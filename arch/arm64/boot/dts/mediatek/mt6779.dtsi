@@ -3647,6 +3647,11 @@ firmware_class.path=/vendor/firmware loop.max_part=7";
 		compatible = "goodix,touch";
 	};
 
+	/* RPMB based on kinibi */
+	rpmb-mtk {
+		compatible = "mediatek,rpmb-kinibi";
+	};
+
 	pmic_clock_buffer_ctrl: pmic_clock_buffer_ctrl {
 		compatible = "mediatek,pmic_clock_buffer";
 		mediatek,clkbuf-quantity = <7>;
