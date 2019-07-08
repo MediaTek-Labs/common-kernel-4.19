@@ -205,8 +205,7 @@ static void mtk_iommu_tlb_add_flush_nosync(unsigned long iova, size_t size,
 		writel_relaxed(iova, data->base + REG_MMU_INVLD_START_A);
 		writel_relaxed(iova + size - 1,
 			       data->base + REG_MMU_INVLD_END_A);
-		writel_relaxed(F_MMU_INV_RANGE,
-			       data->base + REG_MMU_INVALIDATE);
+		writel(F_MMU_INV_RANGE, data->base + REG_MMU_INVALIDATE);
 		data->tlb_flush_active = true;
 	}
 }
@@ -223,7 +222,7 @@ static void mtk_iommu_tlb_sync(void *cookie)
 			return;
 
 		ret = readl_poll_timeout_atomic(data->base + REG_MMU_CPE_DONE,
-						tmp, tmp != 0, 10, 100000);
+						tmp, tmp != 0, 10, 1000);
 		if (ret) {
 			dev_warn(data->dev,
 				 "Partial TLB flush timed out, falling back to full flush\n");
