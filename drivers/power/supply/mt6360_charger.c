@@ -17,6 +17,8 @@
 #include <linux/mfd/mt6360-private.h>
 
 /* 0x11 */
+#define MT6360_MASK_FSLP	BIT(3)
+#define MT6360_SHFT_FSLP	(3)
 #define MT6360_MASK_HIZ		BIT(2)
 #define MT6360_SHFT_HIZ		(2)
 #define MT6360_MASK_OPA_MODE	BIT(0)
@@ -383,6 +385,16 @@ static int mt6360_charger_get_ieoc(struct mt6360_chg_info *mci,
 	return 0;
 }
 
+static int mt6360_charger_set_online(struct mt6360_chg_info *mci,
+				     const union power_supply_propval *val)
+{
+	u8 force_sleep = val->intval ? 0 : 1;
+
+	return regmap_update_bits(mci->regmap, MT6360_PMU_CHG_CTRL1,
+				  MT6360_MASK_FSLP,
+				  force_sleep << MT6360_SHFT_FSLP);
+}
+
 static int mt6360_charger_set_ichg(struct mt6360_chg_info *mci,
 				   const union power_supply_propval *val)
 {
@@ -501,6 +513,9 @@ static int mt6360_charger_set_property(struct power_supply *psy,
 
 	dev_dbg(mci->dev, "%s: prop = %d\n", __func__, psp);
 	switch (psp) {
+	case POWER_SUPPLY_PROP_ONLINE:
+		ret = mt6360_charger_set_online(mci, val);
+		break;
 	case POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT:
 		ret = mt6360_charger_set_ichg(mci, val);
 		break;
@@ -526,6 +541,7 @@ static int mt6360_charger_property_is_writeable(struct power_supply *psy,
 					       enum power_supply_property psp)
 {
 	switch (psp) {
+	case POWER_SUPPLY_PROP_ONLINE:
 	case POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT:
 	case POWER_SUPPLY_PROP_CONSTANT_CHARGE_VOLTAGE:
 	case POWER_SUPPLY_PROP_INPUT_CURRENT_LIMIT:
