@@ -106,6 +106,8 @@
 #define MT6360_IEOC_MIN		100000
 #define MT6360_IEOC_MAX		850000
 #define MT6360_IEOC_STEP	50000
+/* uV */
+#define MT6360_OCV_STEP		1250
 
 /* bc12 icl and ccl setting : uA */
 #define ICL_CHGTYPE_SDP		500000
@@ -241,6 +243,20 @@ out:
 	if (!ret)
 		val->intval = status;
 	return ret;
+}
+
+static int mt6360_charger_get_ocv(struct mt6360_chg_info *mci,
+				  union power_supply_propval *val)
+{
+	int ret;
+	unsigned int regval[2];
+
+	ret = regmap_raw_read(mci->regmap,
+			      MT6360_PMU_ADC_BAT_DATA_H, regval, 2);
+	if (ret < 0)
+		return ret;
+	val->intval = MT6360_OCV_STEP * (regval[0] << 8 | regval[1]);
+	return 0;
 }
 
 static int mt6360_charger_get_charge_type(struct mt6360_chg_info *mci,
@@ -440,6 +456,9 @@ static int mt6360_charger_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_STATUS:
 		ret = mt6360_charger_get_status(mci, val);
 		break;
+	case POWER_SUPPLY_PROP_VOLTAGE_OCV:
+		ret = mt6360_charger_get_ocv(mci, val);
+		break;
 	case POWER_SUPPLY_PROP_CHARGE_TYPE:
 		ret = mt6360_charger_get_charge_type(mci, val);
 		break;
@@ -522,6 +541,7 @@ static enum power_supply_property mt6360_charger_properties[] = {
 	POWER_SUPPLY_PROP_ONLINE,
 	POWER_SUPPLY_PROP_STATUS,
 	POWER_SUPPLY_PROP_CHARGE_TYPE,
+	POWER_SUPPLY_PROP_VOLTAGE_OCV,
 	POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT,
 	POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX,
 	POWER_SUPPLY_PROP_CONSTANT_CHARGE_VOLTAGE,
