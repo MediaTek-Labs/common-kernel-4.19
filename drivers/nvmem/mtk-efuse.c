@@ -68,6 +68,7 @@ static int mtk_efuse_probe(struct platform_device *pdev)
 
 	econfig.stride = 4;
 	econfig.word_size = 4;
+	econfig.name = "mtk-efuse";
 	econfig.reg_read = mtk_reg_read;
 	econfig.reg_write = mtk_reg_write;
 	econfig.size = resource_size(res);
@@ -111,7 +112,7 @@ static void __exit mtk_efuse_exit(void)
 	return platform_driver_unregister(&mtk_efuse_driver);
 }
 
-subsys_initcall(mtk_efuse_init);
+module_init(mtk_efuse_init);
 module_exit(mtk_efuse_exit);
 
 MODULE_AUTHOR("Andrew-CT Chen <andrew-ct.chen@mediatek.com>");
