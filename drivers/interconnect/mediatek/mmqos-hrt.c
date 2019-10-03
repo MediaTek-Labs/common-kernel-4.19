@@ -31,6 +31,8 @@ EXPORT_SYMBOL_GPL(mtk_mmqos_get_avail_hrt_bw);
 
 s32 mtk_mmqos_register_bw_throttle_notifier(struct notifier_block *nb)
 {
+	if (!nb || !mmqos_hrt)
+		return -EINVAL;
 	return blocking_notifier_chain_register(
 				&mmqos_hrt->hrt_bw_throttle_notifier,
 				nb);
@@ -39,6 +41,8 @@ EXPORT_SYMBOL_GPL(mtk_mmqos_register_bw_throttle_notifier);
 
 s32 mtk_mmqos_unregister_bw_throttle_notifier(struct notifier_block *nb)
 {
+	if (!nb || !mmqos_hrt)
+		return -EINVAL;
 	return blocking_notifier_chain_unregister(
 				&mmqos_hrt->hrt_bw_throttle_notifier,
 				nb);
@@ -48,6 +52,9 @@ EXPORT_SYMBOL_GPL(mtk_mmqos_unregister_bw_throttle_notifier);
 void mtk_mmqos_wait_throttle_done(void)
 {
 	u32 wait_result;
+
+	if (!mmqos_hrt)
+		return;
 
 	if (atomic_read(&mmqos_hrt->lock_count) > 0) {
 		pr_notice("begin to blocking for cam_max_bw=%d\n",
@@ -66,6 +73,9 @@ s32 mtk_mmqos_set_hrt_bw(enum hrt_type type, u32 bw)
 		pr_notice("%s: wrong type:%d\n", __func__, type);
 		return -EINVAL;
 	}
+
+	if (!mmqos_hrt)
+		return -EINVAL;
 
 	mmqos_hrt->hrt_bw[type] = bw;
 	return 0;

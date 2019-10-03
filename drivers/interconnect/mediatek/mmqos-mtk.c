@@ -261,12 +261,6 @@ int mtk_mmqos_probe(struct platform_device *pdev)
 	if (!mmqos_desc)
 		return -EINVAL;
 
-	hrt = devm_kzalloc(&pdev->dev, sizeof(*hrt), GFP_KERNEL);
-	if (!hrt)
-		return -ENOMEM;
-	memcpy(hrt, &mmqos_desc->hrt, sizeof(mmqos_desc->hrt));
-	mtk_mmqos_init_hrt(hrt);
-
 	data = devm_kzalloc(&pdev->dev,
 		sizeof(*data) + mmqos_desc->num_nodes * sizeof(node),
 		GFP_KERNEL);
@@ -394,6 +388,14 @@ int mtk_mmqos_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto err;
 	}
+
+	hrt = devm_kzalloc(&pdev->dev, sizeof(*hrt), GFP_KERNEL);
+	if (!hrt) {
+		ret = -ENOMEM;
+		goto err;
+	}
+	memcpy(hrt, &mmqos_desc->hrt, sizeof(mmqos_desc->hrt));
+	mtk_mmqos_init_hrt(hrt);
 
 	mmqos->nb.notifier_call = update_mm_clk;
 	register_mmdvfs_notifier(&mmqos->nb);
