@@ -1,3 +1,5 @@
+obj-y += clkbuf/ \
+		srclken_rc/
 
 obj-$(CONFIG_MTK_MET) += met_drv/
 obj-$(CONFIG_MTK_CCCI_DEVICES)	+=  ccci_util/
@@ -19,11 +21,9 @@ obj-$(CONFIG_MTK_TINYSYS_SSPM_SUPPORT) += sspm/
 obj-$(CONFIG_MTK_SPMTWAM) += twam/
 obj-$(CONFIG_MTK_DVFSRC) += dvfsrc/
 obj-$(CONFIG_MTK_AEE_FEATURE) += aee/
-obj-$(CONFIG_MTK_CLK_BUFFER) += clkbuf/
 obj-$(CONFIG_MTK_QOS_FRAMEWORK) += qos/
 obj-$(CONFIG_MTK_CM_MGR) += cm_mgr/
 obj-$(CONFIG_MTK_PPM) += ppm_v3/
-obj-$(CONFIG_MTK_SRCLKEN_RC) += srclken_rc/
 obj-$(CONFIG_MTK_COMBO) += connectivity/
 obj-$(CONFIG_MTK_BTIF) += btif/
 obj-$(CONFIG_MTK_CONN_MD) += conn_md/
