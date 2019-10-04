@@ -15,6 +15,9 @@ s32 mtk_mmqos_get_avail_hrt_bw(enum hrt_type type)
 {
 	u32 i, used_bw = 0;
 
+	if (!mmqos_hrt)
+		return 0xFFFF;
+
 	for (i = 0; i < HRT_TYPE_NUM; i++) {
 		if (mmqos_hrt->hrt_bw[i] != type)
 			used_bw += mmqos_hrt->hrt_bw[i];
