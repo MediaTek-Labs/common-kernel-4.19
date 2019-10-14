@@ -556,6 +556,11 @@ static int battery_probe(struct platform_device *pdev)
 		goto err_power_supply;
 	}
 
+	if (!gm->bs_data.chg_psy) {
+		ret = -EPROBE_DEFER;
+		goto err_power_supply;
+	}
+
 	gm->bs_data.battery_nb.notifier_call = mtk_battery_notifier;
 	ret = power_supply_reg_notifier(&gm->bs_data.battery_nb);
 	if (ret) {
