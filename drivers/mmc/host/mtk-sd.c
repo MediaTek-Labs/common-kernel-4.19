@@ -18,6 +18,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/ioport.h>
 #include <linux/irq.h>
+#include <linux/kconfig.h>
 #include <linux/of_address.h>
 #include <linux/of_device.h>
 #include <linux/of_irq.h>
@@ -1430,7 +1431,7 @@ static void msdc_enable_sdio_irq(struct mmc_host *mmc, int enb)
 		pm_runtime_put_noidle(host->dev);
 }
 
-#ifdef CONFIG_MMC_CQHCI
+#if IS_ENABLED(CONFIG_MMC_CQHCI)
 static irqreturn_t msdc_cmdq_irq(struct msdc_host *host, u32 intsts)
 {
 	int cmd_err = 0, dat_err = 0;
@@ -1491,7 +1492,7 @@ static irqreturn_t msdc_irq(int irq, void *dev_id)
 		if (!(events & (event_mask & ~MSDC_INT_SDIOIRQ)))
 			break;
 
-#ifdef CONFIG_MMC_CQHCI
+#if IS_ENABLED(CONFIG_MMC_CQHCI)
 		if (host->cqhci && (events & MSDC_INT_CMDQ)) {
 			msdc_cmdq_irq(host, events);
 			/* clear interrupts */
@@ -2345,7 +2346,7 @@ static int msdc_drv_probe(struct platform_device *pdev)
 	mmc_dev(mmc)->dma_mask = &host->dma_mask;
 
 
-#ifdef CONFIG_MMC_CQHCI
+#if IS_ENABLED(CONFIG_MMC_CQHCI)
 	if (host->cqhci) {
 		host->cq_host = devm_kzalloc(host->mmc->parent,
 			       sizeof(*host->cq_host), GFP_KERNEL);

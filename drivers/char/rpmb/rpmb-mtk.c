@@ -1350,3 +1350,5 @@ out_err:
 
 late_initcall(rpmb_init);
 
+MODULE_DESCRIPTION("RPMB class");
+MODULE_LICENSE("GPL v2");
