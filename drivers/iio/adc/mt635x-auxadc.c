@@ -411,9 +411,13 @@ static int auxadc_init_imix_r(struct mt635x_auxadc_device *adc_dev)
 {
 	unsigned char val = 0;
 	int ret;
+	struct device_node *of_chosen;
 
 	if (adc_dev->imix_r)
 		return 0;
+	of_chosen = of_find_node_opts_by_path("/chosen", NULL);
+	if (!of_chosen)
+		of_chosen = of_find_node_opts_by_path("/chosen@0", NULL);
 	ret = of_property_read_u8(of_chosen, "atag,imix_r", &val);
 	if (ret)
 		dev_notice(adc_dev->dev, "no imix_r, ret=%d\n", ret);
