@@ -221,6 +221,7 @@ extern int mtk_thermal_get_tpcb_target(void);
 
 extern void thermal_set_big_core_speed(
 unsigned int tempMonCtl1, unsigned int tempMonCtl2, unsigned int tempAhbPoll);
+extern int send_sig_info(int sig, struct siginfo *info, struct task_struct *p);
 
 /*
  * return value(1): cooler of abcct/abcct_lcmoff is deactive,

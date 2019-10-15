@@ -1,5 +1,5 @@
 config MTK_LEGACY_THERMAL
-	bool "Use MTK legacy thermal code"
+	tristate "Use MTK legacy thermal code"
 	help
 	  Upstream thermal code and legacy thermal
 	  code are not compatiable. As a result,

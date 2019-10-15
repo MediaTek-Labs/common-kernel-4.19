@@ -15,6 +15,7 @@
 #include <linux/types.h>
 #include <linux/kobject.h>
 #include "mt-plat/mtk_thermal_monitor.h"
+#include <mach/mtk_thermal.h>
 
 #define MAX_NUM_INSTANCE_MTK_COOLER_SHUTDOWN  3
 
@@ -68,6 +69,7 @@ static int sd_debouncet = 1;
 static int sd_happened;
 static kuid_t uid = KUIDT_INIT(0);
 static kgid_t gid = KGIDT_INIT(1000);
+
 
 	static ssize_t _mtk_cl_sd_rst_write
 (struct file *filp, const char __user *buf, size_t len, loff_t *data)
@@ -242,7 +244,8 @@ static int _mtk_cl_sd_send_signal(void)
 		info.si_errno = 0;
 		info.si_code = 1;
 		info.si_addr = NULL;
-		ret = do_send_sig_info(SIGIO, &info, pg_task, false);   //JOSH
+
+		ret = send_sig_info(SIGIO, &info, pg_task);   //JOSH
 	}
 
 	if (ret != 0)
@@ -451,3 +454,7 @@ static void __exit mtk_cooler_shutdown_exit(void)
 }
 module_init(mtk_cooler_shutdown_init);
 module_exit(mtk_cooler_shutdown_exit);
+
+MODULE_DESCRIPTION("MEDIATEK Module Thermal cooler shutdown");
+MODULE_LICENSE("GPL v2");
+

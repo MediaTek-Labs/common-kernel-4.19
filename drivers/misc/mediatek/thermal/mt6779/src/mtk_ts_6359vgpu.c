@@ -615,3 +615,7 @@ static void __exit mt6359vgpu_exit(void)
 }
 module_init(mt6359vgpu_init);
 module_exit(mt6359vgpu_exit);
+
+MODULE_DESCRIPTION("MEDIATEK Thermal zone PMIC vgpu temperature sensor");
+MODULE_LICENSE("GPL v2");
+

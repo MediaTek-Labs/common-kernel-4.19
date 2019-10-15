@@ -605,3 +605,7 @@ static void __exit mt6359tsx_exit(void)
 }
 module_init(mt6359tsx_init);
 module_exit(mt6359tsx_exit);
+
+MODULE_DESCRIPTION("MEDIATEK Thermal zone PMIC temperature sensor 6359 tsx");
+MODULE_LICENSE("GPL v2");
+

@@ -748,3 +748,7 @@ static void __exit mtk_cooler_amutt_exit(void)
 }
 module_init(mtk_cooler_amutt_init);
 module_exit(mtk_cooler_amutt_exit);
+
+MODULE_DESCRIPTION("MEDIATEK Module Thermal cooler amutt");
+MODULE_LICENSE("GPL v2");
+

@@ -28,7 +28,7 @@ int get_monitor_thermal_zone_temp(enum monitor_thermal_zone tz_id)
 
 	return thermal_zone_temp_array[tz_id];
 }
-
+EXPORT_SYMBOL_GPL(get_monitor_thermal_zone_temp);
 static void update_temperature_from_tz(enum monitor_thermal_zone tz_id)
 {
 	struct thermal_zone_device *zone;
@@ -104,3 +104,7 @@ static void __exit mtk_monitor_tz_exit(void)
 }
 module_init(mtk_monitor_tz_init);
 module_exit(mtk_monitor_tz_exit);
+
+MODULE_DESCRIPTION("MEDIATEK Module Thermal monitor");
+MODULE_LICENSE("GPL v2");
+

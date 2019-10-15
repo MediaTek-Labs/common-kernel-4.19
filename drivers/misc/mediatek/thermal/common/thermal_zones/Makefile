@@ -23,25 +23,19 @@ ccflags-y  += -I$(srctree)/drivers/misc/mediatek/include/mt-plat/
 ccflags-y  += -I$(srctree)/drivers/misc/mediatek/imgsensor/inc/
 ccflags-y  += -I$(srctree)/drivers/gpu/mediatek/gpufreq/include/
 
-ifneq (,$(filter $(CONFIG_MTK_LEGACY_THERMAL_PLATFORM), "mt6779"))
-#obj-y += mtk_ts_battery.o
-obj-y += mtk_ts_bts.o
-obj-y += mtk_ts_btsmdpa.o
-
-obj-y += mtk_ts_cpu_noBank.o
-#obj-y += mtk_ts_pa.o
-#obj-y += mtk_ts_pa_thput.o
-#obj-y += mtk_ts_pmic.o
-#obj-y += mtk_ts_charger.o
-#obj-y += mtk_ts_charger2.o
-
-obj-y += mtk_monitor_tz.o
-
-ifneq ($(CONFIG_MTK_COMBO_WIFI),)
-#    obj-y += mtk_ts_wmt.o
-endif
-
-#obj-y += mtk_tsAll.o
-#obj-y += mtk_ts_imgsensor.o
-#obj-y += mtk_ts_dctm.o
+ifeq ($(CONFIG_MTK_LEGACY_THERMAL), m)
+	ifneq (,$(filter $(CONFIG_MTK_LEGACY_THERMAL_PLATFORM), "mt6779"))
+		obj-$(CONFIG_MTK_LEGACY_THERMAL) += mtk_ts_bts_mod.o
+		obj-$(CONFIG_MTK_LEGACY_THERMAL) += mtk_ts_btsmdpa_mod.o
+		obj-$(CONFIG_MTK_LEGACY_THERMAL) += mtk_monitor_tz_mod.o
+		mtk_ts_bts_mod-objs += mtk_ts_bts.o
+		mtk_ts_btsmdpa_mod-objs += mtk_ts_btsmdpa.o
+		mtk_monitor_tz_mod-objs += mtk_monitor_tz.o
+	endif
+else
+	ifneq (,$(filter $(CONFIG_MTK_LEGACY_THERMAL_PLATFORM), "mt6779"))
+		obj-y += mtk_ts_bts.o
+		obj-y += mtk_ts_btsmdpa.o
+		obj-y += mtk_monitor_tz.o
+	endif
 endif

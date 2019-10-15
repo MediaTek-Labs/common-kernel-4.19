@@ -516,3 +516,7 @@ static void __exit mtkts_bts_exit(void)
 
 module_init(mtkts_bts_init);
 module_exit(mtkts_bts_exit);
+
+MODULE_DESCRIPTION("MEDIATEK Thermal zone AP NTC");
+MODULE_LICENSE("GPL v2");
+

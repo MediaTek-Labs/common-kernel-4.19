@@ -1671,3 +1671,7 @@ static void __exit mtk_cooler_mutt_exit(void)
 }
 module_init(mtk_cooler_mutt_init);
 module_exit(mtk_cooler_mutt_exit);
+
+MODULE_DESCRIPTION("MEDIATEK Module Thermal cooler modem ");
+MODULE_LICENSE("GPL v2");
+

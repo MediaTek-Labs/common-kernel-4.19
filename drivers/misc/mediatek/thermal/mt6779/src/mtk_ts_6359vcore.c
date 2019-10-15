@@ -605,3 +605,7 @@ static void __exit mt6359vcore_exit(void)
 }
 module_init(mt6359vcore_init);
 module_exit(mt6359vcore_exit);
+
+MODULE_DESCRIPTION("MEDIATEK Thermal zone PMIC vcore temperature sensor");
+MODULE_LICENSE("GPL v2");
+

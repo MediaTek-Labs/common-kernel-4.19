@@ -79,7 +79,7 @@ void cl_set_apu_status(int vv)
 	_cl_apu_status = vv;
 
 }
-EXPORT_SYMBOL(cl_set_apu_status);
+EXPORT_SYMBOL_GPL(cl_set_apu_status);
 unsigned int cl_get_apu_status(void)
 {
 	//if(_cl_apu_status == 1)
@@ -88,7 +88,7 @@ unsigned int cl_get_apu_status(void)
 	return _cl_apu_status;
 
 }
-EXPORT_SYMBOL(cl_get_apu_status);
+EXPORT_SYMBOL_GPL(cl_get_apu_status);
 
 #endif
 
@@ -573,13 +573,6 @@ static int __init mtk_cooler_cam_init(void)
 
 	struct proc_dir_entry *entry;
 
-#if 0
-	entry = create_proc_entry("driver/cl_cam", 0644, NULL);
-	if (entry != NULL) {
-		entry->read_proc = _cl_cam_read;
-		entry->write_proc = _cl_cam_write;
-	}
-#endif
 #if defined(THERMAL_APU_UNLIMIT)
 	entry = proc_create("driver/cl_apu_status", 0664,
 				NULL, &_cl_apu_status_fops);
@@ -646,3 +639,7 @@ static void __exit mtk_cooler_cam_exit(void)
 }
 module_init(mtk_cooler_cam_init);
 module_exit(mtk_cooler_cam_exit);
+
+MODULE_DESCRIPTION("MEDIATEK Module Thermal cooler camera");
+MODULE_LICENSE("GPL v2");
+

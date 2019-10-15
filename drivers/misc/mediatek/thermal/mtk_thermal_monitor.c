@@ -1553,7 +1553,7 @@ int tc1, int tc2, int passive_delay, int polling_delay)
 	return tz;
 
 }
-EXPORT_SYMBOL(mtk_thermal_zone_device_register_wrapper);
+EXPORT_SYMBOL_GPL(mtk_thermal_zone_device_register_wrapper);
 
 /*mtk thermal zone unregister function */
 void mtk_thermal_zone_device_unregister_wrapper(struct thermal_zone_device *tz)
@@ -1594,7 +1594,7 @@ void mtk_thermal_zone_device_unregister_wrapper(struct thermal_zone_device *tz)
 		kfree(tzdata);
 	}
 }
-EXPORT_SYMBOL(mtk_thermal_zone_device_unregister_wrapper);
+EXPORT_SYMBOL_GPL(mtk_thermal_zone_device_unregister_wrapper);
 
 int mtk_thermal_zone_bind_cooling_device_wrapper(
 struct thermal_zone_device *thermal,
@@ -1634,7 +1634,7 @@ int trip, struct thermal_cooling_device *cdev)
 
 	return ret;
 }
-EXPORT_SYMBOL(mtk_thermal_zone_bind_cooling_device_wrapper);
+EXPORT_SYMBOL_GPL(mtk_thermal_zone_bind_cooling_device_wrapper);
 
 /* ********************************************* */
 /* MTK cooling dev register/unregister */
@@ -1886,7 +1886,7 @@ struct thermal_cooling_device *mtk_thermal_cooling_device_register_wrapper
 	mcdata->id = ret->id;	/* Used for CPU usage flag... */
 	return ret;
 }
-EXPORT_SYMBOL(mtk_thermal_cooling_device_register_wrapper);
+EXPORT_SYMBOL_GPL(mtk_thermal_cooling_device_register_wrapper);
 
 struct thermal_cooling_device *mtk_thermal_cooling_device_register_wrapper_extra
 (char *type, void *devdata, const struct thermal_cooling_device_ops *ops,
@@ -1943,7 +1943,7 @@ const struct thermal_cooling_device_ops_extra *ops_ext)
 	mcdata->id = ret->id;	/* Used for CPU usage flag... */
 	return ret;
 }
-EXPORT_SYMBOL(mtk_thermal_cooling_device_register_wrapper_extra);
+EXPORT_SYMBOL_GPL(mtk_thermal_cooling_device_register_wrapper_extra);
 
 int mtk_thermal_cooling_device_add_exit_point(
 struct thermal_cooling_device *cdev, int exit_point)
@@ -1967,7 +1967,7 @@ struct thermal_cooling_device *cdev, int exit_point)
 	THRML_LOG("%s type:%s exit:%d\n", __func__, cdev->type, exit_point);
 	return 0;
 }
-EXPORT_SYMBOL(mtk_thermal_cooling_device_add_exit_point);
+EXPORT_SYMBOL_GPL(mtk_thermal_cooling_device_add_exit_point);
 
 /*
  * MTK Cooling Unregister
@@ -2004,7 +2004,7 @@ struct thermal_cooling_device *cdev)
 
 	THRML_LOG("%s- cdev: %s\n", __func__, type);
 }
-EXPORT_SYMBOL(mtk_thermal_cooling_device_unregister_wrapper);
+EXPORT_SYMBOL_GPL(mtk_thermal_cooling_device_unregister_wrapper);
 
 int mtk_thermal_zone_bind_trigger_trip(
 struct thermal_zone_device *tz, int trip, int mode)
@@ -2013,7 +2013,7 @@ struct thermal_zone_device *tz, int trip, int mode)
 	schedule_delayed_work(&(tz->poll_queue), 0);
 	return 0;
 }
-EXPORT_SYMBOL(mtk_thermal_zone_bind_trigger_trip);
+EXPORT_SYMBOL_GPL(mtk_thermal_zone_bind_trigger_trip);
 
 int mtk_thermal_get_temp(enum mtk_thermal_sensor_id id)
 {
@@ -2032,7 +2032,7 @@ int mtk_thermal_get_temp(enum mtk_thermal_sensor_id id)
 	mutex_unlock(&MTM_GET_TEMP_LOCK);
 	return ret;
 }
-EXPORT_SYMBOL(mtk_thermal_get_temp);
+EXPORT_SYMBOL_GPL(mtk_thermal_get_temp);
 
 struct proc_dir_entry *mtk_thermal_get_proc_drv_therm_dir_entry(void)
 {
@@ -2047,7 +2047,10 @@ struct proc_dir_entry *mtk_thermal_get_proc_drv_therm_dir_entry(void)
 	mutex_unlock(&MTM_DRV_THERM_PROC_DIR_LOCK);
 	return proc_drv_therm_dir_entry;
 }
-EXPORT_SYMBOL(mtk_thermal_get_proc_drv_therm_dir_entry);
+EXPORT_SYMBOL_GPL(mtk_thermal_get_proc_drv_therm_dir_entry);
 
 module_init(mtkthermal_init);
 module_exit(mtkthermal_exit);
+
+MODULE_DESCRIPTION("MEDIATEK Module Thermal monitor");
+MODULE_LICENSE("GPL v2");

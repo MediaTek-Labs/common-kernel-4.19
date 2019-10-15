@@ -1285,10 +1285,6 @@ struct file *filp, const char __user *buf, size_t len, loff_t *data)
 
 	ret = kstrtoint(tmp, 10, &tm_wfd_stat);
 
-#if 0
-	wmt_tm_printk("[%s] %s = %d, len=%d, ret=%d\n"
-		, __func__, tmp, tm_wfd_stat, len, ret);
-#endif
 
 	return len;
 }
@@ -2000,3 +1996,7 @@ static void __exit wmt_tm_deinit(void)
 /* EXPORT_SYMBOL(wifi_in_soc_throttle_enable); */
 module_init(wmt_tm_init);
 module_exit(wmt_tm_deinit);
+
+MODULE_DESCRIPTION("MEDIATEK Thermal zone WMT temperature sensor");
+MODULE_LICENSE("GPL v2");
+

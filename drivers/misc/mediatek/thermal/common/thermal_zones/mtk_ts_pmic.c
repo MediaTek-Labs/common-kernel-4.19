@@ -737,3 +737,7 @@ static void __exit mtktspmic_exit(void)
 }
 module_init(mtktspmic_init);
 module_exit(mtktspmic_exit);
+
+MODULE_DESCRIPTION("MEDIATEK Thermal zone PMIC temperature sensor");
+MODULE_LICENSE("GPL v2");
+

@@ -1539,7 +1539,7 @@ int mtk_cooler_is_abcct_unlimit(void)
 {
 	return (cl_abcct_state == 0 &&  cl_abcct_lcmoff_state == 0) ? 1 : 0;
 }
-EXPORT_SYMBOL(mtk_cooler_is_abcct_unlimit);
+EXPORT_SYMBOL_GPL(mtk_cooler_is_abcct_unlimit);
 
 #if (CONFIG_MTK_GAUGE_VERSION == 30)
 static int mtkcooler_bcct_pdrv_probe(struct platform_device *pdev)
@@ -1724,3 +1724,7 @@ module_exit(mtk_cooler_bcct_exit);
 #if (CONFIG_MTK_GAUGE_VERSION == 30)
 late_initcall(mtkcooler_bcct_late_init);
 #endif
+
+MODULE_DESCRIPTION("MEDIATEK Module Thermal cooler charger");
+MODULE_LICENSE("GPL v2");
+

@@ -89,13 +89,13 @@ int mtk_mdm_get_tx_power(void)
 {
 	return 0;
 }
-EXPORT_SYMBOL(mtk_mdm_get_tx_power);
+EXPORT_SYMBOL_GPL(mtk_mdm_get_tx_power);
 
 int mtk_mdm_get_rf_temp(void)
 {
 	return 0;
 }
-EXPORT_SYMBOL(mtk_mdm_get_rf_temp);
+EXPORT_SYMBOL_GPL(mtk_mdm_get_rf_temp);
 
 int mtk_mdm_get_md_info(struct md_info **p_inf, int *size)
 {
@@ -108,7 +108,7 @@ int mtk_mdm_get_md_info(struct md_info **p_inf, int *size)
 
 	return 0;
 }
-EXPORT_SYMBOL(mtk_mdm_get_md_info);
+EXPORT_SYMBOL_GPL(mtk_mdm_get_md_info);
 
 int mtk_mdm_get_mdinfoex(int opcode, int *value)
 {
@@ -125,7 +125,7 @@ int mtk_mdm_get_mdinfoex(int opcode, int *value)
 	return -1;
 #endif
 }
-EXPORT_SYMBOL(mtk_mdm_get_mdinfoex);
+EXPORT_SYMBOL_GPL(mtk_mdm_get_mdinfoex);
 
 int mtk_mdm_set_mdinfoex_threshold(int opcode, int threshold)
 {
@@ -142,7 +142,7 @@ int mtk_mdm_set_mdinfoex_threshold(int opcode, int threshold)
 	return -1;
 #endif
 }
-EXPORT_SYMBOL(mtk_mdm_set_mdinfoex_threshold);
+EXPORT_SYMBOL_GPL(mtk_mdm_set_mdinfoex_threshold);
 
 int mtk_mdm_start_query(void)
 {
@@ -154,7 +154,7 @@ int mtk_mdm_start_query(void)
 /* #endif */
 	return 0;
 }
-EXPORT_SYMBOL(mtk_mdm_start_query);
+EXPORT_SYMBOL_GPL(mtk_mdm_start_query);
 
 int mtk_mdm_stop_query(void)
 {
@@ -164,14 +164,14 @@ int mtk_mdm_stop_query(void)
 	mtk_mdm_disable();
 	return 0;
 }
-EXPORT_SYMBOL(mtk_mdm_stop_query);
+EXPORT_SYMBOL_GPL(mtk_mdm_stop_query);
 
 int mtk_mdm_set_signal_period(int second)
 {
 	signal_period = second;
 	return 0;
 }
-EXPORT_SYMBOL(mtk_mdm_set_signal_period);
+EXPORT_SYMBOL_GPL(mtk_mdm_set_signal_period);
 
 static int md1_signal_period;
 static int md2_signal_period;
@@ -216,7 +216,7 @@ int mtk_mdm_set_md1_signal_period(int second)
 	set_mdm_signal_period();
 	return 0;
 }
-EXPORT_SYMBOL(mtk_mdm_set_md1_signal_period);
+EXPORT_SYMBOL_GPL(mtk_mdm_set_md1_signal_period);
 
 int mtk_mdm_set_md2_signal_period(int second)
 {
@@ -224,7 +224,7 @@ int mtk_mdm_set_md2_signal_period(int second)
 	set_mdm_signal_period();
 	return 0;
 }
-EXPORT_SYMBOL(mtk_mdm_set_md2_signal_period);
+EXPORT_SYMBOL_GPL(mtk_mdm_set_md2_signal_period);
 
 
 
@@ -594,3 +594,7 @@ static void __exit mtk_mdm_txpwr_exit(void)
 }
 module_init(mtk_mdm_txpwr_init);
 module_exit(mtk_mdm_txpwr_exit);
+
+MODULE_DESCRIPTION("MEDIATEK Thermal zone get modem info APIs");
+MODULE_LICENSE("GPL v2");
+

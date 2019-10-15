@@ -698,37 +698,6 @@ struct file *file, const char __user *buffer, size_t count, loff_t *data)
 	return -EINVAL;
 }
 
-#if 0
-static void mtkts_battery_cancel_thermal_timer(void)
-{
-	/* cancel timer */
-	/*pr_debug("mtkts_battery_cancel_thermal_timer\n"); */
-
-	/* stop thermal framework polling when entering deep idle */
-	/* For charging current throttling during deep idle,
-	 *   this delayed work cannot be canceled.
-	 *if (thz_dev)
-	 *	cancel_delayed_work(&(thz_dev->poll_queue));
-	 *
-	 *return;
-	 */
-}
-
-static void mtkts_battery_start_thermal_timer(void)
-{
-	/*pr_debug("mtkts_battery_start_thermal_timer\n"); */
-	/* resume thermal framework polling when leaving deep idle */
-	/* For charging current throttling during deep idle,
-	 *   this delayed work cannot be canceled.
-	 *if (thz_dev != NULL && interval != 0)
-	 *	mod_delayed_work(system_freezable_power_efficient_wq,
-	 *	&(thz_dev->poll_queue),
-	 *   round_jiffies(msecs_to_jiffies(3000)));
-	 *
-	 *return;
-	 */
-}
-#endif
 
 int mtktsbattery_register_cooler(void)
 {
@@ -816,10 +785,6 @@ static int __init mtktsbattery_init(void)
 		if (entry)
 			proc_set_user(entry, uid, gid);
 	}
-#if 0
-	mtkTTimer_register("mtktsbattery", mtkts_battery_start_thermal_timer,
-					mtkts_battery_cancel_thermal_timer);
-#endif
 	return 0;
 
 err_unreg:
@@ -832,9 +797,10 @@ static void __exit mtktsbattery_exit(void)
 	mtktsbattery_dprintk("[%s]\n", __func__);
 	mtktsbattery_unregister_thermal();
 	mtktsbattery_unregister_cooler();
-#if 0
-	mtkTTimer_unregister("mtktsbattery");
-#endif
 }
 module_init(mtktsbattery_init);
 module_exit(mtktsbattery_exit);
+
+MODULE_DESCRIPTION("MEDIATEK Thermal zone battery temperature sensor");
+MODULE_LICENSE("GPL v2");
+

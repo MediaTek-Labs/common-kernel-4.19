@@ -75,8 +75,8 @@ static unsigned long cl_kshutdown_state[MAX_NUM_INSTANCE_MTK_COOLER_KSHUTDOWN]
 		mtk_cooler_kshutdown_dprintk(
 				"%s %s invokes machine_power_off\n", __func__,
 				cdev->type);
-
-		machine_power_off();
+/*TODO*/
+		//machine_power_off();
 	}
 
 	return 0;
@@ -104,10 +104,6 @@ static int mtk_cooler_kshutdown_register_ltf(void)
 				&mtk_cl_kshutdown_ops);
 	}
 
-#if 0
-	cl_kshutdown_dev = mtk_thermal_cooling_device_register(
-			"mtk-cl-shutdown", NULL, &mtk_cl_kshutdown_ops);
-#endif
 
 	return 0;
 }
@@ -126,12 +122,6 @@ static void mtk_cooler_kshutdown_unregister_ltf(void)
 			cl_kshutdown_state[i] = 0;
 		}
 	}
-#if 0
-	if (cl_kshutdown_dev) {
-		mtk_thermal_cooling_device_unregister(cl_kshutdown_dev);
-		cl_kshutdown_dev = NULL;
-	}
-#endif
 }
 
 
@@ -168,3 +158,7 @@ static void __exit mtk_cooler_kshutdown_exit(void)
 }
 module_init(mtk_cooler_kshutdown_init);
 module_exit(mtk_cooler_kshutdown_exit);
+
+MODULE_DESCRIPTION("MEDIATEK Module Thermal cooler kernel shutdown");
+MODULE_LICENSE("GPL v2");
+

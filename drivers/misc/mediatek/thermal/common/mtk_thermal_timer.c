@@ -153,7 +153,7 @@ const char *name, void (*start_timer) (void), void (*cancel_timer) (void))
 	spin_unlock(&tTimer_lock);
 	return 0;
 }
-
+EXPORT_SYMBOL_GPL(mtkTTimer_register);
 int mtkTTimer_unregister(const char *name)
 {
 	int index;
@@ -202,6 +202,7 @@ int mtkTTimer_unregister(const char *name)
 	spin_unlock(&tTimer_lock);
 	return 0;
 }
+EXPORT_SYMBOL_GPL(mtkTTimer_unregister);
 
 void mtkTTimer_cancel_timer(void)
 {
@@ -228,3 +229,6 @@ void mtkTTimer_start_timer(void)
 	}
 	spin_unlock(&tTimer_lock);
 }
+
+MODULE_DESCRIPTION("MEDIATEK Module Thermal timer");
+MODULE_LICENSE("GPL v2");

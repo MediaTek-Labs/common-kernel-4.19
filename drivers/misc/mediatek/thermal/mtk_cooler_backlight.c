@@ -38,7 +38,7 @@ static void mtk_cl_backlight_set_max_brightness_limit(void)
 	if (g_backlight_last_level != g_backlight_level) {
 		mtk_cooler_backlight_dprintk("set brightness level = %d\n",
 				g_backlight_level);
-
+#if IS_ENABLED(CONFIG_MTK_LEDS)
 		switch (g_backlight_level) {
 		case 0:
 			setMaxbrightness(255, 0);	/* 100% */
@@ -56,6 +56,7 @@ static void mtk_cl_backlight_set_max_brightness_limit(void)
 			setMaxbrightness(255, 0);
 			break;
 		}
+#endif
 	}
 }
 
@@ -204,3 +205,7 @@ static void __exit mtk_cooler_backlight_exit(void)
 }
 module_init(mtk_cooler_backlight_init);
 module_exit(mtk_cooler_backlight_exit);
+
+MODULE_DESCRIPTION("MEDIATEK Module Thermal cooler backlight");
+MODULE_LICENSE("GPL v2");
+

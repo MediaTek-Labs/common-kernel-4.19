@@ -526,3 +526,7 @@ static void __exit mtkts_btsmdpa_exit(void)
 
 module_init(mtkts_btsmdpa_init);
 module_exit(mtkts_btsmdpa_exit);
+
+MODULE_DESCRIPTION("MEDIATEK Thermal zone modem PA temperature sensor");
+MODULE_LICENSE("GPL v2");
+

@@ -1566,7 +1566,7 @@ void get_lvts_slope_intercept(struct TS_PTPOD *ts_info, enum
 	tscpu_dprintk("(LVTS) ts_MTS=%d, ts_BTS=%d\n",
 			ts_ptpod.ts_MTS, ts_ptpod.ts_BTS);
 }
-EXPORT_SYMBOL(get_lvts_slope_intercept);
+EXPORT_SYMBOL_GPL(get_lvts_slope_intercept);
 
 int lvts_tscpu_dump_cali_info(struct seq_file *m, void *v)
 {

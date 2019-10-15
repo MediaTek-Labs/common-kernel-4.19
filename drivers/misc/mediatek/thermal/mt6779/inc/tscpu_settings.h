@@ -581,6 +581,13 @@ extern void dump_lvts_register_value(void);
 #if LVTS_VALID_DATA_TIME_PROFILING
 extern void lvts_dump_time_profiling_result(struct seq_file *m);
 #endif
+
+#ifdef MODULE
+extern int ta_init(void);
+extern int mtk_cooler_atm_init(void);
+extern void mtk_cooler_atm_exit(void);
+#endif
+
 /*=============================================================
  *LOG
  *=============================================================

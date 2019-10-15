@@ -144,7 +144,7 @@ int apthermolmt_register_user(struct apthermolmt_user *handle, char *log)
 
 	return -1;
 }
-EXPORT_SYMBOL(apthermolmt_register_user);
+EXPORT_SYMBOL_GPL(apthermolmt_register_user);
 
 int apthermolmt_unregister_user(struct apthermolmt_user *handle)
 {
@@ -163,7 +163,7 @@ int apthermolmt_unregister_user(struct apthermolmt_user *handle)
 
 	return -1;
 }
-EXPORT_SYMBOL(apthermolmt_unregister_user);
+EXPORT_SYMBOL_GPL(apthermolmt_unregister_user);
 
 void apthermolmt_set_cpu_power_limit(
 struct apthermolmt_user *handle, unsigned int limit)
@@ -211,7 +211,7 @@ struct apthermolmt_user *handle, unsigned int limit)
 
 	mutex_unlock(&apthermolmt_cpu_mutex);
 }
-EXPORT_SYMBOL(apthermolmt_set_cpu_power_limit);
+EXPORT_SYMBOL_GPL(apthermolmt_set_cpu_power_limit);
 
 #if defined(THERMAL_VPU_SUPPORT)
 void apthermolmt_set_vpu_power_limit(
@@ -252,7 +252,7 @@ struct apthermolmt_user *handle, unsigned int limit)
 		tscpu_dprintk("%s %u\n", __func__, final_limit);
 	}
 }
-EXPORT_SYMBOL(apthermolmt_set_vpu_power_limit);
+EXPORT_SYMBOL_GPL(apthermolmt_set_vpu_power_limit);
 #endif
 
 #if defined(THERMAL_MDLA_SUPPORT)
@@ -294,7 +294,7 @@ struct apthermolmt_user *handle, unsigned int limit)
 		tscpu_dprintk("%s %u\n", __func__, final_limit);
 	}
 }
-EXPORT_SYMBOL(apthermolmt_set_mdla_power_limit);
+EXPORT_SYMBOL_GPL(apthermolmt_set_mdla_power_limit);
 #endif
 
 void apthermolmt_set_gpu_power_limit(
@@ -328,7 +328,7 @@ struct apthermolmt_user *handle, unsigned int limit)
 							final_limit : 0);
 	}
 }
-EXPORT_SYMBOL(apthermolmt_set_gpu_power_limit);
+EXPORT_SYMBOL_GPL(apthermolmt_set_gpu_power_limit);
 
 void apthermolmt_set_general_cpu_power_limit(unsigned int limit)
 {
@@ -341,7 +341,7 @@ void apthermolmt_set_general_cpu_power_limit(unsigned int limit)
 		apthermolmt_set_cpu_power_limit(&_gp, gp_curr_cpu_pwr_limit);
 	}
 }
-EXPORT_SYMBOL(apthermolmt_set_general_cpu_power_limit);
+EXPORT_SYMBOL_GPL(apthermolmt_set_general_cpu_power_limit);
 
 void apthermolmt_set_general_gpu_power_limit(unsigned int limit)
 {
@@ -354,44 +354,50 @@ void apthermolmt_set_general_gpu_power_limit(unsigned int limit)
 		apthermolmt_set_gpu_power_limit(&_gp, gp_curr_gpu_pwr_limit);
 	}
 }
-EXPORT_SYMBOL(apthermolmt_set_general_gpu_power_limit);
+EXPORT_SYMBOL_GPL(apthermolmt_set_general_gpu_power_limit);
 
 unsigned int apthermolmt_get_cpu_power_limit(void)
 {
 	return apthermolmt_curr_cpu_pwr_lim;
 }
-EXPORT_SYMBOL(apthermolmt_get_cpu_power_limit);
+EXPORT_SYMBOL_GPL(apthermolmt_get_cpu_power_limit);
 
 unsigned int apthermolmt_get_cpu_min_power(void)
 {
+
 	return tscpu_get_min_cpu_pwr();
+
 }
-EXPORT_SYMBOL(apthermolmt_get_cpu_min_power);
+EXPORT_SYMBOL_GPL(apthermolmt_get_cpu_min_power);
 
 unsigned int apthermolmt_get_gpu_power_limit(void)
 {
 	return apthermolmt_curr_gpu_pwr_lim;
 }
-EXPORT_SYMBOL(apthermolmt_get_gpu_power_limit);
+EXPORT_SYMBOL_GPL(apthermolmt_get_gpu_power_limit);
 
 unsigned int apthermolmt_get_gpu_min_power(void)
 {
+
 	return tscpu_get_min_gpu_pwr();
+
 }
-EXPORT_SYMBOL(apthermolmt_get_gpu_min_power);
+EXPORT_SYMBOL_GPL(apthermolmt_get_gpu_min_power);
 
 #if defined(THERMAL_VPU_SUPPORT)
 unsigned int apthermolmt_get_vpu_power_limit(void)
 {
 	return apthermolmt_curr_vpu_pwr_lim;
 }
-EXPORT_SYMBOL(apthermolmt_get_vpu_power_limit);
+EXPORT_SYMBOL_GPL(apthermolmt_get_vpu_power_limit);
 
 unsigned int apthermolmt_get_vpu_min_power(void)
 {
+
 	return tscpu_get_min_vpu_pwr();
+
 }
-EXPORT_SYMBOL(apthermolmt_get_vpu_min_power);
+EXPORT_SYMBOL_GPL(apthermolmt_get_vpu_min_power);
 #endif
 
 #if defined(THERMAL_MDLA_SUPPORT)
@@ -399,12 +405,14 @@ unsigned int apthermolmt_get_mdla_power_limit(void)
 {
 	return apthermolmt_curr_mdla_pwr_lim;
 }
-EXPORT_SYMBOL(apthermolmt_get_mdla_power_limit);
+EXPORT_SYMBOL_GPL(apthermolmt_get_mdla_power_limit);
 
 unsigned int apthermolmt_get_mdla_min_power(void)
 {
+
 	return tscpu_get_min_mdla_pwr();
+
 }
-EXPORT_SYMBOL(apthermolmt_get_mdla_min_power);
+EXPORT_SYMBOL_GPL(apthermolmt_get_mdla_min_power);
 #endif
 

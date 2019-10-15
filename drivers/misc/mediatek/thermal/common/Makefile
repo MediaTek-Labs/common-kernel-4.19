@@ -21,9 +21,15 @@ ccflags-y  += -I$(srctree)/drivers/misc/mediatek/vpu/mt6779
 ccflags-y  += -I$(srctree)/drivers/misc/mediatek/mdla/1.0
 ccflags-y  += -I$(srctree)/drivers/gpu/mediatek/gpufreq/include/
 
-obj-y += mtk_thermal_platform.o
-obj-y += ap_thermal_limit.o
+ifeq ($(CONFIG_MTK_LEGACY_THERMAL), m)
+	obj-$(CONFIG_MTK_LEGACY_THERMAL) += mtk_thermal_platform_mod.o
+	obj-$(CONFIG_MTK_LEGACY_THERMAL) += mtk_thermal_timer_mod.o
+	mtk_thermal_platform_mod-objs += mtk_thermal_platform.o
+	mtk_thermal_timer_mod-objs += mtk_thermal_timer.o
+else
+	obj-y += mtk_thermal_platform.o
+	obj-y += mtk_thermal_timer.o
+endif
 
-obj-y += thermal_zones/
-obj-y += coolers/
-obj-y += mtk_thermal_timer.o
+obj-$(CONFIG_MTK_LEGACY_THERMAL) += thermal_zones/
+obj-$(CONFIG_MTK_LEGACY_THERMAL) += coolers/

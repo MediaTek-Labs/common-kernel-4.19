@@ -49,10 +49,10 @@
 #endif
 #define __MT_MTK_TS_CPU_C__
 
-#ifdef CONFIG_MTK_EFUSE
+
+#if IS_ENABLED(CONFIG_MTK_EFUSE)
 #include <linux/nvmem-consumer.h>
 #endif
-
 /*=============================================================
  * Local variable definition
  *=============================================================
@@ -117,12 +117,14 @@ struct thermal_controller tscpu_g_tc[THERMAL_CONTROLLER_NUM] = {
 		} /* 4.9ms */
 	}
 };
+EXPORT_SYMBOL_GPL(tscpu_g_tc);
 
 #ifdef CONFIG_OF
 const struct of_device_id mt_thermal_of_match[2] = {
 	{.compatible = "mediatek,therm_ctrl",},
 	{},
 };
+EXPORT_SYMBOL_GPL(mt_thermal_of_match);
 #endif
 
 static struct regmap *map;
@@ -139,8 +141,11 @@ static const struct regmap_config toprgu_regmap_config = {
 	.reg_stride = 4,
 };
 
-int tscpu_debug_log;
+struct platform_device *tscpu_pdev;
+EXPORT_SYMBOL_GPL(tscpu_pdev);
 
+int tscpu_debug_log;
+EXPORT_SYMBOL_GPL(tscpu_debug_log);
 #if MTK_TS_CPU_RT
 static struct task_struct *ktp_thread_handle;
 #endif
@@ -177,21 +182,13 @@ static __s32 g_x_roomt[L_TS_MCU_NUM] = { 0 };
  */
 /* chip dependent */
 int tscpu_polling_trip_temp1 = 40000;
+EXPORT_SYMBOL_GPL(tscpu_polling_trip_temp1);
 int tscpu_polling_trip_temp2 = 20000;
+EXPORT_SYMBOL_GPL(tscpu_polling_trip_temp2);
 int tscpu_polling_factor1 = 1;
+EXPORT_SYMBOL_GPL(tscpu_polling_factor1);
 int tscpu_polling_factor2 = 4;
-
-#if MTKTSCPU_FAST_POLLING
-/* Combined fast_polling_trip_temp and fast_polling_factor,
- *it means polling_delay will be 1/5 of original interval
- *after mtktscpu reports > 65C w/o exit point
- */
-int fast_polling_trip_temp = 60000;
-int fast_polling_trip_temp_high = 60000; /* deprecaed */
-int fast_polling_factor = 1;
-int tscpu_cur_fp_factor = 1;
-int tscpu_next_fp_factor = 1;
-#endif
+EXPORT_SYMBOL_GPL(tscpu_polling_factor2);
 
 /*=============================================================
  * Local function declartation
@@ -314,7 +311,7 @@ thermal_bank_name ts_bank)
 	tscpu_dprintk("ts_MTS=%d, ts_BTS=%d\n",
 		ts_ptpod.ts_MTS, ts_ptpod.ts_BTS);
 }
-EXPORT_SYMBOL(get_thermal_slope_intercept);
+EXPORT_SYMBOL_GPL(get_thermal_slope_intercept);
 
 /* chip dependent */
 static void mtkts_dump_cali_info(void)
@@ -340,7 +337,8 @@ static void mtkts_dump_cali_info(void)
 	tscpu_printk("[cal] g_o_vtsabb      = %d\n", g_o_vtsabb);
 }
 
-#ifdef CONFIG_MTK_EFUSE
+
+#if IS_ENABLED(CONFIG_MTK_EFUSE)
 static void eDataCorrector(void)
 {
 
@@ -404,7 +402,8 @@ static void eDataCorrector(void)
 #endif
 void tscpu_thermal_cal_prepare(void)
 {
-#ifdef CONFIG_MTK_EFUSE
+
+#if IS_ENABLED(CONFIG_MTK_EFUSE)
 	struct device *dev = &tscpu_pdev->dev;
 	struct device_node *node = tscpu_pdev->dev.of_node;
 	struct nvmem_device *nvmem_dev;
@@ -517,7 +516,7 @@ end:
 #endif
 	mtkts_dump_cali_info();
 }
-
+EXPORT_SYMBOL_GPL(tscpu_thermal_cal_prepare);
 void tscpu_thermal_cal_prepare_2(__u32 ret)
 {
 	__s32 format[L_TS_MCU_NUM] = { 0 };
@@ -553,6 +552,7 @@ void tscpu_thermal_cal_prepare_2(__u32 ret)
 		tscpu_printk("[T_De][cal] g_x_roomt%d   = %d\n", i,
 							g_x_roomt[i]);
 }
+EXPORT_SYMBOL_GPL(tscpu_thermal_cal_prepare_2);
 
 #if THERMAL_CONTROLLER_HW_TP
 static __s32 temperature_to_raw_room(__u32 ret, enum tsmcu_sensor_enum ts_name)
@@ -703,7 +703,7 @@ irqreturn_t tscpu_thermal_all_tc_interrupt_handler(int irq, void *dev_id)
 
 	return IRQ_HANDLED;
 }
-
+EXPORT_SYMBOL_GPL(tscpu_thermal_all_tc_interrupt_handler);
 static void thermal_reset_and_initial(int tc_num)
 {
 	__u32 offset, tempMonCtl1, tempMonCtl2, tempAhbPoll;
@@ -925,7 +925,7 @@ int tc_num, enum tsmcu_sensor_enum type, int order)
 	tscpu_ts_temp[type] = tscpu_ts_mcu_temp[type];
 #endif
 }
-
+EXPORT_SYMBOL_GPL(tscpu_thermal_read_tc_temp);
 void read_all_tc_tsmcu_temperature(void)
 {
 	int i = 0, j = 0;
@@ -1056,7 +1056,7 @@ int tscpu_thermal_fast_init(int tc_num)
 
 	return 0;
 }
-
+EXPORT_SYMBOL_GPL(tscpu_thermal_fast_init);
 int tscpu_thermal_ADCValueOfMcu(enum tsmcu_sensor_enum type)
 {
 	switch (type) {
@@ -1104,7 +1104,7 @@ void thermal_pause_all_periodoc_temp_sensing(void)
 		writel((temp | 0x10E), (void *)(offset + TEMPMSRCTL1));
 	}
 }
-
+EXPORT_SYMBOL_GPL(thermal_pause_all_periodoc_temp_sensing);
 /* release ALL periodoc temperature sensing point */
 void thermal_release_all_periodoc_temp_sensing(void)
 {
@@ -1125,7 +1125,7 @@ void thermal_release_all_periodoc_temp_sensing(void)
 		writel(((temp & (~0x10E))), (void *)(offset + TEMPMSRCTL1));
 	}
 }
-
+EXPORT_SYMBOL_GPL(thermal_release_all_periodoc_temp_sensing);
 static void tscpu_thermal_enable_all_periodoc_sensing_point(int tc_num)
 {
 	__u32 offset;
@@ -1172,7 +1172,7 @@ void thermal_disable_all_periodoc_temp_sensing(void)
 		writel(0x00000000, (void *)(offset + TEMPMONCTL0));
 	}
 }
-
+EXPORT_SYMBOL_GPL(thermal_disable_all_periodoc_temp_sensing);
 static void tscpu_thermal_tempADCPNP(int tc_num, int adc, int order)
 {
 	__u32 offset;
@@ -1239,7 +1239,7 @@ void tscpu_thermal_initial_all_tc(void)
 		tscpu_thermal_enable_all_periodoc_sensing_point(i);
 	}
 }
-
+EXPORT_SYMBOL_GPL(tscpu_thermal_initial_all_tc);
 void tscpu_config_all_tc_hw_protect(int temperature, int temperature2)
 {
 	int i = 0;
@@ -1352,7 +1352,7 @@ void tscpu_config_all_tc_hw_protect(int temperature, int temperature2)
 	val |= en_key;
 	regmap_write(map, en_offset, val);
 }
-
+EXPORT_SYMBOL_GPL(tscpu_config_all_tc_hw_protect);
 void tscpu_reset_thermal(void)
 {
 	/* chip dependent, Have to confirm with DE */
@@ -1376,7 +1376,7 @@ void tscpu_reset_thermal(void)
 	temp |= 0x00000001;
 	writel(temp, (void *)INFRA_GLOBALCON_RST_0_CLR);
 }
-
+EXPORT_SYMBOL_GPL(tscpu_reset_thermal);
 int tscpu_dump_cali_info(struct seq_file *m, void *v)
 {
 	int i;
@@ -1409,7 +1409,7 @@ int tscpu_dump_cali_info(struct seq_file *m, void *v)
 
 	return 0;
 }
-
+EXPORT_SYMBOL_GPL(tscpu_dump_cali_info);
 #if CONFIG_LVTS_ERROR_AEE_WARNING
 int check_auxadc_mcu_efuse(void)
 {

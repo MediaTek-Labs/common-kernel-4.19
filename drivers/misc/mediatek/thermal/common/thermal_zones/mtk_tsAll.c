@@ -780,3 +780,8 @@ static void __exit tsallts_exit(void)
 }
 module_init(tsallts_init);
 module_exit(tsallts_exit);
+
+MODULE_DESCRIPTION("MEDIATEK Module Thermal zone SoC junction temperature sensor");
+MODULE_LICENSE("GPL v2");
+
+

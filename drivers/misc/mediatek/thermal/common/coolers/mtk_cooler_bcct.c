@@ -1307,3 +1307,7 @@ static void __exit mtk_cooler_bcct_exit(void)
 }
 module_init(mtk_cooler_bcct_init);
 module_exit(mtk_cooler_bcct_exit);
+
+MODULE_DESCRIPTION("MEDIATEK Module Thermal cooler charger");
+MODULE_LICENSE("GPL v2");
+

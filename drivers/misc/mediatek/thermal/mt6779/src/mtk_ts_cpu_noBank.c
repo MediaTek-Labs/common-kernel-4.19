@@ -82,6 +82,8 @@
  *Local variable definition
  *=============================================================
  */
+
+
 static kuid_t uid = KUIDT_INIT(0);
 static kgid_t gid = KGIDT_INIT(1000);
 static DEFINE_SEMAPHORE(sem_mutex);
@@ -89,25 +91,19 @@ static int isTimerCancelled;
 
 #if !defined(CONFIG_MTK_CLKMGR)
 struct clk *therm_main;		/* main clock for Thermal */
+EXPORT_SYMBOL_GPL(therm_main);
 #endif
 
 void __iomem  *therm_clk_infracfg_ao_base;
+/*GTK modify move to mtk_ts_cpu_noBank.c*/
 
-#ifdef CONFIG_OF
-u32 thermal_irq_number;
-void __iomem *thermal_base;
-void __iomem *auxadc_ts_base;
-void __iomem *infracfg_ao_base;
+int tscpu_cpu_dmips[CPU_COOLER_NUM] = { 0 };
+EXPORT_SYMBOL_GPL(tscpu_cpu_dmips);
+int mtktscpu_limited_dmips = 1;	/* Use in mtk_thermal_platform.c */
+EXPORT_SYMBOL_GPL(mtktscpu_limited_dmips);
 
 
-void __iomem *th_apmixed_base;
-void __iomem *INFRACFG_AO_base;
 
-int thermal_phy_base;
-int auxadc_ts_phy_base;
-int apmixed_phy_base;
-int pericfg_phy_base;
-#endif
 
 #if defined(TZCPU_SET_INIT_CFG)
 /* mseconds, 0 : no auto polling */
@@ -119,6 +115,7 @@ static unsigned int interval = 1000;
 
 int tscpu_g_curr_temp;
 int tscpu_g_prev_temp;
+
 static int g_max_temp = 50000;	/* default=50 deg */
 
 static int tc_mid_trip = -275000;
@@ -180,21 +177,13 @@ static char g_bind8[20] = "";
 static char g_bind9[20] = "";
 #endif
 
-struct mt_gpufreq_power_table_info *mtk_gpu_power;
-/* max GPU opp idx from GPU DVFS driver, default is 0 */
-int gpu_max_opp;
-#if 0
-int Num_of_GPU_OPP = 1;		/* Set this value =1 for non-DVS GPU */
-#else				/* DVFS GPU */
-int Num_of_GPU_OPP;
-#endif
+
 
 #if CONFIG_LVTS_ERROR_AEE_WARNING
 #if DUMP_VCORE_VOLTAGE
 struct regulator *vcore_reg_id;
 #endif
 #endif
-struct platform_device *tscpu_pdev;
 
 /*=============================================================
  * Local function definition
@@ -219,6 +208,7 @@ static void _mt_thermal_aee_init(void)
 	aee_rr_rec_thermal_ktime(0xFFFFFFFFFFFFFFFF);
 }
 #endif
+
 static int tscpu_thermal_probe(struct platform_device *dev);
 static int tscpu_register_thermal(void);
 static void tscpu_unregister_thermal(void);
@@ -232,29 +222,34 @@ void mt_thermalsampler_registerCB(met_thermalsampler_funcMET pCB)
 {
 	g_pThermalSampler = pCB;
 }
-EXPORT_SYMBOL(mt_thermalsampler_registerCB);
+EXPORT_SYMBOL_GPL(mt_thermalsampler_registerCB);
 
 static DEFINE_SPINLOCK(tscpu_met_spinlock);
 void tscpu_met_lock(unsigned long *flags)
 {
 	spin_lock_irqsave(&tscpu_met_spinlock, *flags);
 }
-EXPORT_SYMBOL(tscpu_met_lock);
+EXPORT_SYMBOL_GPL(tscpu_met_lock);
 
 void tscpu_met_unlock(unsigned long *flags)
 {
 	spin_unlock_irqrestore(&tscpu_met_spinlock, *flags);
 }
-EXPORT_SYMBOL(tscpu_met_unlock);
+EXPORT_SYMBOL_GPL(tscpu_met_unlock);
 
 #endif
+
+
 static int g_is_temp_valid;
 static void temp_valid_lock(unsigned long *flags);
 static void temp_valid_unlock(unsigned long *flags);
+
+
 /*=============================================================
  *Weak functions
  *=============================================================
  */
+
 	unsigned int  __attribute__((weak))
 mt_gpufreq_get_max_power(void)
 {
@@ -325,14 +320,14 @@ mt_gpufreq_get_dvfs_table_num(void)
 }
 
 /*=============================================================*/
-long long int thermal_get_current_time_us(void)
+long long thermal_get_current_time_us(void)
 {
 	struct timeval t;
-	long long int temp;
+	long long temp;
 
 	do_gettimeofday(&t);
 
-	temp = (((long long int) t.tv_sec) * 1000000
+	temp = (((long long) t.tv_sec) * 1000000
 		+ t.tv_usec);
 
 	return temp;
@@ -355,35 +350,12 @@ static void tscpu_fast_initial_sw_workaround(void)
 	temp_valid_unlock(&flags);
 }
 
-#if CFG_THERM_LVTS == (0)
-int tscpu_max_temperature(void)
-{
-	int i, j, max = 0;
-
-	tscpu_dprintk("tscpu_get_temp %s, %d\n", __func__, __LINE__);
-
-	for (i = 0; i < ARRAY_SIZE(tscpu_g_tc); i++) {
-		for (j = 0; j < tscpu_g_tc[i].ts_number; j++) {
-			if (i == 0 && j == 0) {
-				max = tscpu_ts_temp[tscpu_g_tc[i].ts[j]];
-			} else {
-				if (max < tscpu_ts_temp[tscpu_g_tc[i].ts[j]])
-					max =
-					tscpu_ts_temp[tscpu_g_tc[i].ts[j]];
-			}
-		}
-	}
-
-	return max;
-}
-#endif
-
 void set_taklking_flag(bool flag)
 {
 	talking_flag = flag;
 	tscpu_printk("talking_flag=%d\n", talking_flag);
 }
-
+EXPORT_SYMBOL_GPL(set_taklking_flag);
 int mtk_gpufreq_register(struct mt_gpufreq_power_table_info *freqs, int num)
 {
 	int i = 0;
@@ -415,7 +387,7 @@ int mtk_gpufreq_register(struct mt_gpufreq_power_table_info *freqs, int num)
 
 	return 0;
 }
-EXPORT_SYMBOL(mtk_gpufreq_register);
+EXPORT_SYMBOL_GPL(mtk_gpufreq_register);
 
 static int tscpu_bind
 (struct thermal_zone_device *thermal, struct thermal_cooling_device *cdev)
@@ -590,7 +562,7 @@ static int tscpu_get_temp
 	if ((curr_temp > (trip_temp[0] - 15000))
 	|| (curr_temp < -30000)
 	|| (curr_temp > 85000)) {
-		printk_ratelimited(TSCPU_LOG_TAG " %u %u CPU T=%d\n",
+		tscpu_dprintk(TSCPU_LOG_TAG " %u %u CPU T=%d\n",
 			apthermolmt_get_cpu_power_limit(),
 			apthermolmt_get_gpu_power_limit(),
 			curr_temp);
@@ -1748,21 +1720,6 @@ int tscpu_get_temp_by_bank(enum thermal_bank_name ts_bank)
 }
 
 #if CFG_THERM_LVTS
-#if 0
-int lvts_tscpu_get_temp_by_bank(enum thermal_bank_name ts_bank)
-{
-	int bank_T = -127000;
-
-	tscpu_dprintk("%s, %d\n",
-						__func__, __LINE__);
-
-	if (ts_bank < THERMAL_BANK_NUM)
-		bank_T = lvts_max_temperature_in_bank[ts_bank]();
-	else
-		panic("Bank number out of range\n");
-	return bank_T;
-}
-#endif
 #endif
 
 #if THERMAL_GPIO_OUT_TOGGLE
@@ -1987,7 +1944,7 @@ int tscpu_get_cpu_temp_met(enum mtk_thermal_sensor_cpu_id_met id)
 	tscpu_met_unlock(&flags);
 	return ret;
 }
-EXPORT_SYMBOL(tscpu_get_cpu_temp_met);
+EXPORT_SYMBOL_GPL(tscpu_get_cpu_temp_met);
 #endif
 
 static DEFINE_SPINLOCK(temp_valid_spinlock);
@@ -2089,7 +2046,7 @@ void tscpu_update_tempinfo(void)
 		g_pThermalSampler();
 #endif
 }
-
+EXPORT_SYMBOL_GPL(tscpu_update_tempinfo);
 #if defined(FAST_RESPONSE_ATM)
 DEFINE_SPINLOCK(timer_lock);
 int is_worktimer_en = 1;
@@ -2175,6 +2132,7 @@ static void tscpu_cancel_thermal_timer(void)
 #ifdef FAST_RESPONSE_ATM
 	atm_cancel_hrtimer();
 #endif
+
 	tscpu_workqueue_cancel_timer();
 }
 
@@ -2187,6 +2145,7 @@ static void tscpu_start_thermal_timer(void)
 #else
 	tscpu_workqueue_start_timer();
 #endif
+
 }
 
 static void init_thermal(void)
@@ -2359,6 +2318,40 @@ static void tscpu_create_fs(void)
 	}
 }
 
+/* chip dependent */
+int tscpu_thermal_clock_on(void)
+{
+	int ret = -1;
+
+#if defined(CONFIG_MTK_CLKMGR)
+	tscpu_printk("%s\n", __func__);
+	/* ret = enable_clock(MT_CG_PERI_THERM, "THERMAL"); */
+#else
+	/* Use CCF instead */
+	tscpu_printk("%s CCF\n", __func__);
+	ret = clk_prepare_enable(therm_main);
+	if (ret)
+		tscpu_printk("Cannot enable thermal clock.\n");
+#endif
+	return ret;
+}
+
+/* chip dependent */
+int tscpu_thermal_clock_off(void)
+{
+	int ret = -1;
+
+#if defined(CONFIG_MTK_CLKMGR)
+	tscpu_printk("%s\n", __func__);
+	/*ret = disable_clock(MT_CG_PERI_THERM, "THERMAL"); */
+#else
+	/*Use CCF instead*/
+	tscpu_printk("%s CCF\n", __func__);
+	clk_disable_unprepare(therm_main);
+#endif
+	return ret;
+}
+
 /*must wait until AUXADC initial ready*/
 static int tscpu_thermal_probe(struct platform_device *dev)
 {
@@ -2453,11 +2446,19 @@ static int tscpu_thermal_probe(struct platform_device *dev)
 	return err;
 }
 
+
 static int __init tscpu_init(void)
 {
+
 	int err = 0;
 
 	tscpu_printk("%s\n", __func__);
+
+
+#ifdef MODULE
+	ta_init();
+	mtk_cooler_atm_init();
+#endif
 	/*set init val*/
 	tscpu_g_curr_temp = 0;
 	tscpu_g_prev_temp = 0;
@@ -2478,8 +2479,10 @@ static int __init tscpu_init(void)
 
 	return 0;
 
+
 err_unreg:
 	return err;
+
 }
 
 
@@ -2487,6 +2490,7 @@ static void __exit tscpu_exit(void)
 {
 
 	tscpu_dprintk("%s\n", __func__);
+
 
 #if MTK_TS_CPU_RT
 	if (ktp_thread_handle)
@@ -2500,6 +2504,14 @@ static void __exit tscpu_exit(void)
 #endif
 
 	mtkTTimer_unregister("mtktscpu");
+#ifdef MODULE
+	mtk_cooler_atm_exit();
+#endif
+
 }
 module_init(tscpu_init);
 module_exit(tscpu_exit);
+
+MODULE_DESCRIPTION("MEDIATEK Thermal zone CPU temperature sensor");
+MODULE_LICENSE("GPL v2");
+

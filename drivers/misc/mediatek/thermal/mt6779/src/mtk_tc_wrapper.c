@@ -51,20 +51,93 @@ int tscpu_ts_lvts_temp_v[L_TS_LVTS_NUM];
 #endif
 
 int tscpu_ts_temp[TS_ENUM_MAX];
+EXPORT_SYMBOL_GPL(tscpu_ts_temp);
 int tscpu_ts_temp_r[TS_ENUM_MAX];
-
+EXPORT_SYMBOL_GPL(tscpu_ts_temp_r);
 int tscpu_ts_mcu_temp[L_TS_MCU_NUM];
+EXPORT_SYMBOL_GPL(tscpu_ts_mcu_temp);
 int tscpu_ts_mcu_temp_r[L_TS_MCU_NUM];
+EXPORT_SYMBOL_GPL(tscpu_ts_mcu_temp_r);
+
+
 
 #if CFG_THERM_LVTS
 int tscpu_ts_lvts_temp[L_TS_LVTS_NUM];
+EXPORT_SYMBOL_GPL(tscpu_ts_lvts_temp);
 int tscpu_ts_lvts_temp_r[L_TS_LVTS_NUM];
+EXPORT_SYMBOL_GPL(tscpu_ts_lvts_temp_r);
 #endif
 
 int tscpu_curr_cpu_temp;
+EXPORT_SYMBOL_GPL(tscpu_curr_cpu_temp);
 int tscpu_curr_gpu_temp;
+EXPORT_SYMBOL_GPL(tscpu_curr_gpu_temp);
+
 
 static int tscpu_curr_max_ts_temp;
+
+#ifdef CONFIG_OF
+u32 thermal_irq_number;
+EXPORT_SYMBOL_GPL(thermal_irq_number);
+void __iomem *thermal_base;
+EXPORT_SYMBOL_GPL(thermal_base);
+void __iomem *auxadc_ts_base;
+EXPORT_SYMBOL_GPL(auxadc_ts_base);
+
+void __iomem *infracfg_ao_base;
+EXPORT_SYMBOL_GPL(infracfg_ao_base);
+
+
+void __iomem *th_apmixed_base;
+EXPORT_SYMBOL_GPL(th_apmixed_base);
+void __iomem *INFRACFG_AO_base;
+EXPORT_SYMBOL_GPL(INFRACFG_AO_base);
+int thermal_phy_base;
+EXPORT_SYMBOL_GPL(thermal_phy_base);
+int auxadc_ts_phy_base;
+EXPORT_SYMBOL_GPL(auxadc_ts_phy_base);
+int apmixed_phy_base;
+EXPORT_SYMBOL_GPL(apmixed_phy_base);
+
+int pericfg_phy_base;
+EXPORT_SYMBOL_GPL(pericfg_phy_base);
+
+#endif
+
+
+
+
+
+struct mt_gpufreq_power_table_info *mtk_gpu_power;
+EXPORT_SYMBOL_GPL(mtk_gpu_power);
+/* max GPU opp idx from GPU DVFS driver, default is 0 */
+int gpu_max_opp;
+EXPORT_SYMBOL_GPL(gpu_max_opp);
+
+		/* DVFS GPU */
+int Num_of_GPU_OPP;
+EXPORT_SYMBOL_GPL(Num_of_GPU_OPP);
+
+
+#if MTKTSCPU_FAST_POLLING
+/* Combined fast_polling_trip_temp and fast_polling_factor,
+ *it means polling_delay will be 1/5 of original interval
+ *after mtktscpu reports > 65C w/o exit point
+ */
+int fast_polling_trip_temp = 60000;
+EXPORT_SYMBOL_GPL(fast_polling_trip_temp);
+int fast_polling_trip_temp_high = 60000; /* deprecaed */
+EXPORT_SYMBOL_GPL(fast_polling_trip_temp_high);
+int fast_polling_factor = 1;
+EXPORT_SYMBOL_GPL(fast_polling_factor);
+int tscpu_cur_fp_factor = 1;
+EXPORT_SYMBOL_GPL(tscpu_cur_fp_factor);
+int tscpu_next_fp_factor = 1;
+EXPORT_SYMBOL_GPL(tscpu_next_fp_factor);
+
+#endif
+
+
 
 /*
  * PTP#	module		TSMCU Plan
@@ -94,7 +167,7 @@ int get_immediate_cpuL_wrap(void)
 
 	return curr_temp;
 }
-
+EXPORT_SYMBOL_GPL(get_immediate_cpuL_wrap);
 int get_immediate_cpuB_wrap(void)
 {
 	int curr_temp;
@@ -105,6 +178,7 @@ int get_immediate_cpuB_wrap(void)
 
 	return curr_temp;
 }
+EXPORT_SYMBOL_GPL(get_immediate_cpuB_wrap);
 
 int get_immediate_mcucci_wrap(void)
 {
@@ -184,7 +258,7 @@ int (*max_temperature_in_bank[THERMAL_BANK_NUM])(void) = {
 	get_immediate_top_wrap,
 	get_immediate_md_wrap
 };
-
+EXPORT_SYMBOL_GPL(max_temperature_in_bank);
 int get_immediate_ts0_wrap(void)
 {
 	int curr_temp;
@@ -422,7 +496,7 @@ int (*get_immediate_tsX[TS_ENUM_MAX])(void) = {
 #endif
 	get_immediate_tsabb_wrap, /* TS_ABB */
 };
-
+EXPORT_SYMBOL_GPL(get_immediate_tsX);
 /**
  * this only returns latest stored max ts temp but not updated from TC.
  */
@@ -430,6 +504,32 @@ int tscpu_get_curr_max_ts_temp(void)
 {
 	return tscpu_curr_max_ts_temp;
 }
+EXPORT_SYMBOL_GPL(tscpu_get_curr_max_ts_temp);
+
+
+#if CFG_THERM_LVTS == (0)
+int tscpu_max_temperature(void)
+{
+	int i, j, max = 0;
+
+	tscpu_dprintk("tscpu_get_temp %s, %d\n", __func__, __LINE__);
+
+	for (i = 0; i < ARRAY_SIZE(tscpu_g_tc); i++) {
+		for (j = 0; j < tscpu_g_tc[i].ts_number; j++) {
+			if (i == 0 && j == 0) {
+				max = tscpu_ts_temp[tscpu_g_tc[i].ts[j]];
+			} else {
+				if (max < tscpu_ts_temp[tscpu_g_tc[i].ts[j]])
+					max =
+					tscpu_ts_temp[tscpu_g_tc[i].ts[j]];
+			}
+		}
+	}
+
+	return max;
+}
+#endif
+
 
 #if CFG_THERM_LVTS
 int tscpu_max_temperature(void)
@@ -473,9 +573,10 @@ int tscpu_max_temperature(void)
 	return max;
 }
 #endif
-
+EXPORT_SYMBOL_GPL(tscpu_max_temperature);
 int tscpu_get_curr_temp(void)
 {
+
 	tscpu_update_tempinfo();
 
 #if PRECISE_HYBRID_POWER_BUDGET
@@ -510,7 +611,7 @@ int tscpu_get_curr_temp(void)
 
 	return tscpu_curr_max_ts_temp;
 }
-
+EXPORT_SYMBOL_GPL(tscpu_get_curr_temp);
 #if CONFIG_LVTS_ERROR_AEE_WARNING
 char mcu_s_array[TS_ENUM_MAX][11] = {
 	"TS_MCU0",
@@ -874,7 +975,7 @@ int tscpu_read_temperature_info(struct seq_file *m, void *v)
 #endif
 	return 0;
 }
-
+EXPORT_SYMBOL_GPL(tscpu_read_temperature_info);
 #if CFG_THERM_LVTS
 static int thermal_idle_notify_call(struct notifier_block *nfb,
 				unsigned long id,
@@ -995,41 +1096,8 @@ int get_io_reg_base(void)
 #endif
 	return 1;
 }
+EXPORT_SYMBOL_GPL(get_io_reg_base);
 #endif
-
-/* chip dependent */
-int tscpu_thermal_clock_on(void)
-{
-	int ret = -1;
-
-#if defined(CONFIG_MTK_CLKMGR)
-	tscpu_printk("%s\n", __func__);
-	/* ret = enable_clock(MT_CG_PERI_THERM, "THERMAL"); */
-#else
-	/* Use CCF instead */
-	tscpu_printk("%s CCF\n", __func__);
-	ret = clk_prepare_enable(therm_main);
-	if (ret)
-		tscpu_printk("Cannot enable thermal clock.\n");
-#endif
-	return ret;
-}
-
-/* chip dependent */
-int tscpu_thermal_clock_off(void)
-{
-	int ret = -1;
-
-#if defined(CONFIG_MTK_CLKMGR)
-	tscpu_printk("%s\n", __func__);
-	/*ret = disable_clock(MT_CG_PERI_THERM, "THERMAL"); */
-#else
-	/*Use CCF instead*/
-	tscpu_printk("%s CCF\n", __func__);
-	clk_disable_unprepare(therm_main);
-#endif
-	return ret;
-}
 
 #if defined(THERMAL_AEE_SELECTED_TS)
 int (*get_aee_selected_tsX[THERMAL_AEE_MAX_SELECTED_TS])(void) = {

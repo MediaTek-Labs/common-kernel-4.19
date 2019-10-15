@@ -35,7 +35,7 @@
  * a function to get GPU loading.
  */
 unsigned long (*mtk_thermal_get_gpu_loading_fp)(void) = NULL;
-EXPORT_SYMBOL(mtk_thermal_get_gpu_loading_fp);
+EXPORT_SYMBOL_GPL(mtk_thermal_get_gpu_loading_fp);
 
 bool __attribute__ ((weak))
 mtk_get_gpu_loading(unsigned int *pLoading)
@@ -451,7 +451,7 @@ int mtk_thermal_get_cpu_info(int *nocores, int **cpufreq, int **cpuloading)
 
 	return 0;
 }
-EXPORT_SYMBOL(mtk_thermal_get_cpu_info);
+EXPORT_SYMBOL_GPL(mtk_thermal_get_cpu_info);
 
 #define NO_GPU_CORES (1)
 static int gpufreqs[NO_GPU_CORES];
@@ -484,7 +484,7 @@ int mtk_thermal_get_gpu_info(int *nocores, int **gpufreq, int **gpuloading)
 
 	return 0;
 }
-EXPORT_SYMBOL(mtk_thermal_get_gpu_info);
+EXPORT_SYMBOL_GPL(mtk_thermal_get_gpu_info);
 
 /* ********************************************* */
 /* Get Extra Info */
@@ -512,7 +512,7 @@ int mtk_thermal_force_get_batt_temp(void)
 
 	return ret;
 }
-EXPORT_SYMBOL(mtk_thermal_force_get_batt_temp);
+EXPORT_SYMBOL_GPL(mtk_thermal_force_get_batt_temp);
 
 static unsigned int _thermal_scen;
 
@@ -522,23 +522,30 @@ unsigned int mtk_thermal_set_user_scenarios(unsigned int mask)
 	if ((mask & MTK_THERMAL_SCEN_CALL)) {
 		/* make mtk_ts_cpu.c aware of call scenario */
 		set_taklking_flag(true);
+
 		_thermal_scen |= (unsigned int)MTK_THERMAL_SCEN_CALL;
 	}
 	return _thermal_scen;
 }
-EXPORT_SYMBOL(mtk_thermal_set_user_scenarios);
+EXPORT_SYMBOL_GPL(mtk_thermal_set_user_scenarios);
 
 unsigned int mtk_thermal_clear_user_scenarios(unsigned int mask)
 {
 	/* only one scen is handled now... */
 	if ((mask & MTK_THERMAL_SCEN_CALL)) {
 		/* make mtk_ts_cpu.c aware of call scenario */
+
 		set_taklking_flag(false);
+
 		_thermal_scen &= ~((unsigned int)MTK_THERMAL_SCEN_CALL);
 	}
 	return _thermal_scen;
 }
-EXPORT_SYMBOL(mtk_thermal_clear_user_scenarios);
+EXPORT_SYMBOL_GPL(mtk_thermal_clear_user_scenarios);
 
 module_init(mtk_thermal_platform_init);
 module_exit(mtk_thermal_platform_exit);
+
+MODULE_DESCRIPTION("MEDIATEK Module Thermal platform");
+MODULE_LICENSE("GPL v2");
+

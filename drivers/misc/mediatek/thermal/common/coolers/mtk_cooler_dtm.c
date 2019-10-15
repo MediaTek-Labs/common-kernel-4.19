@@ -42,8 +42,7 @@
 static kuid_t uid = KUIDT_INIT(0);
 static kgid_t gid = KGIDT_INIT(1000);
 #endif
-int tscpu_cpu_dmips[CPU_COOLER_NUM] = { 0 };
-int mtktscpu_limited_dmips = 1;	/* Use in mtk_thermal_platform.c */
+
 static int previous_step = -1;
 static unsigned int *cl_dev_state;
 static int Num_of_OPP;
@@ -529,3 +528,7 @@ static void __exit mtk_cooler_dtm_exit(void)
 }
 module_init(mtk_cooler_dtm_init);
 module_exit(mtk_cooler_dtm_exit);
+
+MODULE_DESCRIPTION("MEDIATEK Module Thermal cooler DTM");
+MODULE_LICENSE("GPL v2");
+

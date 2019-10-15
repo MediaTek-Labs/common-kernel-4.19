@@ -830,3 +830,7 @@ static void __exit mtktspa_exit(void)
 }
 module_init(mtktspa_init);
 module_exit(mtktspa_exit);
+
+MODULE_DESCRIPTION("MEDIATEK Thermal zone RF transceiver temperature sensor");
+MODULE_LICENSE("GPL v2");
+

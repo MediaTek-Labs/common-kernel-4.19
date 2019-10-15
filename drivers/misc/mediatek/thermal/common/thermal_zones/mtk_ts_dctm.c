@@ -569,30 +569,6 @@ static ssize_t mtkts_dctm_write(struct file *file, const char __user *buffer,
 	kfree(ptr_tmp_data);
 	return -EINVAL;
 }
-#if 0
-static void mtkts_dctm_cancel_thermal_timer(void)
-{
-	/* cancel timer */
-	/* mtkts_dctm_printk("mtkts_dctm_cancel_thermal_timer\n"); */
-
-	/* stop thermal framework polling when entering deep idle */
-
-	if (thz_dev)
-		cancel_delayed_work(&(thz_dev->poll_queue));
-}
-
-static void mtkts_dctm_start_thermal_timer(void)
-{
-	/* mtkts_dctm_printk("mtkts_dctm_start_thermal_timer\n"); */
-
-	/* resume thermal framework polling when leaving deep idle */
-
-	if (thz_dev != NULL && interval != 0)
-		mod_delayed_work(system_freezable_power_efficient_wq,
-			&(thz_dev->poll_queue),
-			round_jiffies(msecs_to_jiffies(3000)));
-}
-#endif
 #ifdef CONFIG_PM
 static int dctm_pm_event(
 		struct notifier_block *notifier,
@@ -964,11 +940,6 @@ static int __init mtkts_dctm_init(void)
 	tskinInit(tpcbinit);
 
 	mtkts_dctm_register_thermal();
-#if 0
-		mtkTTimer_register("mtktsdctm",
-			mtkts_dctm_start_thermal_timer,
-			mtkts_dctm_cancel_thermal_timer);
-#endif
 #ifdef CONFIG_PM
 	ret = register_pm_notifier(&dctm_pm_notifier_func);
 	if (ret)
@@ -981,10 +952,11 @@ static void __exit mtkts_dctm_exit(void)
 {
 	mtkts_dctm_dprintk("[%s]\n", __func__);
 	mtkts_dctm_unregister_thermal();
-#if 0
-	mtkTTimer_unregister("mtktsdctm");
-#endif
 }
 
 module_init(mtkts_dctm_init);
 module_exit(mtkts_dctm_exit);
+
+MODULE_DESCRIPTION("MEDIATEK Thermal zone dctm temperature sensor");
+MODULE_LICENSE("GPL v2");
+

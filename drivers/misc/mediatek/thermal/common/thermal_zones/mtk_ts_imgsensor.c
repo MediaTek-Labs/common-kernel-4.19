@@ -906,3 +906,7 @@ static void __exit mtk_imgs_exit(void)
 }
 module_init(mtk_imgs_init);
 module_exit(mtk_imgs_exit);
+
+MODULE_DESCRIPTION("MEDIATEK Thermal zone image temperature sensor");
+MODULE_LICENSE("GPL v2");
+

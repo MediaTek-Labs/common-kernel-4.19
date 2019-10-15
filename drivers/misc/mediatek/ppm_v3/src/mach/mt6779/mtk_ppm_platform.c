@@ -289,7 +289,7 @@ int ppm_find_pwr_idx(struct ppm_cluster_status *cluster_status)
 
 	return pwr_idx;
 }
-
+EXPORT_SYMBOL(ppm_find_pwr_idx);
 int ppm_get_min_pwr_idx(void)
 {
 	struct ppm_cluster_status status[NR_PPM_CLUSTERS];

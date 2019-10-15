@@ -274,3 +274,7 @@ static void __exit mtk_cooler_sysrst_exit(void)
 }
 module_init(mtk_cooler_sysrst_init);
 module_exit(mtk_cooler_sysrst_exit);
+
+MODULE_DESCRIPTION("MEDIATEK Module Thermal cooler system reset");
+MODULE_LICENSE("GPL v2");
+

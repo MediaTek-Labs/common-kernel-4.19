@@ -248,3 +248,7 @@ static void __exit mtk_thermal_policy_exit(void)
 }
 module_init(mtk_thermal_policy_init);
 module_exit(mtk_thermal_policy_exit);
+
+MODULE_DESCRIPTION("MEDIATEK Module Thermal change policy");
+MODULE_LICENSE("GPL v2");
+

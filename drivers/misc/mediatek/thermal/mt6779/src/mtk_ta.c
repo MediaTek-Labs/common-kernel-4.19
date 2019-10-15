@@ -402,7 +402,7 @@ int wakeup_ta_algo(int flow_state)
 	g_ta_status = g_ta_status | 0x00001000;
 	return -1;
 }
-
+EXPORT_SYMBOL_GPL(wakeup_ta_algo);
 static int tsta_read_log(struct seq_file *m, void *v)
 {
 
@@ -522,7 +522,12 @@ static void tsta_create_fs(void)
 	}
 }
 
+/*move init function to mtk_ts_cpu, if module build*/
+#ifdef MODULE
+int ta_init(void)
+#else
 static int __init ta_init(void)
+#endif
 {
 	/*add by willcai for the userspace  to kernelspace*/
 	struct netlink_kernel_cfg cfg = {
@@ -553,10 +558,8 @@ static int __init ta_init(void)
 	return 0;
 
 }
-
-
-
-
-
+#ifdef MODULE
+EXPORT_SYMBOL_GPL(ta_init);
+#else
 module_init(ta_init);
-
+#endif
