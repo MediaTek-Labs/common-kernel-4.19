@@ -30,7 +30,7 @@ config MTK_ECCCI_CCIF
 	  The option default disabled.
 
 config MTK_ECCCI_C2K
-	tristate "ECCCI driver using CCIF HW to communicate wtih C2K modem"
+	bool "ECCCI driver using CCIF HW to communicate wtih C2K modem"
 	depends on MTK_ECCCI_DRIVER
 	default n
 	help
