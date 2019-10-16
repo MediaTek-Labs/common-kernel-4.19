@@ -14,7 +14,7 @@
 
 #include <linux/mfd/mt6397/core.h>
 #include <linux/regulator/consumer.h>
-
+#include <sound/tlv.h>
 #include <sound/soc.h>
 #include "mt6359.h"
 
@@ -678,177 +678,11 @@ static void headset_volume_ramp(struct mt6359_priv *priv,
 	}
 }
 
-static int dl_pga_get(struct snd_kcontrol *kcontrol,
-		      struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_component *cmpnt = snd_soc_kcontrol_component(kcontrol);
-	struct mt6359_priv *priv = snd_soc_component_get_drvdata(cmpnt);
-	unsigned int id = kcontrol->id.device;
-	int array_size, reg_minus_40db;
-
-
-	if (id == AUDIO_ANALOG_VOLUME_HPOUTL ||
-	    id == AUDIO_ANALOG_VOLUME_HPOUTR)
-		array_size = ARRAY_SIZE(hp_dl_pga_gain);
-	else
-		array_size = ARRAY_SIZE(dl_pga_gain);
-
-	reg_minus_40db = PGA_MINUS_40_DB_REG_VAL;
-
-	ucontrol->value.integer.value[0] = priv->ana_gain[id];
-
-	if (ucontrol->value.integer.value[0] == reg_minus_40db)
-		ucontrol->value.integer.value[0] = array_size - 1;
-
-	return 0;
-}
-
-static int dl_pga_set(struct snd_kcontrol *kcontrol,
-		      struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_component *cmpnt = snd_soc_kcontrol_component(kcontrol);
-	struct mt6359_priv *priv = snd_soc_component_get_drvdata(cmpnt);
-	int index = ucontrol->value.integer.value[0];
-	unsigned int id = kcontrol->id.device;
-	int array_size, reg_minus_40db;
-
-	dev_info(priv->dev, "%s(), id %d, index %d\n", __func__, id, index);
-
-	if (id == AUDIO_ANALOG_VOLUME_HPOUTL ||
-	    id == AUDIO_ANALOG_VOLUME_HPOUTR)
-		array_size = ARRAY_SIZE(hp_dl_pga_gain);
-	else
-		array_size = ARRAY_SIZE(dl_pga_gain);
-
-	reg_minus_40db = PGA_MINUS_40_DB_REG_VAL;
-
-	if (index >= array_size) {
-		dev_warn(priv->dev, "return -EINVAL\n");
-		return -EINVAL;
-	}
-
-	if (index == (array_size - 1))
-		index = reg_minus_40db;	/* reg idx for -40dB*/
-
-	switch (id) {
-	case AUDIO_ANALOG_VOLUME_HPOUTL:
-		regmap_update_bits(priv->regmap, MT6359_ZCD_CON2,
-				   RG_AUDHPLGAIN_MASK_SFT,
-				   index << RG_AUDHPLGAIN_SFT);
-		break;
-	case AUDIO_ANALOG_VOLUME_HPOUTR:
-		regmap_update_bits(priv->regmap, MT6359_ZCD_CON2,
-				   RG_AUDHPRGAIN_MASK_SFT,
-				   index << RG_AUDHPRGAIN_SFT);
-		break;
-	case AUDIO_ANALOG_VOLUME_HSOUTL:
-		regmap_update_bits(priv->regmap, MT6359_ZCD_CON3,
-				   RG_AUDHSGAIN_MASK_SFT,
-				   index << RG_AUDHSGAIN_SFT);
-		break;
-	case AUDIO_ANALOG_VOLUME_LINEOUTL:
-		regmap_update_bits(priv->regmap, MT6359_ZCD_CON1,
-				   RG_AUDLOLGAIN_MASK_SFT,
-				   index << RG_AUDLOLGAIN_SFT);
-		break;
-	case AUDIO_ANALOG_VOLUME_LINEOUTR:
-		regmap_update_bits(priv->regmap, MT6359_ZCD_CON1,
-				   RG_AUDLORGAIN_MASK_SFT,
-				   index << RG_AUDLORGAIN_SFT);
-		break;
-	default:
-		return 0;
-	}
-
-	priv->ana_gain[id] = index;
-	return 0;
-}
-
-static const struct soc_enum dl_pga_enum[] = {
-	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(dl_pga_gain), dl_pga_gain),
-	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(hp_dl_pga_gain), hp_dl_pga_gain),
-};
-
 #define MT_SOC_ENUM_EXT_ID(xname, xenum, xhandler_get, xhandler_put, id) \
 {	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = xname, .device = id,\
 	.info = snd_soc_info_enum_double, \
 	.get = xhandler_get, .put = xhandler_put, \
 	.private_value = (unsigned long)&xenum }
-
-static const struct snd_kcontrol_new mt6359_snd_controls[] = {
-	MT_SOC_ENUM_EXT_ID("Headset_PGAL_GAIN", dl_pga_enum[1],
-			   dl_pga_get, dl_pga_set,
-			   AUDIO_ANALOG_VOLUME_HPOUTL),
-	MT_SOC_ENUM_EXT_ID("Headset_PGAR_GAIN", dl_pga_enum[1],
-			   dl_pga_get, dl_pga_set,
-			   AUDIO_ANALOG_VOLUME_HPOUTR),
-	MT_SOC_ENUM_EXT_ID("Handset_PGA_GAIN", dl_pga_enum[0],
-			   dl_pga_get, dl_pga_set,
-			   AUDIO_ANALOG_VOLUME_HSOUTL),
-	MT_SOC_ENUM_EXT_ID("Lineout_PGAL_GAIN", dl_pga_enum[0],
-			   dl_pga_get, dl_pga_set,
-			   AUDIO_ANALOG_VOLUME_LINEOUTL),
-	MT_SOC_ENUM_EXT_ID("Lineout_PGAR_GAIN", dl_pga_enum[0],
-			   dl_pga_get, dl_pga_set,
-			   AUDIO_ANALOG_VOLUME_LINEOUTR),
-};
-
-/* ul pga gain */
-static const char *const ul_pga_gain[] = {
-	"0Db", "6Db", "12Db", "18Db", "24Db"
-};
-
-static const struct soc_enum ul_pga_enum[] = {
-	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(ul_pga_gain), ul_pga_gain),
-};
-
-static int ul_pga_get(struct snd_kcontrol *kcontrol,
-		      struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_component *cmpnt = snd_soc_kcontrol_component(kcontrol);
-	struct mt6359_priv *priv = snd_soc_component_get_drvdata(cmpnt);
-
-	ucontrol->value.integer.value[0] = priv->ana_gain[kcontrol->id.device];
-	return 0;
-}
-
-static int ul_pga_set(struct snd_kcontrol *kcontrol,
-		      struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_component *cmpnt = snd_soc_kcontrol_component(kcontrol);
-	struct mt6359_priv *priv = snd_soc_component_get_drvdata(cmpnt);
-	int index = ucontrol->value.integer.value[0];
-	unsigned int id = kcontrol->id.device;
-
-	dev_info(priv->dev, "%s(), id %d, index %d\n", __func__, id, index);
-	if (index > ARRAY_SIZE(ul_pga_gain)) {
-		dev_warn(priv->dev, "return -EINVAL\n");
-		return -EINVAL;
-	}
-
-	switch (id) {
-	case AUDIO_ANALOG_VOLUME_MICAMP1:
-		regmap_update_bits(priv->regmap, MT6359_AUDENC_ANA_CON0,
-				   RG_AUDPREAMPLGAIN_MASK_SFT,
-				   index << RG_AUDPREAMPLGAIN_SFT);
-		break;
-	case AUDIO_ANALOG_VOLUME_MICAMP2:
-		regmap_update_bits(priv->regmap, MT6359_AUDENC_ANA_CON1,
-				   RG_AUDPREAMPRGAIN_MASK_SFT,
-				   index << RG_AUDPREAMPRGAIN_SFT);
-		break;
-	case AUDIO_ANALOG_VOLUME_MICAMP3:
-		regmap_update_bits(priv->regmap, MT6359_AUDENC_ANA_CON2,
-				   RG_AUDPREAMP3GAIN_MASK_SFT,
-				   index << RG_AUDPREAMP3GAIN_SFT);
-		break;
-	default:
-		return 0;
-	}
-
-	priv->ana_gain[id] = index;
-	return 0;
-}
 
 /* Mic Type MUX */
 enum {
@@ -927,16 +761,102 @@ static int mic_type_set(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-static const struct snd_kcontrol_new mt6359_snd_ul_controls[] = {
-	MT_SOC_ENUM_EXT_ID("Audio_PGA1_Setting", ul_pga_enum[0],
-			   ul_pga_get, ul_pga_set,
-			   AUDIO_ANALOG_VOLUME_MICAMP1),
-	MT_SOC_ENUM_EXT_ID("Audio_PGA2_Setting", ul_pga_enum[0],
-			   ul_pga_get, ul_pga_set,
-			   AUDIO_ANALOG_VOLUME_MICAMP2),
-	MT_SOC_ENUM_EXT_ID("Audio_PGA3_Setting", ul_pga_enum[0],
-			   ul_pga_get, ul_pga_set,
-			   AUDIO_ANALOG_VOLUME_MICAMP3),
+static int mt6359_put_volsw(struct snd_kcontrol *kcontrol,
+			    struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *component =
+			snd_soc_kcontrol_component(kcontrol);
+	struct mt6359_priv *priv = snd_soc_component_get_drvdata(component);
+	struct soc_mixer_control *mc =
+			(struct soc_mixer_control *)kcontrol->private_value;
+	unsigned int reg;
+	int index = ucontrol->value.integer.value[0];
+	int ret;
+
+	ret = snd_soc_put_volsw(kcontrol, ucontrol);
+	if (ret < 0)
+		return ret;
+
+	switch (mc->reg) {
+	case MT6359_ZCD_CON2:
+		regmap_read(priv->regmap, MT6359_ZCD_CON2, &reg);
+		priv->ana_gain[AUDIO_ANALOG_VOLUME_HPOUTL] =
+			(reg >> RG_AUDHPLGAIN_SFT) & RG_AUDHPLGAIN_MASK;
+		priv->ana_gain[AUDIO_ANALOG_VOLUME_HPOUTR] =
+			(reg >> RG_AUDHPRGAIN_SFT) & RG_AUDHPRGAIN_MASK;
+		break;
+	case MT6359_ZCD_CON1:
+		regmap_read(priv->regmap, MT6359_ZCD_CON1, &reg);
+		priv->ana_gain[AUDIO_ANALOG_VOLUME_LINEOUTL] =
+			(reg >> RG_AUDLOLGAIN_SFT) & RG_AUDLOLGAIN_MASK;
+		priv->ana_gain[AUDIO_ANALOG_VOLUME_LINEOUTR] =
+			(reg >> RG_AUDLORGAIN_SFT) & RG_AUDLORGAIN_MASK;
+		break;
+	case MT6359_ZCD_CON3:
+		regmap_read(priv->regmap, MT6359_ZCD_CON3, &reg);
+		priv->ana_gain[AUDIO_ANALOG_VOLUME_HSOUTL] =
+			(reg >> RG_AUDHSGAIN_SFT) & RG_AUDHSGAIN_MASK;
+		break;
+	case MT6359_AUDENC_ANA_CON0:
+		regmap_read(priv->regmap, MT6359_AUDENC_ANA_CON0, &reg);
+		priv->ana_gain[AUDIO_ANALOG_VOLUME_MICAMP1] =
+			(reg >> RG_AUDPREAMPLGAIN_SFT) & RG_AUDPREAMPLGAIN_MASK;
+		break;
+	case MT6359_AUDENC_ANA_CON1:
+		regmap_read(priv->regmap, MT6359_AUDENC_ANA_CON1, &reg);
+		priv->ana_gain[AUDIO_ANALOG_VOLUME_MICAMP2] =
+			(reg >> RG_AUDPREAMPRGAIN_SFT) & RG_AUDPREAMPRGAIN_MASK;
+		break;
+	case MT6359_AUDENC_ANA_CON2:
+		regmap_read(priv->regmap, MT6359_AUDENC_ANA_CON2, &reg);
+		priv->ana_gain[AUDIO_ANALOG_VOLUME_MICAMP3] =
+			(reg >> RG_AUDPREAMP3GAIN_SFT) & RG_AUDPREAMP3GAIN_MASK;
+
+		break;
+	}
+
+	dev_info(priv->dev, "%s(), name %s, reg(0x%x) = 0x%x, set index = %x\n",
+		 __func__, kcontrol->id.name, mc->reg, reg, index);
+
+	return ret;
+}
+
+static const DECLARE_TLV_DB_SCALE(hp_playback_tlv, -2200, 100, 0);
+static const DECLARE_TLV_DB_SCALE(playback_tlv, -1000, 100, 0);
+static const DECLARE_TLV_DB_SCALE(capture_tlv, 0, 600, 0);
+
+static const struct snd_kcontrol_new mt6359_snd_controls[] = {
+	/* dl pga gain */
+	SOC_SINGLE_EXT_TLV("HeadsetL Volume",
+			   MT6359_ZCD_CON2, 0, 0x1E, 0,
+			   snd_soc_get_volsw, mt6359_put_volsw,
+			   hp_playback_tlv),
+	SOC_SINGLE_EXT_TLV("HeadsetR Volume",
+			   MT6359_ZCD_CON2, 7, 0x1E, 0,
+			   snd_soc_get_volsw, mt6359_put_volsw,
+			   hp_playback_tlv),
+	SOC_SINGLE_EXT_TLV("LineoutL Volume",
+			   MT6359_ZCD_CON1, 0, 0x12, 0,
+			   snd_soc_get_volsw, mt6359_put_volsw, playback_tlv),
+	SOC_SINGLE_EXT_TLV("LineoutR Volume",
+			   MT6359_ZCD_CON1, 7, 0x12, 0,
+			   snd_soc_get_volsw, mt6359_put_volsw, playback_tlv),
+	SOC_SINGLE_EXT_TLV("Handset Volume",
+			   MT6359_ZCD_CON3, 0, 0x12, 0,
+			   snd_soc_get_volsw, mt6359_put_volsw, playback_tlv),
+
+	/* ul pga gain */
+	SOC_SINGLE_EXT_TLV("PGAL Volume",
+			   MT6359_AUDENC_ANA_CON0, RG_AUDPREAMPLGAIN_SFT, 4, 0,
+			   snd_soc_get_volsw, mt6359_put_volsw, capture_tlv),
+	SOC_SINGLE_EXT_TLV("PGAR Volume",
+			   MT6359_AUDENC_ANA_CON1, RG_AUDPREAMPRGAIN_SFT, 4, 0,
+			   snd_soc_get_volsw, mt6359_put_volsw, capture_tlv),
+	SOC_SINGLE_EXT_TLV("PGA3 Volume",
+			   MT6359_AUDENC_ANA_CON2, RG_AUDPREAMP3GAIN_SFT, 4, 0,
+			   snd_soc_get_volsw, mt6359_put_volsw, capture_tlv),
+
+	/* mix type mux */
 	MT_SOC_ENUM_EXT_ID("Mic_Type_Mux_0", mic_type_mux_enum[0],
 			   mic_type_get, mic_type_set,
 			   MUX_MIC_TYPE_0),
@@ -3671,10 +3591,8 @@ static const struct snd_soc_dapm_route mt6359_dapm_routes[] = {
 	{"AIFTX_Supply", NULL, "LDO_VAUD18"},
 	{"AIFTX_Supply", NULL, "AUDGLB"},
 	{"AIFTX_Supply", NULL, "CLKSQ Audio"},
-
 	{"AIFTX_Supply", NULL, "AUD_CK"},
 	{"AIFTX_Supply", NULL, "AUDIF_CK"},
-
 	{"AIFTX_Supply", NULL, "AUDIO_TOP_AFE_CTL"},
 	{"AIFTX_Supply", NULL, "AUDIO_TOP_PWR_CLK"},
 	{"AIFTX_Supply", NULL, "AUDIO_TOP_PDN_RESERVED"},
@@ -3685,23 +3603,21 @@ static const struct snd_soc_dapm_route mt6359_dapm_routes[] = {
 	 */
 	{"AIFTX_Supply", NULL, "AUDIO_TOP_ADC_CTL"},
 	{"AIFTX_Supply", NULL, "AUDIO_TOP_ADDA6_ADC_CTL"},
-
 	{"AIFTX_Supply", NULL, "AFE_ON"},
 
 	/* ul ch 12 */
 	{"AIF1TX", NULL, "AIF Out Mux"},
-		{"AIF1TX", NULL, "AIFTX_Supply"},
-		{"AIF1TX", NULL, "UL_GPIO"},
-		{"AIF1TX", NULL, "MTKAIF_TX"},
+	{"AIF1TX", NULL, "AIFTX_Supply"},
+	{"AIF1TX", NULL, "UL_GPIO"},
+	{"AIF1TX", NULL, "MTKAIF_TX"},
 
 	{"AIF2TX", NULL, "AIF2 Out Mux"},
-		{"AIF2TX", NULL, "AIFTX_Supply"},
-		{"AIF2TX", NULL, "UL_GPIO"},
-		{"AIF2TX", NULL, "MTKAIF_TX"},
+	{"AIF2TX", NULL, "AIFTX_Supply"},
+	{"AIF2TX", NULL, "UL_GPIO"},
+	{"AIF2TX", NULL, "MTKAIF_TX"},
 
 	{"AIF Out Mux", "Normal Path", "MISO0_MUX"},
 	{"AIF Out Mux", "Normal Path", "MISO1_MUX"},
-
 	{"AIF2 Out Mux", "Normal Path", "MISO2_MUX"},
 
 	{"MISO0_MUX", "UL1_CH1", "UL_SRC_MUX"},
@@ -3723,13 +3639,11 @@ static const struct snd_soc_dapm_route mt6359_dapm_routes[] = {
 	{"UL_SRC_MUX", "AMIC", "ADC_R"},
 	{"UL_SRC_MUX", "DMIC", "DMIC0_MUX"},
 	{"UL_SRC_MUX", "DMIC", "DMIC1_MUX"},
-
-		{"UL_SRC_MUX", NULL, "UL_SRC"},
+	{"UL_SRC_MUX", NULL, "UL_SRC"},
 
 	{"UL2_SRC_MUX", "AMIC", "ADC_3"},
 	{"UL2_SRC_MUX", "DMIC", "DMIC2_MUX"},
-
-		{"UL2_SRC_MUX", NULL, "UL_SRC_34"},
+	{"UL2_SRC_MUX", NULL, "UL_SRC_34"},
 
 	{"DMIC0_MUX", "DMIC_DATA0", "AIN0_DMIC"},
 	{"DMIC0_MUX", "DMIC_DATA1_L", "AIN2_DMIC"},
@@ -3744,51 +3658,46 @@ static const struct snd_soc_dapm_route mt6359_dapm_routes[] = {
 	{"DMIC2_MUX", "DMIC_DATA1_L_1", "AIN2_DMIC"},
 	{"DMIC2_MUX", "DMIC_DATA1_R", "AIN3_DMIC"},
 
-		{"DMIC0_MUX", NULL, "UL_SRC_DMIC"},
-		{"DMIC1_MUX", NULL, "UL_SRC_DMIC"},
-		{"DMIC2_MUX", NULL, "UL_SRC_34_DMIC"},
+	{"DMIC0_MUX", NULL, "UL_SRC_DMIC"},
+	{"DMIC1_MUX", NULL, "UL_SRC_DMIC"},
+	{"DMIC2_MUX", NULL, "UL_SRC_34_DMIC"},
 
 	{"AIN0_DMIC", NULL, "DMIC_0"},
-
 	{"AIN2_DMIC", NULL, "DMIC_1"},
 	{"AIN3_DMIC", NULL, "DMIC_1"},
-
 	{"AIN2_DMIC", NULL, "MIC_BIAS_2"},
 	{"AIN3_DMIC", NULL, "MIC_BIAS_2"},
+
 	/* adc */
 	{"ADC_L", NULL, "ADC_L_Mux"},
-		{"ADC_L", NULL, "ADC_CLKGEN"},
-		{"ADC_L", NULL, "ADC_L_EN"},
+	{"ADC_L", NULL, "ADC_CLKGEN"},
+	{"ADC_L", NULL, "ADC_L_EN"},
 	{"ADC_R", NULL, "ADC_R_Mux"},
-		{"ADC_R", NULL, "ADC_CLKGEN"},
-		{"ADC_R", NULL, "ADC_R_EN"},
-		/*
-		 * amic fifo ch1/2 clk from ADC_L,
-		 * enable ADC_L even use ADC_R only
-		 */
-		{"ADC_R", NULL, "ADC_L_EN"},
+	{"ADC_R", NULL, "ADC_CLKGEN"},
+	{"ADC_R", NULL, "ADC_R_EN"},
+	/*
+	 * amic fifo ch1/2 clk from ADC_L,
+	 * enable ADC_L even use ADC_R only
+	 */
+	{"ADC_R", NULL, "ADC_L_EN"},
 	{"ADC_3", NULL, "ADC_3_Mux"},
-		{"ADC_3", NULL, "ADC_CLKGEN"},
-		{"ADC_3", NULL, "ADC_3_EN"},
+	{"ADC_3", NULL, "ADC_CLKGEN"},
+	{"ADC_3", NULL, "ADC_3_EN"},
 
 	{"ADC_L_Mux", "Left Preamplifier", "PGA_L"},
-
 	{"ADC_R_Mux", "Right Preamplifier", "PGA_R"},
-
 	{"ADC_3_Mux", "Preamplifier", "PGA_3"},
 
 	{"PGA_L", NULL, "PGA_L_Mux"},
-		{"PGA_L", NULL, "PGA_L_EN"},
-
+	{"PGA_L", NULL, "PGA_L_EN"},
 	{"PGA_R", NULL, "PGA_R_Mux"},
-		{"PGA_R", NULL, "PGA_R_EN"},
-
+	{"PGA_R", NULL, "PGA_R_EN"},
 	{"PGA_3", NULL, "PGA_3_Mux"},
-		{"PGA_3", NULL, "PGA_3_EN"},
+	{"PGA_3", NULL, "PGA_3_EN"},
 
-		{"PGA_L", NULL, "DCC_CLK", mt_dcc_clk_connect},
-		{"PGA_R", NULL, "DCC_CLK", mt_dcc_clk_connect},
-		{"PGA_3", NULL, "DCC_CLK", mt_dcc_clk_connect},
+	{"PGA_L", NULL, "DCC_CLK", mt_dcc_clk_connect},
+	{"PGA_R", NULL, "DCC_CLK", mt_dcc_clk_connect},
+	{"PGA_3", NULL, "DCC_CLK", mt_dcc_clk_connect},
 
 	{"PGA_L_Mux", "AIN0", "AIN0"},
 	{"PGA_L_Mux", "AIN1", "AIN1"},
@@ -3849,25 +3758,24 @@ static const struct snd_soc_dapm_route mt6359_dapm_routes[] = {
 
 	/* DL Path */
 	{"DAC In Mux", "Normal Path", "AIF_RX"},
-
 	{"DAC In Mux", "Sgen", "SGEN DL"},
-		{"SGEN DL", NULL, "SGEN DL SRC"},
-		{"SGEN DL", NULL, "SGEN MUTE"},
-		{"SGEN DL", NULL, "SGEN DL Enable"},
-		{"SGEN DL", NULL, "DL Digital Clock CH_1_2"},
-		{"SGEN DL", NULL, "DL Digital Clock CH_3"},
-		{"SGEN DL", NULL, "AUDIO_TOP_PDN_AFE_TESTMODEL"},
+	{"SGEN DL", NULL, "SGEN DL SRC"},
+	{"SGEN DL", NULL, "SGEN MUTE"},
+	{"SGEN DL", NULL, "SGEN DL Enable"},
+	{"SGEN DL", NULL, "DL Digital Clock CH_1_2"},
+	{"SGEN DL", NULL, "DL Digital Clock CH_3"},
+	{"SGEN DL", NULL, "AUDIO_TOP_PDN_AFE_TESTMODEL"},
 
 	{"DACL", NULL, "DAC In Mux"},
-		{"DACL", NULL, "DL Power Supply"},
+	{"DACL", NULL, "DL Power Supply"},
 
 	{"DACR", NULL, "DAC In Mux"},
-		{"DACR", NULL, "DL Power Supply"},
+	{"DACR", NULL, "DL Power Supply"},
 
 	/* DAC 3RD */
 	{"DAC In Mux", "Normal Path", "AIF2_RX"},
 	{"DAC_3RD", NULL, "DAC In Mux"},
-		{"DAC_3RD", NULL, "DL Power Supply"},
+	{"DAC_3RD", NULL, "DL Power Supply"},
 
 	/* Lineout Path */
 	{"LOL Mux", "Playback", "DAC_3RD"},
@@ -3898,17 +3806,17 @@ static const struct snd_soc_dapm_route mt6359_dapm_routes[] = {
 
 	/* VOW */
 	{"VOW TX", NULL, "VOW_UL_SRC_MUX"},
-		{"VOW TX", NULL, "CLK_BUF"},
-		{"VOW TX", NULL, "LDO_VAUD18"},
-		{"VOW TX", NULL, "AUDGLB"},
-		{"VOW TX", NULL, "AUDGLB_VOW", mt_vow_amic_connect},
-		{"VOW TX", NULL, "AUD_CK", mt_vow_amic_connect},
-		{"VOW TX", NULL, "VOW_AUD_LPW", mt_vow_amic_connect},
-		{"VOW TX", NULL, "VOW_CLK"},
-		{"VOW TX", NULL, "AUD_VOW"},
-		{"VOW TX", NULL, "VOW_LDO", mt_vow_amic_connect},
-		{"VOW TX", NULL, "VOW_DIG_CFG"},
-		{"VOW TX", NULL, "VOW_PERIODIC_CFG", mt_vow_amic_dcc_connect},
+	{"VOW TX", NULL, "CLK_BUF"},
+	{"VOW TX", NULL, "LDO_VAUD18"},
+	{"VOW TX", NULL, "AUDGLB"},
+	{"VOW TX", NULL, "AUDGLB_VOW", mt_vow_amic_connect},
+	{"VOW TX", NULL, "AUD_CK", mt_vow_amic_connect},
+	{"VOW TX", NULL, "VOW_AUD_LPW", mt_vow_amic_connect},
+	{"VOW TX", NULL, "VOW_CLK"},
+	{"VOW TX", NULL, "AUD_VOW"},
+	{"VOW TX", NULL, "VOW_LDO", mt_vow_amic_connect},
+	{"VOW TX", NULL, "VOW_DIG_CFG"},
+	{"VOW TX", NULL, "VOW_PERIODIC_CFG", mt_vow_amic_dcc_connect},
 	{"VOW_UL_SRC_MUX", "AMIC", "VOW_AMIC0_MUX"},
 	{"VOW_UL_SRC_MUX", "AMIC", "VOW_AMIC1_MUX"},
 	{"VOW_UL_SRC_MUX", "DMIC", "DMIC0_MUX"},
@@ -4446,9 +4354,6 @@ static int mt6359_codec_probe(struct snd_soc_component *cmpnt)
 	snd_soc_component_init_regmap(cmpnt, priv->regmap);
 
 	/* add codec controls */
-	snd_soc_add_component_controls(cmpnt,
-				       mt6359_snd_ul_controls,
-				       ARRAY_SIZE(mt6359_snd_ul_controls));
 	snd_soc_add_component_controls(cmpnt,
 				       mt6359_snd_misc_controls,
 				       ARRAY_SIZE(mt6359_snd_misc_controls));
