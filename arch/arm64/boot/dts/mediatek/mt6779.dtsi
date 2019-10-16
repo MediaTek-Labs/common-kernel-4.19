@@ -2518,6 +2518,8 @@ firmware_class.path=/vendor/firmware loop.max_part=7";
 			mediatek,mux_ccu = "clk_mmpll_d5_d2",
 				"clk_univpll_d3", "clk_adsppll_d5";
 
+			dvfsrc-vcore-supply = <&dvfsrc_vcore>;
+
 			clocks = <&topckgen CLK_TOP_MM>,
 				<&topckgen CLK_TOP_CAM>,
 				<&topckgen CLK_TOP_IMG>,
