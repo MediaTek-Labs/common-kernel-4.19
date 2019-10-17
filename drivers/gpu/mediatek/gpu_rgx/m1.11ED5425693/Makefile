@@ -251,4 +251,5 @@ ccflags-y += \
 
 
 
-obj-y += pvrsrvkm.o
+obj-$(CONFIG_MTK_GPU_SUPPORT) += pvrsrvkm.o
+

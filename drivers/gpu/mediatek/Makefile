@@ -13,7 +13,7 @@
 
 MTK_GPU_VERSION = $(subst ",,$(CONFIG_MTK_GPU_VERSION))
 
-ifeq ($(CONFIG_MTK_GPU_SUPPORT),y)
+ifneq ($(CONFIG_MTK_GPU_SUPPORT),)
 	obj-y += ged/
 	obj-y += hal/
 	obj-y += gpufreq/
