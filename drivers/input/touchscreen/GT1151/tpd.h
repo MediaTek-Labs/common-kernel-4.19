@@ -80,8 +80,6 @@ extern int tpd_wb_start[];
 extern int tpd_wb_end[];
 extern int tpd_v_magnify_x;
 extern int tpd_v_magnify_y;
-extern unsigned int DISP_GetScreenHeight(void);
-extern unsigned int DISP_GetScreenWidth(void);
 #if defined(CONFIG_MTK_S3320) || defined(CONFIG_MTK_S3320_47) || \
 	defined(CONFIG_MTK_S3320_50)
 extern void synaptics_init_sysfs(void);
@@ -179,4 +177,8 @@ void _tpd_switch_single_mode(void);
 void _tpd_switch_multiple_mode(void);
 void _tpd_switch_sleep_mode(void);
 void _tpd_switch_normal_mode(void);
+
+extern int gt1x_driver_init(void);
+extern void gt1x_driver_exit(void);
+extern int tpd_log_init(void);
 #endif

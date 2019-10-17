@@ -478,8 +478,8 @@ static int tpd_probe(struct platform_device *pdev)
 		|| strncmp(CONFIG_MTK_LCM_PHYSICAL_ROTATION, "270", 3) == 0) {
 #ifdef CONFIG_MTK_FB
 /*Fix build errors,as some projects  cannot support these apis while bring up*/
-		TPD_RES_Y = DISP_GetScreenWidth();
-		TPD_RES_X = DISP_GetScreenHeight();
+		TPD_RES_Y = tpd_dts_data.tpd_resolution[1];
+		TPD_RES_X = tpd_dts_data.tpd_resolution[0];
 #endif
 	} else
     #endif
@@ -488,8 +488,8 @@ static int tpd_probe(struct platform_device *pdev)
 #ifndef CONFIG_FPGA_EARLY_PORTING
 #if defined(CONFIG_MTK_FB) && defined(CONFIG_MTK_LCM)
 /*Fix build errors,as some projects  cannot support these apis while bring up*/
-		TPD_RES_X = DISP_GetScreenWidth();
-		TPD_RES_Y = DISP_GetScreenHeight();
+		TPD_RES_Y = tpd_dts_data.tpd_resolution[1];
+		TPD_RES_X = tpd_dts_data.tpd_resolution[0];
 #else
 /*for some projects, we do not use mtk framebuffer*/
 	TPD_RES_X = tpd_dts_data.tpd_resolution[0];
@@ -638,9 +638,13 @@ static void tpd_init_work_callback(struct work_struct *work)
 	if (platform_driver_register(&tpd_driver) != 0)
 		TPD_DMESG("unable to register touch panel driver.\n");
 }
+
 static int __init tpd_device_init(void)
 {
 	int res = 0;
+	/* load touch driver first  */
+	gt1x_driver_init();
+	tpd_log_init();
 
 	tpd_init_workqueue = create_singlethread_workqueue("mtk-tpd");
 	INIT_WORK(&tpd_init_work, tpd_init_work_callback);
@@ -651,14 +655,19 @@ static int __init tpd_device_init(void)
 	return 0;
 }
 /* should never be called */
+
 static void __exit tpd_device_exit(void)
 {
 	TPD_DMESG("MediaTek touch panel driver exit\n");
+	/* unload touch driver first */
+	gt1x_driver_exit();
+	tpd_log_init();
+
 	/* input_unregister_device(tpd->dev); */
 	platform_driver_unregister(&tpd_driver);
 }
 
-late_initcall(tpd_device_init);
+module_init(tpd_device_init);
 module_exit(tpd_device_exit);
 
 MODULE_LICENSE("GPL");

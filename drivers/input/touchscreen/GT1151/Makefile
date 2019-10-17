@@ -1,15 +1,8 @@
 # Linux driver folder
 ccflags-y += -I$(srctree)/drivers/input/touchscreen/GT1151/$(CONFIG_GT1151_CONFIG)/
 
-obj-y	+=  gt1x_generic.o
-obj-y	+=  gt1x_tools.o
-obj-y	+=  gt1x_tpd.o
-obj-y	+=  gt1x_update.o
-obj-y   +=  tpd_control.o
-obj-y   +=  tpd_button.o
-obj-y   +=  tpd_calibrate.o
-obj-y   +=  tpd_debug.o
-obj-y   +=  tpd_default.o
-obj-y   +=  tpd_misc.o
-obj-y   +=  tpd_setting.o
 
+obj-m :=gt1x.o
+gt1x-objs := gt1x_generic.o gt1x_tools.o gt1x_tpd.o gt1x_update.o tpd_control.o \
+	    tpd_button.o tpd_calibrate.o tpd_default.o tpd_misc.o \
+	    tpd_setting.o tpd_debug.o
