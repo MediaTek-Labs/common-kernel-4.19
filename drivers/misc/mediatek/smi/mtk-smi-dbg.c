@@ -250,11 +250,8 @@ static void mtk_smi_dbg_print(
 	if (!node.dev || !node.va)
 		return;
 
-	ret = pm_runtime_get_if_in_use(node.dev);
-	dev_info(node.dev, "===== %pa.%s:%u rpm:%d =====\n",
-		&node.pa, name, id, ret);
-	if (ret <= 0)
-		return;
+	pm_runtime_get_sync(node.dev);
+	dev_info(node.dev, "===== %pa.%s:%u =====\n", &node.pa, name, id);
 
 	for (i = 0, len = 0; i < regs_nr; i++) {
 		for (j = 0, diff = false; j < PRINT_NR; j++) {

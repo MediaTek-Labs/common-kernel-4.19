@@ -1,3 +1,3 @@
 # SPDX-License-Identifier: GPL-2.0
 
-obj-y += mtk-smi-dbg.o
+obj-$(CONFIG_MTK_SMI) += mtk-smi-dbg.o
