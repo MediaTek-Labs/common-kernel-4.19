@@ -688,3 +688,4 @@ err_unreg_smi:
 }
 
 module_init(mtk_smi_init);
+MODULE_LICENSE("GPL v2");
