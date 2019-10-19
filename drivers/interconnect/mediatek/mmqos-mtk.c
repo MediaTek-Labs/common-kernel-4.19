@@ -182,8 +182,13 @@ static int mtk_mmqos_aggregate(struct icc_node *node,
 static struct icc_node *mtk_mmqos_xlate(
 	struct of_phandle_args *spec, void *data)
 {
-	struct icc_onecell_data *icc_data = (struct icc_onecell_data *)data;
+	struct icc_onecell_data *icc_data;
 	s32 i;
+
+	if (!spec || !data)
+		return ERR_PTR(-EPROBE_DEFER);
+
+	icc_data = (struct icc_onecell_data *)data;
 
 	for (i = 0; i < icc_data->num_nodes; i++)
 		if (icc_data->nodes[i]->id == spec->args[0])
