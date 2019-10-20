@@ -1,0 +1,212 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Copyright (c) 2019 MediaTek Inc.
+ */
+
+/dts-v1/;
+#include "mt8168.dtsi"
+#include <dt-bindings/clock/mt8168-clk.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/pinctrl/mt8168-pinfunc.h>
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/phy/phy.h>
+
+/ {
+	model = "MediaTek MT8168 EVB";
+	compatible = "mediatek,mt8168-evb", "mediatek,mt8168";
+
+	mmc_fixed_3v3: fixedregulator@0 {
+		compatible = "regulator-fixed";
+		regulator-name = "mmc_power";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		enable-active-high;
+		regulator-always-on;
+	};
+
+	mmc_fixed_1v8_io: fixedregulator@1 {
+		compatible = "regulator-fixed";
+		regulator-name = "mmc_io";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		enable-active-high;
+		regulator-always-on;
+	};
+};
+
+&cpu0 {
+	clock-frequency = <10000000>;
+};
+
+&cpu1 {
+	clock-frequency = <10000000>;
+};
+
+&cpu2 {
+	clock-frequency = <10000000>;
+};
+
+&cpu3 {
+	clock-frequency = <10000000>;
+};
+
+&fstab {
+	vendor {
+		compatible = "android,vendor";
+		dev = "/dev/block/platform/soc/11230000.mmc/by-name/vendor";
+		type = "ext4";
+		mnt_flags = "ro";
+		fsmgr_flags = "wait,avb";
+	};
+};
+
+&mmc0 {
+	status = "okay";
+	pinctrl-names = "default", "state_uhs";
+	pinctrl-0 = <&mmc0_pins_default>;
+	pinctrl-1 = <&mmc0_pins_uhs>;
+	bus-width = <8>;
+	max-frequency = <200000000>;
+	cap-mmc-highspeed;
+	mmc-hs200-1_8v;
+	mmc-hs400-1_8v;
+	cap-cqe;
+	cap-cqe_dcmd;
+	hs400-ds-delay = <0x12012>;
+	vmmc-supply = <&mmc_fixed_3v3>;
+	vqmmc-supply = <&mmc_fixed_1v8_io>;
+	assigned-clocks = <&topckgen CLK_TOP_MSDC50_0_SEL>;
+	assigned-clock-parents = <&topckgen CLK_TOP_MSDCPLL>;
+	non-removable;
+	no-sd;
+	no-sdio;
+};
+
+&mmc1 {
+	status = "okay";
+	pinctrl-names = "default", "state_uhs";
+	pinctrl-0 = <&mmc1_pins_default>;
+	pinctrl-1 = <&mmc1_pins_uhs>;
+	bus-width = <4>;
+	max-frequency = <200000000>;
+	cap-sd-highspeed;
+	sd-uhs-sdr50;
+	sd-uhs-sdr104;
+	cd-gpios = <&pio 7 GPIO_ACTIVE_HIGH>;
+	vmmc-supply = <&mmc_fixed_3v3>;
+	vqmmc-supply = <&mmc_fixed_1v8_io>;
+	no-mmc;
+	no-sdio;
+};
+
+&pio {
+	pinctrl-names = "default";
+
+	mmc0_pins_default: mmc0default {
+		pins_clk {
+			pinmux = <MT8168_PIN_99_MSDC0_CLK__FUNC_MSDC0_CLK>;
+			bias-pull-down;
+		};
+
+		pins_cmd_dat {
+			pinmux = <MT8168_PIN_103_MSDC0_DAT0__FUNC_MSDC0_DAT0>,
+				 <MT8168_PIN_102_MSDC0_DAT1__FUNC_MSDC0_DAT1>,
+				 <MT8168_PIN_101_MSDC0_DAT2__FUNC_MSDC0_DAT2>,
+				 <MT8168_PIN_100_MSDC0_DAT3__FUNC_MSDC0_DAT3>,
+				 <MT8168_PIN_96_MSDC0_DAT4__FUNC_MSDC0_DAT4>,
+				 <MT8168_PIN_95_MSDC0_DAT5__FUNC_MSDC0_DAT5>,
+				 <MT8168_PIN_94_MSDC0_DAT6__FUNC_MSDC0_DAT6>,
+				 <MT8168_PIN_93_MSDC0_DAT7__FUNC_MSDC0_DAT7>,
+				 <MT8168_PIN_98_MSDC0_CMD__FUNC_MSDC0_CMD>;
+			input-enable;
+			bias-pull-up;
+		};
+
+		pins_rst {
+			pinmux = <MT8168_PIN_97_MSDC0_RSTB__FUNC_MSDC0_RSTB>;
+			bias-pull-up;
+		};
+	};
+
+	mmc0_pins_uhs: mmc0 {
+		pins_clk {
+			pinmux = <MT8168_PIN_99_MSDC0_CLK__FUNC_MSDC0_CLK>;
+			drive-strength = <MTK_DRIVE_6mA>;
+			bias-pull-down = <MTK_PUPD_SET_R1R0_01>;
+		};
+
+		pins_cmd_dat {
+			pinmux = <MT8168_PIN_103_MSDC0_DAT0__FUNC_MSDC0_DAT0>,
+				 <MT8168_PIN_102_MSDC0_DAT1__FUNC_MSDC0_DAT1>,
+				 <MT8168_PIN_101_MSDC0_DAT2__FUNC_MSDC0_DAT2>,
+				 <MT8168_PIN_100_MSDC0_DAT3__FUNC_MSDC0_DAT3>,
+				 <MT8168_PIN_96_MSDC0_DAT4__FUNC_MSDC0_DAT4>,
+				 <MT8168_PIN_95_MSDC0_DAT5__FUNC_MSDC0_DAT5>,
+				 <MT8168_PIN_94_MSDC0_DAT6__FUNC_MSDC0_DAT6>,
+				 <MT8168_PIN_93_MSDC0_DAT7__FUNC_MSDC0_DAT7>,
+				 <MT8168_PIN_98_MSDC0_CMD__FUNC_MSDC0_CMD>;
+			input-enable;
+			drive-strength = <MTK_DRIVE_6mA>;
+			bias-pull-up = <MTK_PUPD_SET_R1R0_01>;
+		};
+
+		pins_ds {
+			pinmux = <MT8168_PIN_104_MSDC0_DSL__FUNC_MSDC0_DSL>;
+			drive-strength = <MTK_DRIVE_6mA>;
+			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
+		};
+
+		pins_rst {
+			pinmux = <MT8168_PIN_97_MSDC0_RSTB__FUNC_MSDC0_RSTB>;
+			bias-pull-up;
+		};
+	};
+
+	mmc1_pins_default: mmc1default {
+		pins_clk {
+			pinmux = <MT8168_PIN_88_MSDC1_CLK__FUNC_MSDC1_CLK>;
+			drive-strength = <MTK_DRIVE_4mA>;
+			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
+		};
+
+		pins_cmd_dat {
+			pinmux = <MT8168_PIN_89_MSDC1_DAT0__FUNC_MSDC1_DAT0>,
+				 <MT8168_PIN_90_MSDC1_DAT1__FUNC_MSDC1_DAT1>,
+				 <MT8168_PIN_91_MSDC1_DAT2__FUNC_MSDC1_DAT2>,
+				 <MT8168_PIN_92_MSDC1_DAT3__FUNC_MSDC1_DAT3>,
+				 <MT8168_PIN_87_MSDC1_CMD__FUNC_MSDC1_CMD>;
+			input-enable;
+			drive-strength = <MTK_DRIVE_4mA>;
+			bias-pull-up = <MTK_PUPD_SET_R1R0_01>;
+		};
+
+		pins_insert {
+			pinmux = <MT8168_PIN_7_GPIO7__FUNC_GPIO7>;
+			bias-pull-up;
+		};
+	};
+
+	mmc1_pins_uhs: mmc1 {
+		pins_clk {
+			pinmux = <MT8168_PIN_88_MSDC1_CLK__FUNC_MSDC1_CLK>;
+			drive-strength = <MTK_DRIVE_6mA>;
+			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
+		};
+
+		pins_cmd_dat {
+			pinmux = <MT8168_PIN_89_MSDC1_DAT0__FUNC_MSDC1_DAT0>,
+				 <MT8168_PIN_90_MSDC1_DAT1__FUNC_MSDC1_DAT1>,
+				 <MT8168_PIN_91_MSDC1_DAT2__FUNC_MSDC1_DAT2>,
+				 <MT8168_PIN_92_MSDC1_DAT3__FUNC_MSDC1_DAT3>,
+				 <MT8168_PIN_87_MSDC1_CMD__FUNC_MSDC1_CMD>;
+			input-enable;
+			drive-strength = <MTK_DRIVE_6mA>;
+			bias-pull-up = <MTK_PUPD_SET_R1R0_01>;
+		};
+	};
+};
+
+&uart0 {
+	status="okay";
+};
