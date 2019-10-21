@@ -28,22 +28,21 @@
 #include <linux/mfd/mt6397/registers.h>
 #include <linux/mfd/mt6397/core.h>
 
-#define MTK_PMIC_PWRKEY_RST_EN_MASK	0x1
-#define MTK_PMIC_PWRKEY_RST_EN_SHIFT	6
-#define MTK_PMIC_HOMEKEY_RST_EN_MASK	0x1
-#define MTK_PMIC_HOMEKEY_RST_EN_SHIFT	5
-#define MTK_PMIC_RST_DU_MASK		0x3
-#define MTK_PMIC_RST_DU_SHIFT		8
-
-#define MTK_PMIC_PWRKEY_RST		\
-	(MTK_PMIC_PWRKEY_RST_EN_MASK << MTK_PMIC_PWRKEY_RST_EN_SHIFT)
-#define MTK_PMIC_HOMEKEY_RST		\
-	(MTK_PMIC_HOMEKEY_RST_EN_MASK << MTK_PMIC_HOMEKEY_RST_EN_SHIFT)
-
 #define MTK_PMIC_PWRKEY_INDEX	0
 #define MTK_PMIC_HOMEKEY_INDEX	1
 #define MTK_PMIC_MAX_KEY_COUNT	2
 
+#define MT6397_PWRKEY_RST_SHIFT		6
+#define MT6397_HOMEKEY_RST_SHIFT	5
+#define MT6397_RST_DU_SHIFT		8
+
+#define MT6359_PWRKEY_RST_SHIFT		9
+#define MT6359_HOMEKEY_RST_SHIFT	8
+#define MT6359_RST_DU_SHIFT		12
+
+#define PWRKEY_RST_EN			0x1
+#define HOMEKEY_RST_EN			0x1
+#define RST_DU_MASK			0x3
 #define INVALID_VALUE	0
 
 struct mtk_pmic_keys_regs {
@@ -68,6 +67,9 @@ struct mtk_pmic_regs {
 	const struct mtk_pmic_keys_regs keys_regs[MTK_PMIC_MAX_KEY_COUNT];
 	bool release_irq;
 	u32 pmic_rst_reg;
+	u32 pwrkey_rst_shift;
+	u32 homekey_rst_shift;
+	u32 rst_du_shift;
 };
 
 static const struct mtk_pmic_regs mt6397_regs = {
@@ -79,6 +81,9 @@ static const struct mtk_pmic_regs mt6397_regs = {
 		0x10, MT6397_INT_RSV, 0x8),
 	.release_irq = false,
 	.pmic_rst_reg = MT6397_TOP_RST_MISC,
+	.pwrkey_rst_shift = MT6397_PWRKEY_RST_SHIFT,
+	.homekey_rst_shift = MT6397_HOMEKEY_RST_SHIFT,
+	.rst_du_shift = MT6397_RST_DU_SHIFT,
 };
 
 static const struct mtk_pmic_regs mt6323_regs = {
@@ -90,6 +95,9 @@ static const struct mtk_pmic_regs mt6323_regs = {
 		0x4, MT6323_INT_MISC_CON, 0x8),
 	.release_irq = false,
 	.pmic_rst_reg = MT6323_TOP_RST_MISC,
+	.pwrkey_rst_shift = MT6397_PWRKEY_RST_SHIFT,
+	.homekey_rst_shift = MT6397_HOMEKEY_RST_SHIFT,
+	.rst_du_shift = MT6397_RST_DU_SHIFT,
 };
 
 static const struct mtk_pmic_regs mt6359_regs = {
@@ -101,6 +109,9 @@ static const struct mtk_pmic_regs mt6359_regs = {
 		INVALID_VALUE, MT6359_PSC_TOP_INT_CON0, 0x2),
 	.release_irq = true,
 	.pmic_rst_reg = MT6359_TOP_RST_MISC,
+	.pwrkey_rst_shift = MT6359_PWRKEY_RST_SHIFT,
+	.homekey_rst_shift = MT6359_HOMEKEY_RST_SHIFT,
+	.rst_du_shift = MT6359_RST_DU_SHIFT,
 };
 
 struct mtk_pmic_keys_info {
@@ -126,10 +137,14 @@ enum mtk_pmic_keys_lp_mode {
 };
 
 static void mtk_pmic_keys_lp_reset_setup(struct mtk_pmic_keys *keys,
-		u32 pmic_rst_reg)
+		const struct mtk_pmic_regs *pmic_regs)
 {
 	int ret;
 	u32 long_press_mode, long_press_debounce;
+	u32 pmic_rst_reg = pmic_regs->pmic_rst_reg;
+	u32 pwrkey_rst = PWRKEY_RST_EN << pmic_regs->pwrkey_rst_shift;
+	u32 homekey_rst =
+		HOMEKEY_RST_EN << pmic_regs->homekey_rst_shift;
 
 	ret = of_property_read_u32(keys->dev->of_node,
 		"power-off-time-sec", &long_press_debounce);
@@ -137,8 +152,8 @@ static void mtk_pmic_keys_lp_reset_setup(struct mtk_pmic_keys *keys,
 		long_press_debounce = 0;
 
 	regmap_update_bits(keys->regmap, pmic_rst_reg,
-			   MTK_PMIC_RST_DU_MASK << MTK_PMIC_RST_DU_SHIFT,
-			   long_press_debounce << MTK_PMIC_RST_DU_SHIFT);
+			   RST_DU_MASK << pmic_regs->rst_du_shift,
+			   long_press_debounce << pmic_regs->rst_du_shift);
 
 	ret = of_property_read_u32(keys->dev->of_node,
 		"mediatek,long-press-mode", &long_press_mode);
@@ -148,26 +163,26 @@ static void mtk_pmic_keys_lp_reset_setup(struct mtk_pmic_keys *keys,
 	switch (long_press_mode) {
 	case LP_ONEKEY:
 		regmap_update_bits(keys->regmap, pmic_rst_reg,
-				   MTK_PMIC_PWRKEY_RST,
-				   MTK_PMIC_PWRKEY_RST);
+				   pwrkey_rst,
+				   pwrkey_rst);
 		regmap_update_bits(keys->regmap, pmic_rst_reg,
-				   MTK_PMIC_HOMEKEY_RST,
+				   homekey_rst,
 				   0);
 		break;
 	case LP_TWOKEY:
 		regmap_update_bits(keys->regmap, pmic_rst_reg,
-				   MTK_PMIC_PWRKEY_RST,
-				   MTK_PMIC_PWRKEY_RST);
+				   pwrkey_rst,
+				   pwrkey_rst);
 		regmap_update_bits(keys->regmap, pmic_rst_reg,
-				   MTK_PMIC_HOMEKEY_RST,
-				   MTK_PMIC_HOMEKEY_RST);
+				   homekey_rst,
+				   homekey_rst);
 		break;
 	case LP_DISABLE:
 		regmap_update_bits(keys->regmap, pmic_rst_reg,
-				   MTK_PMIC_PWRKEY_RST,
+				   pwrkey_rst,
 				   0);
 		regmap_update_bits(keys->regmap, pmic_rst_reg,
-				   MTK_PMIC_HOMEKEY_RST,
+				   homekey_rst,
 				   0);
 		break;
 	default:
@@ -379,7 +394,7 @@ static int mtk_pmic_keys_probe(struct platform_device *pdev)
 		return error;
 	}
 
-	mtk_pmic_keys_lp_reset_setup(keys, mtk_pmic_regs->pmic_rst_reg);
+	mtk_pmic_keys_lp_reset_setup(keys, mtk_pmic_regs);
 
 	platform_set_drvdata(pdev, keys);
 
