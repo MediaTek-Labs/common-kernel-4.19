@@ -112,7 +112,11 @@ static void __exit mtk_efuse_exit(void)
 	return platform_driver_unregister(&mtk_efuse_driver);
 }
 
+#ifdef MODULE
 module_init(mtk_efuse_init);
+#else
+subsys_initcall(mtk_efuse_init);
+#endif
 module_exit(mtk_efuse_exit);
 
 MODULE_AUTHOR("Andrew-CT Chen <andrew-ct.chen@mediatek.com>");
