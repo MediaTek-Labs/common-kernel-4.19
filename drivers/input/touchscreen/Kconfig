@@ -1300,7 +1300,8 @@ config TOUCHSCREEN_ROHM_BU21023
 	  module will be called bu21023_ts.
 
 config TOUCHSCREEN_MTK_GT1151
-        tristate "GT1151 for Mediatek package"
+        bool "GT1151 for Mediatek package"
+        default n
         help
           Say Y here if you have GT1151 touch panel.
 

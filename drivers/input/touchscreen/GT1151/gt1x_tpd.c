@@ -59,7 +59,6 @@ static int tpd_wb_end_local[TPD_WARP_CNT] = TPD_WARP_END;
 static int tpd_def_calmat_local[8] = TPD_CALIBRATION_MATRIX;
 #endif
 
-
 static int tpd_event_handler(void *unused);
 static int tpd_i2c_probe(struct i2c_client *client,
 				const struct i2c_device_id *id);
@@ -1387,8 +1386,8 @@ void tpd_on(void)
 		GTP_ERROR("GTP later resume failed.");
 	tpd_halt = 0;
 }
-
-int  gt1x_driver_init(void)
+/* called when loaded into kernel */
+static int __init tpd_driver_init(void)
 {
 	GTP_INFO("Goodix touch panel driver init.");
 	tpd_get_dts_info();
@@ -1397,11 +1396,13 @@ int  gt1x_driver_init(void)
 
 	return 0;
 }
-EXPORT_SYMBOL_GPL(gt1x_driver_init);
 
-void  gt1x_driver_exit(void)
+/* should never be called */
+static void __exit tpd_driver_exit(void)
 {
 	GTP_INFO("MediaTek gt91xx touch panel driver exit\n");
 	tpd_driver_remove(&tpd_device_driver);
 }
-EXPORT_SYMBOL_GPL(gt1x_driver_exit);
+
+module_init(tpd_driver_init);
+module_exit(tpd_driver_exit);
