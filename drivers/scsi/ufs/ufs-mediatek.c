@@ -443,3 +443,4 @@ static struct platform_driver ufs_mtk_pltform = {
 
 module_platform_driver(ufs_mtk_pltform);
 
+MODULE_LICENSE("GPL v2");
