@@ -29,6 +29,8 @@ endif
 endif
 
 ifeq ($(CONFIG_GPU_VERSION_MALI_MIDGARD_R26P0),y)
+ifneq ($(CONFIG_MTK_GPU_SUPPORT),m)
 	obj-y += hal/
 	obj-y += gpu_mali/
+endif
 endif
