@@ -845,8 +845,7 @@
 };
 /* CONSYS end */
 
-&bat_gm30 {
-	extcon = <&mt6360_chg>;
+&mtk_gauge {
 	charger = <&mt6360_chg>;
 };
 

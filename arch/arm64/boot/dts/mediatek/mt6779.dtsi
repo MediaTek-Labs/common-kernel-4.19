@@ -3670,10 +3670,6 @@ firmware_class.path=/vendor/firmware loop.max_part=7";
 		gpio = <&pio 0 0>;
 	};
 
-	bat_gm30: battery {
-		compatible = "mediatek,bat_gm30";
-	};
-
 	mtk_m4u_debug {
 		compatible = "mediatek,mt6779-m4u-debug";
 	};
