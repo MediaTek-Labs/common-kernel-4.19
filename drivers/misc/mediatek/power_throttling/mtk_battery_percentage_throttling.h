@@ -24,19 +24,24 @@ enum BATTERY_PERCENT_PRIO_TAG {
 	BATTERY_PERCENT_PRIO_FLASHLIGHT = 5,
 	BATTERY_PERCENT_PRIO_VIDEO = 6,
 	BATTERY_PERCENT_PRIO_WIFI = 7,
-	BATTERY_PERCENT_PRIO_BACKLIGHT = 8
+	BATTERY_PERCENT_PRIO_BACKLIGHT = 8,
+	BATTERY_PERCENT_PRIO_UT = 9
 };
 
 typedef void (*battery_percent_callback)(BATTERY_PERCENT_LEVEL tag);
 
+void update_bat_per_ut_status(int status);
 #ifdef CONFIG_MTK_BATTERY_PERCENTAGE_POWER_THROTTLING
 void register_battery_percent_notify(
 		battery_percent_callback bp_cb,
 		BATTERY_PERCENT_PRIO prio_val);
+void unregister_battery_percent_notify(BATTERY_PERCENT_PRIO prio_val);
 #else
-static void register_battery_percent_notify(
+void register_battery_percent_notify(
 		battery_percent_callback bp_cb,
 		BATTERY_PERCENT_PRIO prio_val)
+{};
+void unregister_battery_percent_notify(BATTERY_PERCENT_PRIO prio_val)
 {};
 #endif
 

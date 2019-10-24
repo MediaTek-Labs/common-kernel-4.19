@@ -30,6 +30,13 @@ static struct battery_percent_callback_table bpcb_tb[BPCB_MAX_NUM] = { {0} };
 
 static struct notifier_block bp_nb;
 
+unsigned int ut_status;
+
+void update_bat_per_ut_status(int status)
+{
+	ut_status = status;
+}
+
 void register_battery_percent_notify(
 	battery_percent_callback bp_cb,
 	BATTERY_PERCENT_PRIO prio_val)
@@ -48,6 +55,18 @@ void register_battery_percent_notify(
 		if (bp_cb != NULL)
 			bp_cb(BATTERY_PERCENT_LEVEL_1);
 	}
+}
+
+void unregister_battery_percent_notify(BATTERY_PERCENT_PRIO prio_val)
+{
+	if (prio_val >= BPCB_MAX_NUM || prio_val < 0) {
+		pr_info("[%s] prio_val=%d, out of boundary\n",
+			__func__, prio_val);
+		return;
+	}
+
+	bpcb_tb[prio_val].bpcb = NULL;
+	pr_info("[%s] prio_val=%d\n", __func__, prio_val);
 }
 
 void exec_battery_percent_callback(
@@ -104,6 +123,14 @@ int bp_psy_event(struct notifier_block *nb, unsigned long event, void *v)
 		return NOTIFY_DONE;
 
 	bat_status = val.intval;
+
+	if (ut_status == 1) {
+		uisoc = BAT_PERCENT_LIMIT;
+		bat_status = POWER_SUPPLY_STATUS_DISCHARGING;
+	} else if (ut_status == 2) {
+		uisoc = BAT_PERCENT_LIMIT + 1;
+		bat_status = POWER_SUPPLY_STATUS_CHARGING;
+	}
 
 	if ((bat_status != POWER_SUPPLY_STATUS_CHARGING) &&
 		(g_battery_percent_level == BATTERY_PERCENT_LEVEL_0) &&
