@@ -2120,7 +2120,7 @@ static enum alarmtimer_restart sw_uisoc_timer_callback(
 	struct mtk_battery *gm;
 
 	gm = container_of(alarm,
-		struct mtk_battery, one_percent_timer);
+		struct mtk_battery, sw_uisoc_timer);
 	pr_debug("[%s]\n", __func__);
 	schedule_work(&gm->sw_uisoc_timer_work);
 	return ALARMTIMER_NORESTART;

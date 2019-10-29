@@ -715,7 +715,7 @@ static void mtk_battery_daemon_handler(void *nl_data,
 		memcpy(&gm->uisoc_int_ht_en,
 			&msg->fgd_data[0], sizeof(gm->uisoc_int_ht_en));
 		if (gm->uisoc_int_ht_en == 0) {
-			if (ver == GAUGE_NO_HW)
+			if (ver != GAUGE_NO_HW)
 				gauge_coulomb_stop(&gm->uisoc_plus);
 			else if (gm->soc != gm->ui_soc) {
 				ktime = ktime_set(60, 0);
