@@ -2560,6 +2560,11 @@ firmware_class.path=/vendor/firmware loop.max_part=7";
 				"clk_univpll_d2_d2";
 		};
 
+		mmdvfs_scen {
+			compatible = "mediatek,mmdvfs-scen";
+			dvfsrc-vcore-supply = <&dvfsrc_vcore>;
+		};
+
 		mmdvfs_wrapper_mm {
 			compatible = "mediatek,mt6779-mmdvfs-wrapper";
 			mediatek,name = "mm";
