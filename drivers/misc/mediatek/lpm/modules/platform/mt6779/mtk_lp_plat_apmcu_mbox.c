@@ -13,6 +13,8 @@
 
 #include <mtk_lp_plat_apmcu_mbox.h>
 
+
+
 struct mbox_ops {
 	void (*write)(int id, int *buf, unsigned int len);
 	void (*read)(int id, int *buf, unsigned int len);
