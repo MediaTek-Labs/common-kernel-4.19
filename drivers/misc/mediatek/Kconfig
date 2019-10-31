@@ -35,7 +35,6 @@ config MTK_CLKBUF_BBLPM
 
 config MTK_DCM_COMMON
 	tristate "Mediatek DCM COMMON"
-	default m
 	depends on ARCH_MEDIATEK && OF
 	help
 	  For Mediatek dcm control. Provid a common interface to
@@ -45,7 +44,6 @@ config MTK_DCM_COMMON
 
 config MTK_DCM_MT6779
 	tristate "Mediatek MT6779 DCM control"
-	default m
 	depends on ARCH_MEDIATEK && OF
 	select MTK_DCM_COMMON
 	help
