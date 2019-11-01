@@ -953,7 +953,7 @@ int _srclken_dts_map_internal(struct device_node *node, int idx)
 
 	buf = kzalloc(sizeof(char)*25, GFP_KERNEL);
 	if (!buf)
-		goto no_mem;
+		return -ENOMEM;
 
 	snprintf(buf, 25, "%s-%s-%s", srclken_dts[idx].base_n,
 			srclken_dts[idx].match, srclken_dts[idx].flag);
@@ -969,10 +969,6 @@ int _srclken_dts_map_internal(struct device_node *node, int idx)
 
 	return ret;
 
-no_mem:
-	pr_err("%s can't allocate memory %d\n",
-			__func__, ret);
-	return -ENOMEM;
 no_property:
 	kfree(buf);
 	pr_err("%s can't find property %d\n",
@@ -1002,6 +998,7 @@ int srclken_dts_map(struct platform_device *pdev)
 	hw = kzalloc(sizeof(hw), GFP_KERNEL);
 	if (!hw)
 		goto hw_no_mem;
+
 	hw->base = kzalloc(sizeof(void __iomem *) * MAX_BASE_NUM, GFP_KERNEL);
 	if (!hw->base)
 		goto base_no_mem;
@@ -1043,8 +1040,6 @@ val_no_mem:
 base_no_mem:
 	kfree(hw);
 hw_no_mem:
-	pr_err("%s can't allocate memory %d\n",
-			__func__, ret);
 	return -ENOMEM;
 no_property:
 	pr_err("%s can't find property %d\n",
