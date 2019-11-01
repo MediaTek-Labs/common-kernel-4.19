@@ -48,6 +48,7 @@ struct dvfsrc_soc_data {
 	u32 num_opp;
 	const struct dvfsrc_opp **opps;
 	bool vcore_check;
+	bool vopp_table_init;
 	int (*get_target_level)(struct mtk_dvfsrc *dvfsrc);
 	int (*get_current_level)(struct mtk_dvfsrc *dvfsrc);
 	u32 (*get_vcore_level)(struct mtk_dvfsrc *dvfsrc);
@@ -93,21 +94,20 @@ int mtk_dvfsrc_vcore_uv_table(u32 opp)
 }
 EXPORT_SYMBOL(mtk_dvfsrc_vcore_uv_table);
 
-static void mtk_dvfsrc_setup_vopp_table(void)
+int mtk_dvfsrc_vcore_opp_count(void)
+{
+	return num_vopp;
+}
+EXPORT_SYMBOL(mtk_dvfsrc_vcore_opp_count);
+
+static void mtk_dvfsrc_setup_vopp_table(struct mtk_dvfsrc *dvfsrc)
 {
 	int i;
 	struct arm_smccc_res ares;
+	u32 num_opp = dvfsrc->dvd->num_opp;
 
-	arm_smccc_smc(MTK_SIP_VCOREFS_CONTROL,
-		MTK_SIP_VCOREFS_VCORE_NUM,
-		0, 0, 0, 0, 0, 0,
-		&ares);
-
-	if (!ares.a0)
-		num_vopp = ares.a1;
-	else
-		return;
-
+	num_vopp =
+		dvfsrc->dvd->opps[dvfsrc->dram_type][num_opp - 1].vcore_opp + 1;
 	vopp_uv_tlb = kcalloc(num_vopp, sizeof(u32), GFP_KERNEL);
 
 	if (!vopp_uv_tlb)
@@ -128,8 +128,8 @@ static void mtk_dvfsrc_setup_vopp_table(void)
 		}
 	}
 	for (i = 0; i < num_vopp; i++)
-		pr_info("dvfsrc vopp[%d] = %d\n", i,
-			mtk_dvfsrc_vcore_uv_table(i));
+		dev_info(dvfsrc->dev, "dvfsrc vopp[%d] = %d\n",
+			i, mtk_dvfsrc_vcore_uv_table(i));
 
 }
 
@@ -619,6 +619,9 @@ static int mtk_dvfsrc_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, dvfsrc);
 	pstate_notifier_register(dvfsrc);
 
+	if ((dvfsrc->dvd->vopp_table_init) || (dvfsrc->dvd->vcore_check))
+		mtk_dvfsrc_setup_vopp_table(dvfsrc);
+
 	ret = devm_of_platform_populate(&pdev->dev);
 	if (ret)
 		dev_err(&pdev->dev, "Failed to populate dvfsrc context\n");
@@ -669,6 +672,7 @@ static const struct dvfsrc_soc_data mt6779_data = {
 	.num_opp = ARRAY_SIZE(dvfsrc_opp_mt6779_lp4),
 	.regs = mt6779_regs,
 	.vcore_check = true,
+	.vopp_table_init = true,
 	.get_target_level = mt6779_get_target_level,
 	.get_current_level = mt6779_get_current_level,
 	.get_vcore_level = mt6779_get_vcore_level,
@@ -703,13 +707,6 @@ static const struct of_device_id mtk_dvfsrc_of_match[] = {
 		/* sentinel */
 	},
 };
-
-static int dvfsrc_vcore_opp_setup(void)
-{
-	mtk_dvfsrc_setup_vopp_table();
-	return 0;
-}
-device_initcall(dvfsrc_vcore_opp_setup);
 
 static struct platform_driver mtk_dvfsrc_driver = {
 	.probe	= mtk_dvfsrc_probe,
