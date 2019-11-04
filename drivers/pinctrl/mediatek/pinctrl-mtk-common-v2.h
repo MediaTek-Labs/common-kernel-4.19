@@ -289,4 +289,7 @@ int mtk_pinconf_adv_pull_get(struct mtk_pinctrl *hw,
 			     u32 *val);
 
 bool mtk_is_virt_gpio(struct mtk_pinctrl *hw, unsigned int gpio_n);
+
+extern const struct dev_pm_ops mtk_eint_pm_ops_v2;
+
 #endif /* __PINCTRL_MTK_COMMON_V2_H */
