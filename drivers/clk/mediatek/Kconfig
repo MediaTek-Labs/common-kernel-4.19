@@ -337,6 +337,50 @@ config COMMON_CLK_MT8135
 	---help---
 	  This driver supports MediaTek MT8135 clocks.
 
+config COMMON_CLK_MT8168
+	bool "Clock driver for MediaTek MT8168"
+	depends on ARCH_MEDIATEK || COMPILE_TEST
+	select COMMON_CLK_MEDIATEK
+	default ARCH_MEDIATEK
+	---help---
+	  This driver supports MediaTek MT8168 basic clocks.
+
+config COMMON_CLK_MT8168_APU
+	bool "Clock driver for MediaTek MT8168 apu"
+	depends on COMMON_CLK_MT8168
+	---help---
+	  This driver supports MediaTek MT8168 apu clocks.
+
+config COMMON_CLK_MT8168_CAMSYS
+	bool "Clock driver for MediaTek MT8168 camsys"
+	depends on COMMON_CLK_MT8168
+	---help---
+	  This driver supports MediaTek MT8168 camsys clocks.
+
+config COMMON_CLK_MT8168_MFGCFG
+	bool "Clock driver for MediaTek MT8168 mfgcfg"
+	depends on COMMON_CLK_MT8168
+	---help---
+	  This driver supports MediaTek MT8168 mfgcfg clocks.
+
+config COMMON_CLK_MT8168_MMSYS
+	bool "Clock driver for MediaTek MT8168 mmsys"
+	depends on COMMON_CLK_MT8168
+	---help---
+	  This driver supports MediaTek MT8168 mmsys clocks.
+
+config COMMON_CLK_MT8168_VDECSYS
+	bool "Clock driver for MediaTek MT8168 vdecsys"
+	depends on COMMON_CLK_MT8168
+	---help---
+	  This driver supports MediaTek MT8168 vdecsys clocks.
+
+config COMMON_CLK_MT8168_VENCSYS
+	bool "Clock driver for MediaTek MT8168 vencsys"
+	depends on COMMON_CLK_MT8168
+	---help---
+	  This driver supports MediaTek MT8168 vencsys clocks.
+
 config COMMON_CLK_MT8173
 	bool "Clock driver for MediaTek MT8173"
 	depends on ARCH_MEDIATEK || COMPILE_TEST

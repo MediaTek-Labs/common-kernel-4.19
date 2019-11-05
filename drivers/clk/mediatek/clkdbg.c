@@ -1203,7 +1203,7 @@ static struct generic_pm_domain **get_all_genpd(void)
 		else if (r != 0)
 			pr_warn("%s(): of_genpd_add_device(%d)\n", __func__, r);
 		pds[num_pds] = pd_to_genpd(pdev->dev.pm_domain);
-		r = pm_genpd_remove_device(pds[num_pds], &pdev->dev);
+		r = pm_genpd_remove_device(&pdev->dev);
 		if (r != 0)
 			pr_warn("%s(): pm_genpd_remove_device(%d)\n",
 					__func__, r);
@@ -1730,7 +1730,7 @@ static void unreg_pdev_drv(const char *pdname, struct seq_file *s)
 		if (!allpd && strcmp(pdname, pd->name) != 0)
 			continue;
 
-		r = pm_genpd_remove_device(pd, &pderv[i].pdev->dev);
+		r = pm_genpd_remove_device(&pderv[i].pdev->dev);
 		if (r != 0 && s != NULL)
 			seq_printf(s, "%s(): pm_genpd_remove_device(%d)\n",
 						__func__, r);
