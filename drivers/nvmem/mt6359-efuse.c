@@ -4,6 +4,7 @@
  */
 
 #include <linux/delay.h>
+#include <linux/mfd/mt6357/registers.h>
 #include <linux/mfd/mt6359/registers.h>
 #include <linux/mfd/mt6397/core.h>
 #include <linux/module.h>
@@ -206,6 +207,13 @@ static int mt6359_efuse_probe(struct platform_device *pdev)
 	return 0;
 }
 
+static const struct efuse_chip_data mt6357_efuse_data = {
+	.reg_num = 128,
+	.base = MT6357_OTP_CON0,
+	.ck_pdn = MT6357_TOP_CKPDN_CON0,
+	.ck_pdn_hwen = MT6357_TOP_CKHWEN_CON0
+};
+
 static const struct efuse_chip_data mt6359_efuse_data = {
 	.reg_num = 128,
 	.base = MT6359_OTP_CON0,
@@ -215,6 +223,9 @@ static const struct efuse_chip_data mt6359_efuse_data = {
 
 static const struct of_device_id mt6359_efuse_of_match[] = {
 	{
+		.compatible = "mediatek,mt6357-efuse",
+		.data = &mt6357_efuse_data
+	}, {
 		.compatible = "mediatek,mt6359-efuse",
 		.data = &mt6359_efuse_data
 	}, {
