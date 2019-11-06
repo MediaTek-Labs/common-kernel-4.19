@@ -23,7 +23,7 @@ static void wake_up_gauge_coulomb(struct mtk_battery *gm)
 
 	pr_debug("%s %d %d\n",
 		__func__,
-		cs->wlock.active,
+		cs->wlock->active,
 		cs->coulomb_thread_timeout);
 
 	mutex_lock(&cs->hw_coulomb_lock);
@@ -31,8 +31,8 @@ static void wake_up_gauge_coulomb(struct mtk_battery *gm)
 	gauge_set_property(GAUGE_PROP_COULOMB_LT_INTERRUPT, 300);
 	mutex_unlock(&cs->hw_coulomb_lock);
 	spin_lock_irqsave(&cs->slock, flags);
-	if (cs->wlock.active == 0)
-		__pm_stay_awake(&cs->wlock);
+	if (cs->wlock->active == 0)
+		__pm_stay_awake(cs->wlock);
 	spin_unlock_irqrestore(&cs->slock, flags);
 
 	cs->coulomb_thread_timeout = true;
@@ -61,7 +61,7 @@ void gauge_coulomb_dump_list(struct mtk_battery *gm)
 		return;
 	pr_debug("%s %d %d\n",
 		__func__,
-		cs->wlock.active,
+		cs->wlock->active,
 		cs->coulomb_thread_timeout);
 
 	phead = &cs->coulomb_head_plus;
@@ -410,7 +410,7 @@ static int gauge_coulomb_thread(void *arg)
 		mutex_unlock(&cs->coulomb_lock);
 
 		spin_lock_irqsave(&cs->slock, flags);
-		__pm_relax(&cs->wlock);
+		__pm_relax(cs->wlock);
 		spin_unlock_irqrestore(&cs->slock, flags);
 
 		get_monotonic_boottime(&end);
@@ -446,7 +446,7 @@ void gauge_coulomb_service_init(struct mtk_battery *gm)
 	mutex_init(&cs->coulomb_lock);
 	mutex_init(&cs->hw_coulomb_lock);
 	spin_lock_init(&cs->slock);
-	wakeup_source_init(&cs->wlock, "gauge coulomb wakelock");
+	cs->wlock = wakeup_source_register("gauge coulomb wakelock");
 	init_waitqueue_head(&cs->wait_que);
 	kthread_run(gauge_coulomb_thread, cs, "gauge_coulomb_thread");
 

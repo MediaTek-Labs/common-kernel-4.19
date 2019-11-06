@@ -510,7 +510,7 @@ struct mtk_coulomb_service {
 	struct mutex hw_coulomb_lock;
 	unsigned long reset_coulomb;
 	spinlock_t slock;
-	struct wakeup_source wlock;
+	struct wakeup_source *wlock;
 	wait_queue_head_t wait_que;
 	bool coulomb_thread_timeout;
 	int fgclog_level;
