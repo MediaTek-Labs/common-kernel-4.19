@@ -73,7 +73,7 @@ static int mt6359_efuse_poll_busy(struct mt6359_efuse *efuse)
 	ret = regmap_read_poll_timeout(efuse->regmap,
 				       efuse->data->base + RG_OTP_RD_BUSY,
 				       val,
-				       !(val & RG_OTP_RD_BUSY),
+				       !(val & RG_OTP_RD_BUSY_MASK),
 				       EFUSE_POLL_DELAY_US,
 				       EFUSE_POLL_TIMEOUT);
 	if (ret) {
