@@ -27,7 +27,6 @@ static int emicen_probe(struct platform_device *pdev)
 	int ret;
 
 	pr_info("%s: module probe.\n", __func__);
-	emicen_pdev = pdev;
 	emicen_dev_ptr = devm_kmalloc(&pdev->dev,
 		sizeof(struct emicen_dev_t), GFP_KERNEL);
 	if (!emicen_dev_ptr)
@@ -84,6 +83,7 @@ static int emicen_probe(struct platform_device *pdev)
 		emicen_dev_ptr->emi_chn_base[i] = of_iomap(emichn_node, i);
 
 	platform_set_drvdata(pdev, emicen_dev_ptr);
+	emicen_pdev = pdev;
 
 	return ret;
 }
@@ -136,7 +136,12 @@ module_exit(emicen_drv_exit);
  */
 unsigned int mtk_emicen_get_ch_cnt(void)
 {
-	struct emicen_dev_t *emicen_dev_ptr =
+	struct emicen_dev_t *emicen_dev_ptr;
+
+	if (!emicen_pdev)
+		return 0;
+
+	emicen_dev_ptr =
 		(struct emicen_dev_t *)platform_get_drvdata(emicen_pdev);
 
 	return emicen_dev_ptr->ch_cnt;
@@ -150,7 +155,12 @@ EXPORT_SYMBOL(mtk_emicen_get_ch_cnt);
  */
 unsigned int mtk_emicen_get_rk_cnt(void)
 {
-	struct emicen_dev_t *emicen_dev_ptr =
+	struct emicen_dev_t *emicen_dev_ptr;
+
+	if (!emicen_pdev)
+		return 0;
+
+	emicen_dev_ptr =
 		(struct emicen_dev_t *)platform_get_drvdata(emicen_pdev);
 
 	return emicen_dev_ptr->rk_cnt;
@@ -165,7 +175,12 @@ EXPORT_SYMBOL(mtk_emicen_get_rk_cnt);
  */
 unsigned int mtk_emicen_get_rk_size(unsigned int rk_id)
 {
-	struct emicen_dev_t *emicen_dev_ptr =
+	struct emicen_dev_t *emicen_dev_ptr;
+
+	if (!emicen_pdev)
+		return 0;
+
+	emicen_dev_ptr =
 		(struct emicen_dev_t *)platform_get_drvdata(emicen_pdev);
 
 	if (rk_id < emicen_dev_ptr->rk_cnt)
