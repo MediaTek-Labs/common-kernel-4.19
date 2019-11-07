@@ -25,7 +25,7 @@ ccflags-y += \
 	-I$(srctree)/drivers/misc/mediatek/sspm/$(CONFIG_MTK_PLATFORM)
 endif
 
-ifneq ($(CONFIG_FPGA_EARLY_PORTING),y)
+ifneq ($(CONFIG_MTK_PPM), m)
 # main
 obj-y := mtk_ppm_main.o
 obj-y += mtk_ppm_interface.o
@@ -58,5 +58,6 @@ obj-y += mtk_ppm_policy_ut.o
 obj-y += mach/
 else
 # dummy driver to avoid build error
-obj-y := mtk_ppm_dummy.o
+obj-$(CONFIG_MTK_PPM) += ppm.o
+ppm-objs := mtk_ppm_dummy.o
 endif
