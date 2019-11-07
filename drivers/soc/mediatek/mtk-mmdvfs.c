@@ -89,13 +89,13 @@ static void set_all_muxes(struct mmdvfs_drv_data *drv_data, u32 opp_level)
 
 		if (err) {
 			pr_notice("prepare mux(%s) fail:%d opp_level:%d\n",
-				drv_data->muxes[i].mux_name, err, opp_level);
+				  drv_data->muxes[i].mux_name, err, opp_level);
 			continue;
 		}
 		err = clk_set_parent(mux, clk_src);
 		if (err)
 			pr_notice("set parent(%s) fail:%d opp_level:%d\n",
-				drv_data->muxes[i].mux_name, err, opp_level);
+				  drv_data->muxes[i].mux_name, err, opp_level);
 		clk_disable_unprepare(mux);
 	}
 }
@@ -114,21 +114,21 @@ static void set_all_hoppings(struct mmdvfs_drv_data *drv_data, u32 opp_level)
 
 		if (err) {
 			pr_notice("prepare hopping(%s) fail:%d opp_level:%d\n",
-				drv_data->hoppings[i].hopping_name,
-				err, opp_level);
+				  drv_data->hoppings[i].hopping_name,
+				  err, opp_level);
 			continue;
 		}
 		err = clk_set_rate(hopping, hopping_rate);
 		if (err)
 			pr_notice("set %s rate(%u) fail:%d opp_level:%d\n",
-				drv_data->hoppings[i].hopping_name,
-				hopping_rate, err, opp_level);
+				  drv_data->hoppings[i].hopping_name,
+				  hopping_rate, err, opp_level);
 		clk_disable_unprepare(hopping);
 	}
 }
 
-static void set_all_clk(
-	struct mmdvfs_drv_data *drv_data, u32 voltage, bool vol_inc)
+static void set_all_clk(struct mmdvfs_drv_data *drv_data,
+			u32 voltage, bool vol_inc)
 {
 	u32 i;
 	u32 opp_level;
@@ -164,7 +164,7 @@ static void set_all_clk(
 }
 
 static int regulator_event_notify(struct notifier_block *nb,
-				unsigned long event, void *data)
+				  unsigned long event, void *data)
 {
 	unsigned long uV;
 	struct mmdvfs_drv_data *drv_data;
@@ -183,21 +183,21 @@ static int regulator_event_notify(struct notifier_block *nb,
 			drv_data->need_change_voltage = true;
 		}
 		pr_debug("regulator event=PRE_VOLTAGE_CHANGE old=%lu new=%lu\n",
-			pvc_data->old_uV, pvc_data->min_uV);
+			 pvc_data->old_uV, pvc_data->min_uV);
 	} else if (event == REGULATOR_EVENT_VOLTAGE_CHANGE) {
 		uV = (unsigned long)data;
-		if (drv_data->need_change_voltage == true) {
+		if (drv_data->need_change_voltage) {
 			set_all_clk(drv_data, uV, true);
 			drv_data->need_change_voltage = false;
 			drv_data->request_voltage = uV;
 		}
 		pr_debug("regulator event=VOLTAGE_CHANGE voltage=%lu\n", uV);
 	} else if (event == REGULATOR_EVENT_ABORT_VOLTAGE_CHANGE) {
-		uV = (unsigned long) data;
+		uV = (unsigned long)data;
 		/* If clk was changed, restore to previous setting */
 		if (uV != drv_data->request_voltage) {
 			set_all_clk(drv_data, uV,
-				uV > drv_data->request_voltage);
+				    uV > drv_data->request_voltage);
 			drv_data->need_change_voltage = false;
 			drv_data->request_voltage = uV;
 		}
@@ -206,11 +206,6 @@ static int regulator_event_notify(struct notifier_block *nb,
 	}
 	return 0;
 }
-
-
-/*
- * mmdvfs driver init
- */
 
 static const struct of_device_id of_mmdvfs_match_tbl[] = {
 	{
@@ -330,19 +325,19 @@ static int mmdvfs_probe(struct platform_device *pdev)
 	if (!drv_data)
 		return -ENOMEM;
 
-	of_property_for_each_string(
-		dev->of_node, "mediatek,support_mux", mux_prop, mux_name) {
+	of_property_for_each_string(dev->of_node, "mediatek,support_mux",
+				    mux_prop, mux_name) {
 		if (num_mux >= MAX_MUX_NUM) {
 			pr_notice("Too many items in support_mux\n");
 			return -EINVAL;
 		}
 		drv_data->muxes[num_mux].mux = devm_clk_get(dev, mux_name);
 		drv_data->muxes[num_mux].mux_name = mux_name;
-		snprintf(prop_name, sizeof(prop_name)-1,
-			"mediatek,mux_%s", mux_name);
+		snprintf(prop_name, sizeof(prop_name) - 1,
+			 "mediatek,mux_%s", mux_name);
 		num_clksrc = 0;
-		of_property_for_each_string(
-			dev->of_node, prop_name, clksrc_prop, clksrc_name) {
+		of_property_for_each_string(dev->of_node, prop_name,
+					    clksrc_prop, clksrc_name) {
 			if (num_clksrc >= MAX_OPP_NUM) {
 				pr_notice("Too many items in %s\n", prop_name);
 				return -EINVAL;
@@ -356,7 +351,7 @@ static int mmdvfs_probe(struct platform_device *pdev)
 	drv_data->num_muxes = num_mux;
 
 	of_property_for_each_string(dev->of_node, "mediatek,support_hopping",
-		hopping_prop, hopping_name) {
+				    hopping_prop, hopping_name) {
 		if (num_hopping >= MAX_HOPPING_CLK_NUM) {
 			pr_notice("Too many items in support_hopping\n");
 			return -EINVAL;
@@ -364,17 +359,17 @@ static int mmdvfs_probe(struct platform_device *pdev)
 		drv_data->hoppings[num_hopping].hopping_clk =
 					devm_clk_get(dev, hopping_name);
 		drv_data->hoppings[num_hopping].hopping_name = hopping_name;
-		snprintf(prop_name, sizeof(prop_name)-1,
-			"mediatek,hopping_%s", hopping_name);
+		snprintf(prop_name, sizeof(prop_name) - 1,
+			 "mediatek,hopping_%s", hopping_name);
 		num_hopping_rate = 0;
 		of_property_for_each_u32(dev->of_node, prop_name,
-				hopping_rate_prop, p, hopping_rate) {
+					 hopping_rate_prop, p, hopping_rate) {
 			if (num_hopping_rate >= MAX_OPP_NUM) {
 				pr_notice("Too many items in %s\n", prop_name);
 				return -EINVAL;
 			}
-			drv_data->hoppings[num_hopping].hopping_rate[
-					num_hopping_rate] = hopping_rate;
+			drv_data->hoppings[num_hopping].hopping_rate
+					[num_hopping_rate] = hopping_rate;
 			num_hopping_rate++;
 		}
 		num_hopping++;
@@ -382,7 +377,7 @@ static int mmdvfs_probe(struct platform_device *pdev)
 	drv_data->num_hoppings = num_hopping;
 
 	of_property_read_u32(dev->of_node,
-		"mediatek,action", &drv_data->action);
+			     "mediatek,action", &drv_data->action);
 
 	/* Get voltage info from opp table */
 	dev_pm_opp_of_add_table(dev);
@@ -434,7 +429,6 @@ static struct platform_driver mmdvfs_drv = {
 	.probe = mmdvfs_probe,
 	.driver = {
 		.name = "mtk-mmdvfs",
-		.owner = THIS_MODULE,
 		.of_match_table = of_mmdvfs_match_tbl,
 	},
 };
