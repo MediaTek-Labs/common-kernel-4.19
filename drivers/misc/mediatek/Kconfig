@@ -53,9 +53,8 @@ config MTK_DCM_MT6779
 	  Select "n" if you do not need to change
 
 config MTK_QOS_FRAMEWORK
-	bool "MTK QOS FRAMEWORK"
+	tristate "MTK QOS FRAMEWORK"
 	depends on MTK_TINYSYS_SSPM_SUPPORT
-	default n
 	help
 	  This kernel config can be used to enable MTK QOS FRAMEWORK.
 	  When enabling this option, BW Limiter and BW Bound Detector
