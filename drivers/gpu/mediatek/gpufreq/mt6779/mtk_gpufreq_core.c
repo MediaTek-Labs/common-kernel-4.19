@@ -828,6 +828,7 @@ unsigned int mt_gpufreq_get_max_power(void)
 {
 	return (!g_power_table) ? 0 : g_power_table[0].gpufreq_power;
 }
+EXPORT_SYMBOL(mt_gpufreq_get_max_power);
 
 /* API : get min power on power table */
 unsigned int mt_gpufreq_get_min_power(void)
@@ -836,6 +837,7 @@ unsigned int mt_gpufreq_get_min_power(void)
 		return 0;
 	return g_power_table[g_opp_idx_num - 1].gpufreq_power;
 }
+EXPORT_SYMBOL(mt_gpufreq_get_min_power);
 
 /* API : get static leakage power */
 unsigned int mt_gpufreq_get_leakage_mw(void)
@@ -1110,6 +1112,7 @@ void mt_gpufreq_thermal_protect(unsigned int limited_power)
 
 	mutex_unlock(&mt_gpufreq_power_lock);
 }
+EXPORT_SYMBOL(mt_gpufreq_thermal_protect);
 
 /* API : set limited OPP table index by PBM */
 void mt_gpufreq_pbm_set_power_limit(unsigned int limited_power)
@@ -2488,10 +2491,17 @@ static void __mt_gpufreq_setup_opp_power_table(int num)
 				g_power_table[i].gpufreq_power);
 	}
 
-#ifdef CONFIG_MTK_LEGACY_THERMAL
-	mtk_gpufreq_register(g_power_table, num);
-#endif /* ifdef CONFIG_MTK_LEGACY_THERMAL */
 }
+#if IS_ENABLED(CONFIG_MTK_LEGACY_THERMAL)
+struct mt_gpufreq_power_table_info *mtk_gpufreq_get_powtab(int *num_ret)
+{
+	if (num_ret)
+		*num_ret = g_opp_idx_num;
+
+	return pass_gpu_table_to_eara();
+}
+EXPORT_SYMBOL(mtk_gpufreq_get_powtab);
+#endif /* ifdef CONFIG_MTK_LEGACY_THERMAL */
 
 /*
  *Set default OPP index at driver probe function
