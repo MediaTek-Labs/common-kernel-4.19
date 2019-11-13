@@ -36,6 +36,7 @@ void update_bat_per_ut_status(int status)
 {
 	ut_status = status;
 }
+EXPORT_SYMBOL(update_bat_per_ut_status);
 
 void register_battery_percent_notify(
 	battery_percent_callback bp_cb,
@@ -56,6 +57,7 @@ void register_battery_percent_notify(
 			bp_cb(BATTERY_PERCENT_LEVEL_1);
 	}
 }
+EXPORT_SYMBOL(register_battery_percent_notify);
 
 void unregister_battery_percent_notify(BATTERY_PERCENT_PRIO prio_val)
 {
@@ -68,6 +70,7 @@ void unregister_battery_percent_notify(BATTERY_PERCENT_PRIO prio_val)
 	bpcb_tb[prio_val].bpcb = NULL;
 	pr_info("[%s] prio_val=%d\n", __func__, prio_val);
 }
+EXPORT_SYMBOL(unregister_battery_percent_notify);
 
 void exec_battery_percent_callback(
 	enum BATTERY_PERCENT_LEVEL_TAG battery_percent_level)

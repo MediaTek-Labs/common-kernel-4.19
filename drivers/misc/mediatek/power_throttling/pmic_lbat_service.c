@@ -590,3 +590,7 @@ static struct platform_driver pmic_lbat_service_driver = {
 	.probe	= pmic_lbat_service_probe,
 };
 module_platform_driver(pmic_lbat_service_driver);
+
+MODULE_AUTHOR("Jeter Chen");
+MODULE_DESCRIPTION("MTK pmic lbat service driver");
+MODULE_LICENSE("GPL");
