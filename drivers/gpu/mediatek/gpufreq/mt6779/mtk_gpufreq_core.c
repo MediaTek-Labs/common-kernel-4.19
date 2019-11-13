@@ -67,13 +67,16 @@
 #include "mtk_static_power_mt6779.h"
 #endif /* ifdef MT_GPUFREQ_STATIC_PWR_READY2USE */
 
-#ifdef MT_GPUFREQ_BATT_OC_PROTECT
+#if IS_ENABLED(CONFIG_MTK_BATTERY_OC_POWER_THROTTLING) && \
+		defined(MT_GPUFREQ_BATT_OC_PROTECT)
 #include "mtk_battery_oc_throttling.h"
 #endif
-#ifdef MT_GPUFREQ_LOW_BATT_VOLT_PROTECT
+#if IS_ENABLED(CONFIG_MTK_LOW_BATTERY_POWER_THROTTLING) && \
+		defined(MT_GPUFREQ_LOW_BATT_VOLT_PROTECT)
 #include "mtk_low_battery_throttling.h"
 #endif
-#ifdef MT_GPUFREQ_BATT_PERCENT_PROTECT
+#if IS_ENABLED(CONFIG_MTK_BATTERY_PERCENTAGE_POWER_THROTTLING) && \
+		defined(MT_GPUFREQ_BATT_PERCENT_PROTECT)
 #include "mtk_battery_percentage_throttling.h"
 #endif
 
@@ -111,13 +114,16 @@ static void __mt_gpufreq_clock_switch(unsigned int freq_new);
 static void __mt_gpufreq_volt_switch(unsigned int volt_old,
 	unsigned int volt_new, unsigned int vsram_old,
 	unsigned int vsram_new);
-#ifdef MT_GPUFREQ_BATT_OC_PROTECT
+#if IS_ENABLED(CONFIG_MTK_BATTERY_OC_POWER_THROTTLING) && \
+		defined(MT_GPUFREQ_BATT_OC_PROTECT)
 static void __mt_gpufreq_batt_oc_protect(unsigned int limited_idx);
 #endif
-#ifdef MT_GPUFREQ_BATT_PERCENT_PROTECT
+#if IS_ENABLED(CONFIG_MTK_BATTERY_PERCENTAGE_POWER_THROTTLING) && \
+		defined(MT_GPUFREQ_BATT_PERCENT_PROTECT)
 static void __mt_gpufreq_batt_percent_protect(unsigned int limited_index);
 #endif
-#ifdef MT_GPUFREQ_LOW_BATT_VOLT_PROTECT
+#if IS_ENABLED(CONFIG_MTK_LOW_BATTERY_POWER_THROTTLING) && \
+		defined(MT_GPUFREQ_LOW_BATT_VOLT_PROTECT)
 static void __mt_gpufreq_low_batt_protect(unsigned int limited_index);
 #endif
 #ifdef MT_GPUFREQ_DYNAMIC_POWER_TABLE_UPDATE
@@ -322,21 +328,24 @@ static unsigned int g_pbm_limited_power;
 static unsigned int g_thermal_protect_power;
 static unsigned int g_DVFS_off_by_ptpod_idx;
 static unsigned int g_opp_springboard_idx;
-#ifdef MT_GPUFREQ_BATT_OC_PROTECT
+#if IS_ENABLED(CONFIG_MTK_BATTERY_OC_POWER_THROTTLING) && \
+		defined(MT_GPUFREQ_BATT_OC_PROTECT)
 static bool g_batt_oc_limited_ignore_state;
 static unsigned int g_batt_oc_level;
 static unsigned int g_batt_oc_limited_idx;
 static unsigned int g_batt_oc_limited_idx_lvl_0;
 static unsigned int g_batt_oc_limited_idx_lvl_1;
 #endif /* ifdef MT_GPUFREQ_BATT_OC_PROTECT */
-#ifdef MT_GPUFREQ_BATT_PERCENT_PROTECT
+#if IS_ENABLED(CONFIG_MTK_BATTERY_PERCENTAGE_POWER_THROTTLING) && \
+		defined(MT_GPUFREQ_BATT_PERCENT_PROTECT)
 static bool g_batt_percent_limited_ignore_state;
 static unsigned int g_batt_percent_level;
 static unsigned int g_batt_percent_limited_idx;
 static unsigned int g_batt_percent_limited_idx_lv_0;
 static unsigned int g_batt_percent_limited_idx_lv_1;
 #endif /* ifdef MT_GPUFREQ_BATT_PERCENT_PROTECT */
-#ifdef MT_GPUFREQ_LOW_BATT_VOLT_PROTECT
+#if IS_ENABLED(CONFIG_MTK_LOW_BATTERY_POWER_THROTTLING) && \
+		defined(MT_GPUFREQ_LOW_BATT_VOLT_PROTECT)
 static bool g_low_batt_limited_ignore_state;
 static unsigned int g_low_battery_level;
 static unsigned int g_low_batt_limited_idx;
@@ -957,7 +966,8 @@ int mt_gpufreq_get_cur_ceiling_idx(void)
 }
 EXPORT_SYMBOL(mt_gpufreq_get_cur_ceiling_idx);
 
-#ifdef MT_GPUFREQ_BATT_OC_PROTECT
+#if IS_ENABLED(CONFIG_MTK_BATTERY_OC_POWER_THROTTLING) && \
+		defined(MT_GPUFREQ_BATT_OC_PROTECT)
 /*
  * API : Over Currents(OC) Callback
  */
@@ -990,7 +1000,8 @@ void mt_gpufreq_batt_oc_callback(enum BATTERY_OC_LEVEL_TAG battery_oc_level)
 }
 #endif /* ifdef MT_GPUFREQ_BATT_OC_PROTECT */
 
-#ifdef MT_GPUFREQ_BATT_PERCENT_PROTECT
+#if IS_ENABLED(CONFIG_MTK_BATTERY_PERCENTAGE_POWER_THROTTLING) && \
+		defined(MT_GPUFREQ_BATT_PERCENT_PROTECT)
 /*
  * API : Battery Percentage Callback
  */
@@ -1030,7 +1041,8 @@ mt_gpufreq_batt_percent_callback(enum BATTERY_PERCENT_LEVEL_TAG bat_percent_lv)
 }
 #endif /* ifdef MT_GPUFREQ_BATT_PERCENT_PROTECT */
 
-#ifdef MT_GPUFREQ_LOW_BATT_VOLT_PROTECT
+#if IS_ENABLED(CONFIG_MTK_LOW_BATTERY_POWER_THROTTLING) && \
+		defined(MT_GPUFREQ_LOW_BATT_VOLT_PROTECT)
 /*
  * API : Low Battery Volume Callback
  */
@@ -1334,15 +1346,18 @@ out:
 static int mt_gpufreq_power_limited_proc_show(struct seq_file *m, void *v)
 {
 	seq_puts(m, "GPU-DVFS power limited state ....\n");
-#ifdef MT_GPUFREQ_BATT_OC_PROTECT
+#if IS_ENABLED(CONFIG_MTK_BATTERY_OC_POWER_THROTTLING) && \
+		defined(MT_GPUFREQ_BATT_OC_PROTECT)
 	seq_printf(m, "g_batt_oc_limited_ignore_state = %d\n",
 		g_batt_oc_limited_ignore_state);
 #endif
-#ifdef MT_GPUFREQ_BATT_PERCENT_PROTECT
+#if IS_ENABLED(CONFIG_MTK_BATTERY_PERCENTAGE_POWER_THROTTLING) && \
+		defined(MT_GPUFREQ_BATT_PERCENT_PROTECT)
 	seq_printf(m, "g_batt_percent_limited_ignore_state = %d\n",
 		g_batt_percent_limited_ignore_state);
 #endif
-#ifdef MT_GPUFREQ_LOW_BATT_VOLT_PROTECT
+#if IS_ENABLED(CONFIG_MTK_LOW_BATTERY_POWER_THROTTLING) && \
+		defined(MT_GPUFREQ_LOW_BATT_VOLT_PROTECT)
 	seq_printf(m, "g_low_batt_limited_ignore_state = %d\n",
 		g_low_batt_limited_ignore_state);
 #endif
@@ -1380,13 +1395,16 @@ static ssize_t mt_gpufreq_power_limited_proc_write(struct file *file,
 	unsigned int size;
 	unsigned int value = 0;
 	static const char * const array[] = {
-#ifdef MT_GPUFREQ_BATT_OC_PROTECT
+#if IS_ENABLED(CONFIG_MTK_BATTERY_OC_POWER_THROTTLING) && \
+		defined(MT_GPUFREQ_BATT_OC_PROTECT)
 		"ignore_batt_oc",
 #endif /* ifdef MT_GPUFREQ_BATT_OC_PROTECT */
-#ifdef MT_GPUFREQ_BATT_PERCENT_PROTECT
+#if IS_ENABLED(CONFIG_MTK_BATTERY_PERCENTAGE_POWER_THROTTLING) && \
+		defined(MT_GPUFREQ_BATT_PERCENT_PROTECT)
 		"ignore_batt_percent",
 #endif /* ifdef MT_GPUFREQ_BATT_PERCENT_PROTECT */
-#ifdef MT_GPUFREQ_LOW_BATT_VOLT_PROTECT
+#if IS_ENABLED(CONFIG_MTK_LOW_BATTERY_POWER_THROTTLING) && \
+		defined(MT_GPUFREQ_LOW_BATT_VOLT_PROTECT)
 		"ignore_low_batt",
 #endif /* ifdef MT_GPUFREQ_LOW_BATT_VOLT_PROTECT */
 		"ignore_thermal_protect",
@@ -1422,7 +1440,8 @@ static ssize_t mt_gpufreq_power_limited_proc_write(struct file *file,
 					mt_gpufreq_thermal_protect(value);
 					break;
 				}
-#ifdef MT_GPUFREQ_BATT_OC_PROTECT
+#if IS_ENABLED(CONFIG_MTK_BATTERY_OC_POWER_THROTTLING) && \
+		defined(MT_GPUFREQ_BATT_OC_PROTECT)
 				mt_gpufreq_plim_proc_write_op(array[i],
 					strlen(array[i]), "ignore_batt_oc",
 					&g_batt_oc_limited_ignore_state,
@@ -1431,7 +1450,8 @@ static ssize_t mt_gpufreq_power_limited_proc_write(struct file *file,
 					if (found)
 						break;
 #endif /* ifdef MT_GPUFREQ_BATT_OC_PROTECT */
-#ifdef MT_GPUFREQ_BATT_PERCENT_PROTECT
+#if IS_ENABLED(CONFIG_MTK_BATTERY_PERCENTAGE_POWER_THROTTLING) && \
+		defined(MT_GPUFREQ_BATT_PERCENT_PROTECT)
 				mt_gpufreq_plim_proc_write_op(array[i],
 					strlen(array[i]),
 					"ignore_batt_percent",
@@ -1441,7 +1461,8 @@ static ssize_t mt_gpufreq_power_limited_proc_write(struct file *file,
 					if (found)
 						break;
 #endif /* ifdef MT_GPUFREQ_BATT_PERCENT_PROTECT */
-#ifdef MT_GPUFREQ_LOW_BATT_VOLT_PROTECT
+#if IS_ENABLED(CONFIG_MTK_LOW_BATTERY_POWER_THROTTLING) && \
+		defined(MT_GPUFREQ_LOW_BATT_VOLT_PROTECT)
 				mt_gpufreq_plim_proc_write_op(array[i],
 					strlen(array[i]),
 					"ignore_low_batt",
@@ -2299,7 +2320,8 @@ static void __mt_gpufreq_update_max_limited_idx(void)
 		__func__, g_max_limited_idx);
 }
 
-#ifdef MT_GPUFREQ_BATT_OC_PROTECT
+#if IS_ENABLED(CONFIG_MTK_BATTERY_OC_POWER_THROTTLING) && \
+		defined(MT_GPUFREQ_BATT_OC_PROTECT)
 /*
  * limit OPP index for Over Currents (OC) protection
  */
@@ -2316,7 +2338,8 @@ static void __mt_gpufreq_batt_oc_protect(unsigned int limited_idx)
 }
 #endif /* ifdef MT_GPUFREQ_BATT_OC_PROTECT */
 
-#ifdef MT_GPUFREQ_BATT_PERCENT_PROTECT
+#if IS_ENABLED(CONFIG_MTK_BATTERY_PERCENTAGE_POWER_THROTTLING) && \
+		defined(MT_GPUFREQ_BATT_PERCENT_PROTECT)
 /*
  * limit OPP index for Battery Percentage protection
  */
@@ -2333,7 +2356,8 @@ static void __mt_gpufreq_batt_percent_protect(unsigned int limited_index)
 }
 #endif /* ifdef MT_GPUFREQ_BATT_PERCENT_PROTECT */
 
-#ifdef MT_GPUFREQ_LOW_BATT_VOLT_PROTECT
+#if IS_ENABLED(CONFIG_MTK_LOW_BATTERY_POWER_THROTTLING) && \
+		defined(MT_GPUFREQ_LOW_BATT_VOLT_PROTECT)
 /*
  * limit OPP index for Low Battery Volume protection
  */
@@ -2734,7 +2758,8 @@ static int __mt_gpufreq_pdrv_probe(struct platform_device *pdev)
 	 *		g_cur_opp_cond_idx);
 	 */
 
-#ifdef MT_GPUFREQ_LOW_BATT_VOLT_PROTECT
+#if IS_ENABLED(CONFIG_MTK_LOW_BATTERY_POWER_THROTTLING) && \
+		defined(MT_GPUFREQ_LOW_BATT_VOLT_PROTECT)
 	g_low_batt_limited_idx_lvl_0 = 0;
 	for (i = 0; i < g_opp_idx_num; i++) {
 		if (g_opp_table[i].gpufreq_khz <=
@@ -2747,7 +2772,8 @@ static int __mt_gpufreq_pdrv_probe(struct platform_device *pdev)
 		LOW_BATTERY_PRIO_GPU);
 #endif /* ifdef MT_GPUFREQ_LOW_BATT_VOLT_PROTECT */
 
-#ifdef MT_GPUFREQ_BATT_PERCENT_PROTECT
+#if IS_ENABLED(CONFIG_MTK_BATTERY_PERCENTAGE_POWER_THROTTLING) && \
+		defined(MT_GPUFREQ_BATT_PERCENT_PROTECT)
 	g_batt_percent_limited_idx_lv_0 = 0;
 	for (i = 0; i < g_opp_idx_num; i++) {
 		g_batt_percent_limited_idx_lv_1 = 0;
@@ -2761,7 +2787,8 @@ static int __mt_gpufreq_pdrv_probe(struct platform_device *pdev)
 		BATTERY_PERCENT_PRIO_GPU);
 #endif /* ifdef MT_GPUFREQ_BATT_PERCENT_PROTECT */
 
-#ifdef MT_GPUFREQ_BATT_OC_PROTECT
+#if IS_ENABLED(CONFIG_MTK_BATTERY_OC_POWER_THROTTLING) && \
+		defined(MT_GPUFREQ_BATT_OC_PROTECT)
 	g_batt_oc_limited_idx_lvl_0 = 0;
 	for (i = 0; i < g_opp_idx_num; i++) {
 		if (g_opp_table[i].gpufreq_khz <=
