@@ -49,7 +49,7 @@ static void ppm_pwrthro_status_change_cb(bool enable)
 	FUNC_EXIT(FUNC_LV_POLICY);
 }
 
-#ifndef DISABLE_BATTERY_PERCENT_PROTECT
+#if IS_ENABLED(CONFIG_MTK_BATTERY_PERCENTAGE_POWER_THROTTLING)
 static void ppm_pwrthro_bat_per_protect(BATTERY_PERCENT_LEVEL level)
 {
 	unsigned int limited_power = ~0;
@@ -86,7 +86,7 @@ end:
 }
 #endif
 
-#ifndef DISABLE_BATTERY_OC_PROTECT
+#if IS_ENABLED(CONFIG_MTK_BATTERY_OC_POWER_THROTTLING)
 static void ppm_pwrthro_bat_oc_protect(enum BATTERY_OC_LEVEL_TAG level)
 {
 	unsigned int limited_power = ~0;
@@ -123,7 +123,7 @@ end:
 }
 #endif
 
-#ifndef DISABLE_LOW_BATTERY_PROTECT
+#if IS_ENABLED(CONFIG_MTK_LOW_BATTERY_POWER_THROTTLING)
 void ppm_pwrthro_low_bat_protect(enum LOW_BATTERY_LEVEL_TAG level)
 {
 	unsigned int limited_power = ~0;
@@ -175,14 +175,20 @@ static int __init ppm_pwrthro_policy_init(void)
 		goto out;
 	}
 
+#if IS_ENABLED(CONFIG_MTK_BATTERY_PERCENTAGE_POWER_THROTTLING)
 	register_battery_percent_notify(&ppm_pwrthro_bat_per_protect,
 		BATTERY_PERCENT_PRIO_CPU_L);
+#endif
 
+#if IS_ENABLED(CONFIG_MTK_BATTERY_OC_POWER_THROTTLING)
 	register_battery_oc_notify(&ppm_pwrthro_bat_oc_protect,
 		BATTERY_OC_PRIO_CPU_L);
+#endif
 
+#if IS_ENABLED(CONFIG_MTK_LOW_BATTERY_POWER_THROTTLING)
 	register_low_battery_notify(&ppm_pwrthro_low_bat_protect,
 		LOW_BATTERY_PRIO_CPU_L);
+#endif
 
 	ppm_info("@%s: register %s done!\n", __func__, pwrthro_policy.name);
 
