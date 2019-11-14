@@ -19,62 +19,6 @@
 static struct sock *mtk_battery_sk;
 static u_int g_fgd_pid;
 
-#define BMLOG_ERROR_LEVEL   3
-#define BMLOG_WARNING_LEVEL 4
-#define BMLOG_NOTICE_LEVEL  5
-#define BMLOG_INFO_LEVEL    6
-#define BMLOG_DEBUG_LEVEL   7
-#define BMLOG_TRACE_LEVEL   8
-
-static int log_level = BMLOG_DEBUG_LEVEL;
-
-int bat_get_debug_level(void)
-{
-	return log_level;
-}
-
-#define bm_err(fmt, args...)   \
-do {\
-	if (bat_get_debug_level() >= BMLOG_ERROR_LEVEL) {\
-		pr_notice(fmt, ##args); \
-	} \
-} while (0)
-
-#define bm_warn(fmt, args...)   \
-do {\
-	if (bat_get_debug_level() >= BMLOG_WARNING_LEVEL) {\
-		pr_notice(fmt, ##args); \
-	}								   \
-} while (0)
-
-#define bm_notice(fmt, args...)   \
-do {\
-	if (bat_get_debug_level() >= BMLOG_NOTICE_LEVEL) {\
-		pr_notice(fmt, ##args); \
-	}								   \
-} while (0)
-
-#define bm_info(fmt, args...)   \
-do {\
-	if (bat_get_debug_level() >= BMLOG_INFO_LEVEL) {\
-		pr_notice(fmt, ##args); \
-	}								   \
-} while (0)
-
-#define bm_debug(fmt, args...)   \
-do {\
-	if (bat_get_debug_level() >= BMLOG_DEBUG_LEVEL) {\
-		pr_notice(fmt, ##args); \
-	}								   \
-} while (0)
-
-#define bm_trace(fmt, args...)\
-do {\
-	if (bat_get_debug_level() >= BMLOG_TRACE_LEVEL) {\
-		pr_notice(fmt, ##args);\
-	}						\
-} while (0)
-
 static int interpolation(int i1, int b1, int i2, int b2, int i)
 {
 	int ret;
@@ -328,7 +272,7 @@ void fg_daemon_get_data(int cmd,
 
 			if (sizeof(struct fuel_gauge_table_custom_data)
 				!= prcv->total_size) {
-				pr_notice("%s size is different %d %d\n",
+				bm_err("%s size is different %d %d\n",
 				__func__,
 				(int)sizeof(
 				struct fuel_gauge_table_custom_data),
@@ -421,8 +365,7 @@ static void mtk_battery_daemon_handler(void *nl_data,
 			int temperture = 0;
 
 			memcpy(&update, &msg->fgd_data[0], sizeof(update));
-			temperture = battery_get_int_property(
-				BAT_PROP_TEMPERATURE);
+			temperture = force_get_tbat(gm, true);
 			bm_debug("[K]FG_DAEMON_CMD_GET_TEMPERTURE update=%d tmp:%d\n",
 				update, temperture);
 			ret_msg->fgd_data_len += sizeof(temperture);
@@ -849,7 +792,7 @@ static void mtk_battery_daemon_handler(void *nl_data,
 	break;
 	case FG_DAEMON_CMD_CHECK_FG_DAEMON_VERSION:
 	{
-		//todo
+		/* todo */
 		bm_debug(
 			"[K]FG_DAEMON_CMD_CHECK_FG_DAEMON_VERSION\n");
 	}
@@ -1007,7 +950,7 @@ static void mtk_battery_daemon_handler(void *nl_data,
 	break;
 	case FG_DAEMON_CMD_SET_IAVG_INTR:
 	{
-		pr_notice("[K]FG_DAEMON_CMD_SET_IAVG_INTR is removed\n");
+		bm_err("[K]FG_DAEMON_CMD_SET_IAVG_INTR is removed\n");
 	}
 	break;
 	case FG_DAEMON_CMD_SET_BAT_PLUGOUT_INTR:
@@ -1524,11 +1467,6 @@ static void mtk_battery_daemon_handler(void *nl_data,
 	break;
 	case FG_DAEMON_CMD_DUMP_LOG:
 	{
-		//gm.proc_subcmd = msg->fgd_subcmd;
-		//gm.proc_subcmd_para1 = msg->fgd_subcmd_para1;
-		//memset(gm.proc_log, 0, 4096);
-		//strncpy(gm.proc_log, &msg->fgd_data[0],
-		//	strlen(&msg->fgd_data[0]));
 		bm_debug("[K]FG_DAEMON_CMD_DUMP_LOG %d %d %d\n",
 			msg->fgd_subcmd, msg->fgd_subcmd_para1,
 			(int)strlen(&msg->fgd_data[0]));
@@ -1649,7 +1587,7 @@ static void mtk_battery_daemon_handler(void *nl_data,
 	break;
 	case FG_DAEMON_CMD_SET_QMAX_T_AGING:
 	{
-		//tbd
+		/* todo */
 		bm_debug("[K]FG_DAEMON_CMD_SET_QMAX_T_AGING\n");
 	}
 	break;
@@ -2162,7 +2100,7 @@ static irqreturn_t bat_plugout_irq(int irq, void *data)
 			is_bat_exist, gm->plug_miss_count);
 
 		if (gm->plug_miss_count >= 3) {
-			disable_irq_nosync(gm->gauge->bat_plugout_irq);
+			disable_gauge_irq(gm->gauge, BAT_PLUGOUT_IRQ);
 			bm_err("[%s]disable FG_BAT_PLUGOUT\n",
 				__func__);
 			gm->disable_plug_int = 1;
@@ -2227,7 +2165,7 @@ void fg_sw_bat_cycle_accu(struct mtk_battery *gm)
 	diff_car = fg_coulomb - gm->bat_cycle_car;
 
 	if (diff_car > 0) {
-		pr_notice("[%s]ERROR!drop diff_car\n", __func__);
+		bm_err("[%s]ERROR!drop diff_car\n", __func__);
 		gm->bat_cycle_car = fg_coulomb;
 	} else {
 		gm->bat_cycle_ncar = gm->bat_cycle_ncar + abs(diff_car);
@@ -2235,7 +2173,7 @@ void fg_sw_bat_cycle_accu(struct mtk_battery *gm)
 	}
 
 	gauge_set_property(GAUGE_PROP_HW_INFO, 0);
-	pr_notice("[%s]car[o:%d n:%d],diff_car:%d,ncar[o:%d n:%d hw:%d] thr %d\n",
+	bm_err("[%s]car[o:%d n:%d],diff_car:%d,ncar[o:%d n:%d hw:%d] thr %d\n",
 		__func__,
 		tmp_car, fg_coulomb, diff_car,
 		tmp_ncar, gm->bat_cycle_ncar, gm->gauge->fg_hw_info.ncar,
@@ -2251,7 +2189,7 @@ void fg_sw_bat_cycle_accu(struct mtk_battery *gm)
 
 			gm->bat_cycle_ncar = 0;
 			wakeup_fg_algo(gm, FG_INTR_BAT_CYCLE);
-			pr_notice("[fg_cycle_int_handler] ncar:%d thr:%d\n",
+			bm_err("[fg_cycle_int_handler] ncar:%d thr:%d\n",
 				tmp_ncar, tmp_thr);
 		}
 	}
@@ -2264,7 +2202,7 @@ static irqreturn_t cycle_irq(int irq, void *data)
 	if (fg_interrupt_check(gm) == false)
 		return IRQ_HANDLED;
 
-	disable_irq_nosync(gm->gauge->fg_n_charge_l_irq);
+	disable_gauge_irq(gm->gauge, FG_N_CHARGE_L_IRQ);
 	wakeup_fg_algo(gm, FG_INTR_BAT_CYCLE);
 	fg_int_event(gm, EVT_INT_BAT_CYCLE);
 	sw_check_bat_plugout(gm);
@@ -2282,8 +2220,8 @@ static irqreturn_t iavg_h_irq(int irq, void *data)
 	if (fg_interrupt_check(gm) == false)
 		return IRQ_HANDLED;
 	gm->gauge->hw_status.iavg_intr_flag = 0;
-	disable_irq_nosync(gm->gauge->fg_iavg_h_irq);
-	disable_irq_nosync(gm->gauge->fg_iavg_l_irq);
+	disable_gauge_irq(gm->gauge, FG_IAVG_H_IRQ);
+	disable_gauge_irq(gm->gauge, FG_IAVG_L_IRQ);
 
 	bm_debug("[%s]iavg_intr_flag %d\n",
 		__func__,
@@ -2301,8 +2239,8 @@ static irqreturn_t iavg_l_irq(int irq, void *data)
 	if (fg_interrupt_check(gm) == false)
 		return IRQ_HANDLED;
 	gm->gauge->hw_status.iavg_intr_flag = 0;
-	disable_irq_nosync(gm->gauge->fg_iavg_h_irq);
-	disable_irq_nosync(gm->gauge->fg_iavg_l_irq);
+	disable_gauge_irq(gm->gauge, FG_IAVG_H_IRQ);
+	disable_gauge_irq(gm->gauge, FG_IAVG_L_IRQ);
 
 	bm_debug("[%s]iavg_intr_flag %d\n",
 		__func__,
@@ -2444,7 +2382,7 @@ static void mtk_battery_shutdown(struct mtk_battery *gm)
 	}
 	verify_car = gauge_get_int_property(GAUGE_PROP_SHUTDOWN_CAR);
 
-	pr_notice("******** %s!! car=[o:%d,new:%d,diff:%d v:%d]********\n",
+	bm_err("******** %s!! car=[o:%d,new:%d,diff:%d v:%d]********\n",
 		__func__,
 		gm->d_saved_car, fg_coulomb, shut_car_diff, verify_car);
 
@@ -2475,9 +2413,9 @@ static int mtk_battery_suspend(struct mtk_battery *gm, pm_message_t state)
 
 	if (version >= GAUGE_HW_V2000
 		&& gm->gauge->hw_status.iavg_intr_flag == 1) {
-		disable_irq_nosync(gm->gauge->fg_iavg_h_irq);
+		disable_gauge_irq(gm->gauge, FG_IAVG_H_IRQ);
 		if (gm->gauge->hw_status.iavg_lt > 0)
-			disable_irq_nosync(gm->gauge->fg_iavg_l_irq);
+			disable_gauge_irq(gm->gauge, FG_IAVG_L_IRQ);
 	}
 	return 0;
 }
@@ -2498,9 +2436,9 @@ static int mtk_battery_resume(struct mtk_battery *gm)
 	if (version >=
 		GAUGE_HW_V2000
 		&& gm->gauge->hw_status.iavg_intr_flag == 1) {
-		enable_irq(gm->gauge->fg_iavg_h_irq);
+		enable_gauge_irq(gm->gauge, FG_IAVG_H_IRQ);
 		if (gm->gauge->hw_status.iavg_lt > 0)
-			enable_irq(gm->gauge->fg_iavg_l_irq);
+			enable_gauge_irq(gm->gauge, FG_IAVG_L_IRQ);
 	}
 	/* reset nafg monitor time to avoid suspend for too long case */
 	get_monotonic_boottime(&gm->last_nafg_update_time);
@@ -2551,90 +2489,80 @@ void mtk_battery_daemon_init(struct platform_device *pdev)
 
 	if (hw_version >= GAUGE_HW_V0500) {
 		ret = devm_request_threaded_irq(&gm->gauge->pdev->dev,
-		gm->gauge->zcv_irq,
+		gm->gauge->irq_no[ZCV_IRQ],
 		NULL, zcv_irq,
 		IRQF_ONESHOT | IRQF_TRIGGER_HIGH,
 		"mtk_gauge_zcv",
 		gm);
-		disable_irq_nosync(gm->gauge->zcv_irq);
 
 		if (hw_version == GAUGE_HW_V0500) {
 			ret = devm_request_threaded_irq(&gm->gauge->pdev->dev,
-			gm->gauge->vbat_h_irq,
+			gm->gauge->irq_no[VBAT_H_IRQ],
 			NULL, vbat_h_irq,
 			IRQF_ONESHOT | IRQF_TRIGGER_HIGH,
 			"mtk_gauge_vbat_high",
 			gm);
-			disable_irq_nosync(gm->gauge->vbat_h_irq);
 
 			ret = devm_request_threaded_irq(&gm->gauge->pdev->dev,
-			gm->gauge->vbat_l_irq,
+			gm->gauge->irq_no[VBAT_L_IRQ],
 			NULL, vbat_l_irq,
 			IRQF_ONESHOT | IRQF_TRIGGER_HIGH,
 			"mtk_gauge_vbat_low",
 			gm);
-			disable_irq_nosync(gm->gauge->vbat_l_irq);
 		}
 	}
 
 	if (hw_version >= GAUGE_HW_V1000) {
 		ret = devm_request_threaded_irq(&gm->gauge->pdev->dev,
-		gm->gauge->nafg_irq,
+		gm->gauge->irq_no[NAFG_IRQ],
 		NULL, nafg_irq,
 		IRQF_ONESHOT | IRQF_TRIGGER_HIGH,
 		"mtk_gauge_nafg",
 		gm);
-		disable_irq_nosync(gm->gauge->nafg_irq);
 	}
 
 	if (hw_version >= GAUGE_HW_V2000) {
 		ret = devm_request_threaded_irq(&gm->gauge->pdev->dev,
-		gm->gauge->bat_plugout_irq,
+		gm->gauge->irq_no[BAT_PLUGOUT_IRQ],
 		NULL, bat_plugout_irq,
 		IRQF_ONESHOT | IRQF_TRIGGER_HIGH,
 		"mtk_gauge_bat_plugout",
 		gm);
-		disable_irq_nosync(gm->gauge->bat_plugout_irq);
 
 		ret = devm_request_threaded_irq(&gm->gauge->pdev->dev,
-		gm->gauge->fg_n_charge_l_irq,
+		gm->gauge->irq_no[FG_N_CHARGE_L_IRQ],
 		NULL, cycle_irq,
 		IRQF_ONESHOT | IRQF_TRIGGER_HIGH,
 		"mtk_cycle_zcv",
 		gm);
-		disable_irq_nosync(gm->gauge->fg_n_charge_l_irq);
 
 		ret = devm_request_threaded_irq(&gm->gauge->pdev->dev,
-		gm->gauge->fg_iavg_h_irq,
+		gm->gauge->irq_no[FG_IAVG_H_IRQ],
 		NULL, iavg_h_irq,
 		IRQF_ONESHOT | IRQF_TRIGGER_HIGH,
 		"mtk_gauge_iavg_h",
 		gm);
-		disable_irq_nosync(gm->gauge->fg_iavg_h_irq);
 
 		ret = devm_request_threaded_irq(&gm->gauge->pdev->dev,
-		gm->gauge->fg_iavg_l_irq,
+		gm->gauge->irq_no[FG_IAVG_L_IRQ],
 		NULL, iavg_l_irq,
 		IRQF_ONESHOT | IRQF_TRIGGER_HIGH,
 		"mtk_gauge_iavg_l",
 		gm);
-		disable_irq_nosync(gm->gauge->fg_iavg_l_irq);
 
 		ret = devm_request_threaded_irq(&gm->gauge->pdev->dev,
-		gm->gauge->bat_tmp_h_irq,
+		gm->gauge->irq_no[BAT_TMP_H_IRQ],
 		NULL, bat_temp_irq,
 		IRQF_ONESHOT | IRQF_TRIGGER_HIGH,
 		"mtk_bat_tmp_h",
 		gm);
-		disable_irq_nosync(gm->gauge->bat_tmp_h_irq);
 
 		ret = devm_request_threaded_irq(&gm->gauge->pdev->dev,
-		gm->gauge->bat_tmp_l_irq,
+		gm->gauge->irq_no[BAT_TMP_L_IRQ],
 		NULL, bat_temp_irq,
 		IRQF_ONESHOT | IRQF_TRIGGER_HIGH,
 		"mtk_bat_tmp_l",
 		gm);
-		disable_irq_nosync(gm->gauge->bat_tmp_l_irq);
 	}
 
 	sw_iavg_init(gm);

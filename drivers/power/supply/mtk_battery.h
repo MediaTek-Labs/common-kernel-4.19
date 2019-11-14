@@ -22,6 +22,57 @@
 #define UNIT_TRANS_60	60
 #define MAX_TABLE		10
 
+#define BMLOG_ERROR_LEVEL   3
+#define BMLOG_WARNING_LEVEL 4
+#define BMLOG_NOTICE_LEVEL  5
+#define BMLOG_INFO_LEVEL    6
+#define BMLOG_DEBUG_LEVEL   7
+#define BMLOG_TRACE_LEVEL   8
+
+#define BMLOG_DEFAULT_LEVEL BMLOG_DEBUG_LEVEL
+
+#define bm_err(fmt, args...)   \
+do {\
+	if (bat_get_debug_level() >= BMLOG_ERROR_LEVEL) {\
+		pr_notice(fmt, ##args); \
+	} \
+} while (0)
+
+#define bm_warn(fmt, args...)   \
+do {\
+	if (bat_get_debug_level() >= BMLOG_WARNING_LEVEL) {\
+		pr_notice(fmt, ##args); \
+	}								   \
+} while (0)
+
+#define bm_notice(fmt, args...)   \
+do {\
+	if (bat_get_debug_level() >= BMLOG_NOTICE_LEVEL) {\
+		pr_notice(fmt, ##args); \
+	}								   \
+} while (0)
+
+#define bm_info(fmt, args...)   \
+do {\
+	if (bat_get_debug_level() >= BMLOG_INFO_LEVEL) {\
+		pr_notice(fmt, ##args); \
+	}								   \
+} while (0)
+
+#define bm_debug(fmt, args...)   \
+do {\
+	if (bat_get_debug_level() >= BMLOG_DEBUG_LEVEL) {\
+		pr_notice(fmt, ##args); \
+	}								   \
+} while (0)
+
+#define bm_trace(fmt, args...)\
+do {\
+	if (bat_get_debug_level() >= BMLOG_TRACE_LEVEL) {\
+		pr_notice(fmt, ##args);\
+	}						\
+} while (0)
+
 #define BAT_SYSFS_FIELD_RW(_name, _prop)	\
 {									 \
 	.attr	= __ATTR(_name, 0644, bat_sysfs_show, bat_sysfs_store),\
@@ -55,6 +106,7 @@ enum battery_property {
 	BAT_PROP_DISABLE,
 	BAT_PROP_INIT_DONE,
 	BAT_PROP_FG_RESET,
+	BAT_PROP_LOG_LEVEL,
 };
 
 struct battery_data {
@@ -121,7 +173,7 @@ enum fg_daemon_cmds {
 	FG_DAEMON_CMD_SET_NAG_C_DLTV,
 	FG_DAEMON_CMD_SET_ZCV_INTR,
 	FG_DAEMON_CMD_SET_FG_QUSE,
-	FG_DAEMON_CMD_SET_FG_RESISTANCE,//remove
+	FG_DAEMON_CMD_SET_FG_RESISTANCE,/*remove*/
 	FG_DAEMON_CMD_SET_FG_DC_RATIO,
 	FG_DAEMON_CMD_SET_BATTERY_CYCLE_THRESHOLD,
 	FG_DAEMON_CMD_SOFF_RESET,
@@ -159,13 +211,13 @@ enum fg_daemon_cmds {
 	FG_DAEMON_CMD_GET_RTC_INVALID,
 	FG_DAEMON_CMD_GET_VBAT,
 	FG_DAEMON_CMD_GET_DISABLE_NAFG,
-	FG_DAEMON_CMD_DUMP_LOG,//get start
+	FG_DAEMON_CMD_DUMP_LOG,
 	FG_DAEMON_CMD_GET_SHUTDOWN_CAR,
 	FG_DAEMON_CMD_GET_NCAR,
 	FG_DAEMON_CMD_GET_CURR_1,
 	FG_DAEMON_CMD_GET_CURR_2,
 	FG_DAEMON_CMD_GET_REFRESH,
-	FG_DAEMON_CMD_GET_IS_AGING_RESET,//set stop
+	FG_DAEMON_CMD_GET_IS_AGING_RESET,
 	FG_DAEMON_CMD_SET_SOC,
 	FG_DAEMON_CMD_SET_C_D0_SOC,
 	FG_DAEMON_CMD_SET_V_D0_SOC,
@@ -817,6 +869,7 @@ struct mtk_battery {
 	int (*suspend)(struct mtk_battery *gm, pm_message_t state);
 	int (*resume)(struct mtk_battery *gm);
 
+	int log_level;
 };
 
 struct mtk_battery_sysfs_field_info {
@@ -840,6 +893,11 @@ extern void gauge_coulomb_after_reset(struct mtk_battery *gm);
 /* coulomb sub system end */
 
 /*mtk_battery.c */
+extern void enable_gauge_irq(struct mtk_gauge *gauge,
+	enum gauge_irq irq);
+extern void disable_gauge_irq(struct mtk_gauge *gauge,
+	enum gauge_irq irq);
+extern int bat_get_debug_level(void);
 extern int force_get_tbat(struct mtk_battery *gm, bool update);
 extern int force_get_tbat_internal(struct mtk_battery *gm, bool update);
 extern int wakeup_fg_algo_cmd(struct mtk_battery *gm,
@@ -852,6 +910,7 @@ extern int gauge_get_property(enum gauge_property gp,
 extern int gauge_set_property(enum gauge_property gp,
 			    int val);
 extern int battery_init(struct platform_device *pdev);
+extern int battery_psy_init(struct platform_device *pdev);
 extern struct mtk_battery *get_mtk_battery(void);
 extern int battery_get_property(enum battery_property bp, int *val);
 extern int battery_get_int_property(enum battery_property bp);

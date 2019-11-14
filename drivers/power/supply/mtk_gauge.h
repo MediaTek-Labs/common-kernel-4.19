@@ -196,6 +196,22 @@ struct zcv_data {
 	int pl_charging_status;
 };
 
+enum gauge_irq {
+	COULOMB_H_IRQ,
+	COULOMB_L_IRQ,
+	VBAT_H_IRQ,
+	VBAT_L_IRQ,
+	NAFG_IRQ,
+	BAT_PLUGOUT_IRQ,
+	ZCV_IRQ,
+	FG_N_CHARGE_L_IRQ,
+	FG_IAVG_H_IRQ,
+	FG_IAVG_L_IRQ,
+	BAT_TMP_H_IRQ,
+	BAT_TMP_L_IRQ,
+	GAUGE_IRQ_MAX
+};
+
 struct mtk_gauge {
 	struct mt6397_chip *chip;
 	struct regmap *regmap;
@@ -211,18 +227,7 @@ struct mtk_gauge {
 	struct gauge_hw_status hw_status;
 	struct gauge_hw_info_data fg_hw_info;
 
-	int coulomb_h_irq;
-	int coulomb_l_irq;
-	int vbat_h_irq;
-	int vbat_l_irq;
-	int nafg_irq;
-	int bat_plugout_irq;
-	int zcv_irq;
-	int fg_n_charge_l_irq;
-	int fg_iavg_h_irq;
-	int fg_iavg_l_irq;
-	int bat_tmp_h_irq;
-	int bat_tmp_l_irq;
+	int irq_no[GAUGE_IRQ_MAX];
 
 	bool vbat_l_en;
 	bool vbat_h_en;

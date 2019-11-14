@@ -21,7 +21,7 @@ static void wake_up_gauge_coulomb(struct mtk_battery *gm)
 	if (cs == NULL || cs->init == false)
 		return;
 
-	pr_debug("%s %d %d\n",
+	bm_debug("%s %d %d\n",
 		__func__,
 		cs->wlock->active,
 		cs->coulomb_thread_timeout);
@@ -37,7 +37,7 @@ static void wake_up_gauge_coulomb(struct mtk_battery *gm)
 
 	cs->coulomb_thread_timeout = true;
 	wake_up(&cs->wait_que);
-	pr_debug("%s end\n", __func__);
+	bm_debug("%s end\n", __func__);
 }
 
 void gauge_coulomb_consumer_init(struct gauge_consumer *coulomb,
@@ -59,7 +59,7 @@ void gauge_coulomb_dump_list(struct mtk_battery *gm)
 	cs = &gm->cs;
 	if (cs->init == false)
 		return;
-	pr_debug("%s %d %d\n",
+	bm_debug("%s %d %d\n",
 		__func__,
 		cs->wlock->active,
 		cs->coulomb_thread_timeout);
@@ -68,10 +68,10 @@ void gauge_coulomb_dump_list(struct mtk_battery *gm)
 	mutex_lock(&cs->coulomb_lock);
 	gauge_get_property(GAUGE_PROP_COULOMB, &car);
 	if (list_empty(phead) != true) {
-		pr_debug("dump plus list start\n");
+		bm_debug("dump plus list start\n");
 		list_for_each(pos, phead) {
 			ptr = container_of(pos, struct gauge_consumer, list);
-			pr_debug(
+			bm_debug(
 				"+dump list name:%s start:%ld end:%ld car:%d int:%d\n",
 				ptr->name,
 			ptr->start, ptr->end, car, ptr->variable);
@@ -80,10 +80,10 @@ void gauge_coulomb_dump_list(struct mtk_battery *gm)
 
 	phead = &cs->coulomb_head_minus;
 	if (list_empty(phead) != true) {
-		pr_debug("dump minus list start\n");
+		bm_debug("dump minus list start\n");
 		list_for_each(pos, phead) {
 			ptr = container_of(pos, struct gauge_consumer, list);
-			pr_debug(
+			bm_debug(
 				"-dump list name:%s start:%ld end:%ld car:%d int:%d\n",
 				ptr->name,
 			ptr->start, ptr->end, car, ptr->variable);
@@ -100,7 +100,7 @@ void gauge_coulomb_before_reset(struct mtk_battery *gm)
 	cs = &gm->cs;
 
 	if (cs->init == false) {
-		pr_notice("[%s]gauge_coulomb service is not rdy\n",
+		bm_err("[%s]gauge_coulomb service is not rdy\n",
 			__func__);
 		return;
 	}
@@ -113,7 +113,7 @@ void gauge_coulomb_before_reset(struct mtk_battery *gm)
 
 	gauge_get_property(GAUGE_PROP_COULOMB, &val);
 	cs->reset_coulomb = val;
-	pr_notice("%s car=%ld\n",
+	bm_err("%s car=%ld\n",
 		__func__,
 		cs->reset_coulomb);
 	gauge_coulomb_dump_list(gm);
@@ -132,7 +132,7 @@ void gauge_coulomb_after_reset(struct mtk_battery *gm)
 
 	if (cs->init == false)
 		return;
-	pr_notice("%s\n", __func__);
+	bm_err("%s\n", __func__);
 	now = cs->reset_coulomb;
 	mutex_lock(&cs->coulomb_lock);
 
@@ -145,7 +145,7 @@ void gauge_coulomb_after_reset(struct mtk_battery *gm)
 		duraction = ptr->end - now;
 		ptr->end = duraction;
 		ptr->variable = duraction;
-		pr_debug("[%s]+ %s %ld %ld %d\n",
+		bm_debug("[%s]+ %s %ld %ld %d\n",
 			__func__,
 			ptr->name,
 		ptr->start, ptr->end, ptr->variable);
@@ -160,7 +160,7 @@ void gauge_coulomb_after_reset(struct mtk_battery *gm)
 		duraction = ptr->end - now;
 		ptr->end = duraction;
 		ptr->variable = duraction;
-		pr_debug("[%s]- %s %ld %ld %d\n",
+		bm_debug("[%s]- %s %ld %ld %d\n",
 			__func__,
 			ptr->name,
 		ptr->start, ptr->end, ptr->variable);
@@ -197,7 +197,7 @@ void gauge_coulomb_start(struct gauge_consumer *coulomb, int car)
 	car_now = val;
 	/* del from old list */
 	if (list_empty(&coulomb->list) != true) {
-		pr_debug("coulomb_start del name:%s s:%ld e:%ld v:%d car:%d\n",
+		bm_debug("coulomb_start del name:%s s:%ld e:%ld v:%d car:%d\n",
 		coulomb->name,
 		coulomb->start, coulomb->end, coulomb->variable, car_now);
 		list_del_init(&coulomb->list);
@@ -255,7 +255,8 @@ void gauge_coulomb_start(struct gauge_consumer *coulomb, int car)
 	if (wake == true)
 		wake_up_gauge_coulomb(gm);
 
-	pr_debug("coulomb_start dev:%s name:%s s:%ld e:%ld v:%d car:%d w:%d\n",
+	bm_debug("%s dev:%s name:%s s:%ld e:%ld v:%d car:%d w:%d\n",
+	__func__,
 	dev_name(coulomb->dev), coulomb->name, coulomb->start, coulomb->end,
 	coulomb->variable, car, wake);
 }
@@ -271,7 +272,8 @@ void gauge_coulomb_stop(struct gauge_consumer *coulomb)
 	if (cs->init == false)
 		return;
 
-	pr_debug("coulomb_stop name:%s %ld %ld %d\n",
+	bm_debug("%s name:%s %ld %ld %d\n",
+	__func__,
 	coulomb->name, coulomb->start, coulomb->end,
 	coulomb->variable);
 
@@ -291,7 +293,7 @@ static void gauge_coulomb_int_handler(struct mtk_coulomb_service *cs)
 
 	gm = get_mtk_battery();
 	gauge_get_property(GAUGE_PROP_COULOMB, &car);
-	pr_debug("[%s] car:%d preCar:%d\n",
+	bm_debug("[%s] car:%d preCar:%d\n",
 		__func__,
 		car, cs->pre_coulomb);
 
@@ -306,7 +308,7 @@ static void gauge_coulomb_int_handler(struct mtk_coulomb_service *cs)
 				ptmp = pos;
 				pos = pos->next;
 				list_del_init(ptmp);
-				pr_debug(
+				bm_debug(
 					"[%s]+ %s s:%ld e:%ld car:%d %d int:%d timeout\n",
 					__func__,
 					ptr->name,
@@ -326,7 +328,7 @@ static void gauge_coulomb_int_handler(struct mtk_coulomb_service *cs)
 			pos = cs->coulomb_head_plus.next;
 			ptr = container_of(pos, struct gauge_consumer, list);
 			hw_car = ptr->end - car;
-			pr_debug(
+			bm_debug(
 				"[%s]+ %s %ld %ld %d now:%d dif:%d\n",
 				__func__,
 					ptr->name,
@@ -337,9 +339,9 @@ static void gauge_coulomb_int_handler(struct mtk_coulomb_service *cs)
 				hw_car);
 			mutex_unlock(&cs->hw_coulomb_lock);
 		} else
-			pr_debug("+ list is empty\n");
+			bm_debug("+ list is empty\n");
 	} else
-		pr_debug("+ list is empty\n");
+		bm_debug("+ list is empty\n");
 
 	if (list_empty(&cs->coulomb_head_minus) != true) {
 		pos = cs->coulomb_head_minus.next;
@@ -352,7 +354,7 @@ static void gauge_coulomb_int_handler(struct mtk_coulomb_service *cs)
 				ptmp = pos;
 				pos = pos->next;
 				list_del_init(ptmp);
-				pr_debug(
+				bm_debug(
 					"[%s]- %s s:%ld e:%ld car:%d %d int:%d timeout\n",
 					__func__,
 					ptr->name,
@@ -373,7 +375,7 @@ static void gauge_coulomb_int_handler(struct mtk_coulomb_service *cs)
 			pos = cs->coulomb_head_minus.next;
 			ptr = container_of(pos, struct gauge_consumer, list);
 			hw_car = car - ptr->end;
-			pr_debug(
+			bm_debug(
 				"[%s]- %s %ld %ld %d now:%d dif:%d\n",
 				__func__,
 				ptr->name,
@@ -384,9 +386,9 @@ static void gauge_coulomb_int_handler(struct mtk_coulomb_service *cs)
 				hw_car);
 			mutex_unlock(&cs->hw_coulomb_lock);
 		} else
-			pr_debug("- list is empty\n");
+			bm_debug("- list is empty\n");
 	} else
-		pr_debug("- list is empty\n");
+		bm_debug("- list is empty\n");
 
 	cs->pre_coulomb = car;
 }
@@ -399,7 +401,7 @@ static int gauge_coulomb_thread(void *arg)
 	struct mtk_battery *gm;
 
 	gm = get_mtk_battery();
-	pr_debug("[%s]=>\n", __func__);
+	bm_debug("[%s]=>\n", __func__);
 	while (1) {
 		wait_event(cs->wait_que, (cs->coulomb_thread_timeout == true));
 		cs->coulomb_thread_timeout = false;
@@ -416,7 +418,7 @@ static int gauge_coulomb_thread(void *arg)
 		get_monotonic_boottime(&end);
 		duraction = timespec_sub(end, start);
 
-		pr_debug(
+		bm_debug(
 			"%s time:%d ms\n",
 			__func__,
 			(int)(duraction.tv_nsec / 1000000));
@@ -429,6 +431,7 @@ static irqreturn_t coulomb_irq(int irq, void *data)
 {
 	struct mtk_battery *gm = data;
 
+	bm_debug("%s\n", __func__);
 	wake_up_gauge_coulomb(gm);
 	return IRQ_HANDLED;
 }
@@ -439,7 +442,7 @@ void gauge_coulomb_service_init(struct mtk_battery *gm)
 	struct mtk_coulomb_service *cs;
 	int ret;
 
-	pr_debug("gauge coulomb_service_init\n");
+	bm_debug("%s\n", __func__);
 	cs = &gm->cs;
 	INIT_LIST_HEAD(&cs->coulomb_head_minus);
 	INIT_LIST_HEAD(&cs->coulomb_head_plus);
@@ -451,24 +454,24 @@ void gauge_coulomb_service_init(struct mtk_battery *gm)
 	kthread_run(gauge_coulomb_thread, cs, "gauge_coulomb_thread");
 
 	ret = devm_request_threaded_irq(&gm->gauge->pdev->dev,
-	gm->gauge->coulomb_h_irq,
+	gm->gauge->irq_no[COULOMB_H_IRQ],
 	NULL, coulomb_irq,
 	IRQF_ONESHOT | IRQF_TRIGGER_HIGH,
 	"mtk_gauge_coulomb_high",
 	gm);
-	disable_irq_nosync(gm->gauge->coulomb_h_irq);
+	//disable_irq_nosync(gm->gauge->coulomb_h_irq);
 	if (ret)
-		pr_notice("failed to request coulomb h irq\n");
+		bm_err("failed to request coulomb h irq\n");
 
 	ret = devm_request_threaded_irq(&gm->gauge->pdev->dev,
-	gm->gauge->coulomb_l_irq,
+	gm->gauge->irq_no[COULOMB_L_IRQ],
 	NULL, coulomb_irq,
 	IRQF_ONESHOT | IRQF_TRIGGER_HIGH,
 	"mtk_gauge_coulomb_low",
 	gm);
-	disable_irq_nosync(gm->gauge->coulomb_l_irq);
+	//disable_irq_nosync(gm->gauge->coulomb_l_irq);
 	if (ret)
-		pr_notice("failed to request coulomb l irq\n");
+		bm_err("failed to request coulomb l irq\n");
 
 	gauge_get_property(GAUGE_PROP_COULOMB, &val);
 	cs->pre_coulomb = val;
