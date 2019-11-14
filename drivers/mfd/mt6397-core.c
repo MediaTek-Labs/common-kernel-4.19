@@ -260,6 +260,9 @@ static const struct mfd_cell mt6359_devs[] = {
 		.resources = mt6359_gauge_resources,
 		.of_compatible = "mediatek,mt6359-gauge",
 	}, {
+		.name = "mt-pmic",
+		.of_compatible = "mediatek,mt63xx-debug",
+	}, {
 		.name = "mt6359-sound",
 		.of_compatible = "mediatek,mt6359-sound"
 	}
