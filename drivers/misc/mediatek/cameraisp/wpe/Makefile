@@ -11,16 +11,5 @@
 # GNU General Public License for more details.
 #
 
-obj-y += dip/
-#obj-y += src/
-#ifeq ($(CONFIG_MACH_MT6763),y)
-#obj-y += owe/
-#endif
-obj-y += rsc/
-obj-y += wpe/
-#obj-y += dpe/
-#ifeq ($(CONFIG_MACH_MT6763),y)
-#obj-y += tsf/
-#endif
-#obj-y += mfb/
-#obj-y += fdvt/
+obj-y := camerawpe_dummy.o
+obj-y += mt6779/
