@@ -105,13 +105,12 @@ mt_cpufreq_thermal_protect(unsigned int limited_power)
 }
 #endif
 
-
-void __attribute__ ((weak))
-mt_gpufreq_thermal_protect(unsigned int limited_power)
+#if !IS_ENABLED(CONFIG_MTK_GPU_SUPPORT)
+static void mt_gpufreq_thermal_protect(unsigned int limited_power)
 {
 	pr_notice(TSCPU_LOG_TAG "E_WF: %s doesn't exist\n", __func__);
 }
-
+#endif
 
 /*=============================================================
  * Local function prototype

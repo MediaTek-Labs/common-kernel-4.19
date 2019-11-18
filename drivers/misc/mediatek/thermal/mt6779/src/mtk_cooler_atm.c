@@ -424,36 +424,35 @@ mtk_eara_thermal_pb_handle(int total_pwr_budget,
 	pr_notice("E_WF: %s doesn't exist\n", __func__);
 	return 0;
 }
+#if !IS_ENABLED(CONFIG_MTK_GPU_SUPPORT)
+static bool mtk_get_gpu_loading(unsigned int *pLoading)
+{
+	pr_notice("%s doesn't exist\n", __func__);
+	return 0;
+}
+static unsigned int mt_gpufreq_get_min_power(void)
+{
+	pr_notice("%s doesn't exist\n", __func__);
+	return 0;
+}
+static unsigned int mt_gpufreq_get_max_power(void)
+{
+	pr_notice("%s doesn't exist\n", __func__);
+	return 0;
+}
+static unsigned int mt_gpufreq_get_cur_freq(void)
+{
+	return 0;
+}
 
-bool __attribute__((weak))
-mtk_get_gpu_loading(unsigned int *pLoading)
-{
-	pr_notice("E_WF: %s doesn't exist\n", __func__);
-	return 0;
-}
-unsigned int  __attribute__((weak))
-mt_gpufreq_get_min_power(void)
-{
-	pr_notice("E_WF: %s doesn't exist\n", __func__);
-	return 0;
-}
-unsigned int  __attribute__((weak))
-mt_gpufreq_get_max_power(void)
-{
-	pr_notice("E_WF: %s doesn't exist\n", __func__);
-	return 0;
-}
+#endif
 void __attribute__ ((weak))
 print_risky_temps(char *prefix, int offset, int printLevel)
 {
 
 }
 
-unsigned int __attribute__ ((weak))
-mt_gpufreq_get_cur_freq(void)
-{
-	return 0;
-}
+
 
 unsigned int __attribute__ ((weak))
 mt_ppm_thermal_get_cur_power(void)

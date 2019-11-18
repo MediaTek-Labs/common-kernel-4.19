@@ -544,7 +544,9 @@ extern void lvts_sodi3_release_thermal_controller(void);
  * In drivers/misc/mediatek/gpu/hal/mtk_gpu_utility.c
  * It's not our api, ask them to provide header file
  */
+#if IS_ENABLED(CONFIG_MTK_GPU_SUPPORT)
 extern bool mtk_get_gpu_loading(unsigned int *pLoading);
+#endif
 /*
  * In drivers/misc/mediatek/auxadc/mt_auxadc.c
  * It's not our api, ask them to provide header file

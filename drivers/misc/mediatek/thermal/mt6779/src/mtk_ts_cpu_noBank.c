@@ -249,14 +249,26 @@ static void temp_valid_unlock(unsigned long *flags);
  *Weak functions
  *=============================================================
  */
-
-	unsigned int  __attribute__((weak))
-mt_gpufreq_get_max_power(void)
+#if !IS_ENABLED(CONFIG_MTK_GPU_SUPPORT)
+static unsigned int mt_gpufreq_get_max_power(void)
 {
-	pr_notice("E_WF: %s doesn't exist\n", __func__);
+	pr_notice("%s doesn't exist\n", __func__);
 	return 0;
 }
 
+static bool mtk_get_gpu_loading(unsigned int *pLoading)
+{
+	pr_notice("%s doesn't exist\n", __func__);
+	return 0;
+}
+static unsigned int mt_gpufreq_get_cur_freq(void)
+{
+	pr_notice("%s doesn't exist\n", __func__);
+	return 0;
+}
+
+
+#endif
 #if !defined(CONFIG_MEDIATEK_MT6577_AUXADC)
 int __attribute__ ((weak))
 IMM_IsAdcInitReady(void)
@@ -266,12 +278,7 @@ IMM_IsAdcInitReady(void)
 }
 #endif
 
-	bool __attribute__ ((weak))
-mtk_get_gpu_loading(unsigned int *pLoading)
-{
-	pr_notice("E_WF: %s doesn't exist\n", __func__);
-	return 0;
-}
+
 
 	void __attribute__ ((weak))
 mt_ptp_lock(unsigned long *flags)
@@ -291,12 +298,6 @@ mt_cpufreq_thermal_5A_limit(bool enable)
 	pr_notice("E_WF: %s doesn't exist\n", __func__);
 }
 
-	unsigned int __attribute__ ((weak))
-mt_gpufreq_get_cur_freq(void)
-{
-	pr_notice("E_WF: %s doesn't exist\n", __func__);
-	return 0;
-}
 
 	unsigned int __attribute__ ((weak))
 mt_ppm_thermal_get_max_power(void)
@@ -305,19 +306,7 @@ mt_ppm_thermal_get_max_power(void)
 	return 0;
 }
 
-	unsigned int  __attribute__((weak))
-mt_gpufreq_get_seg_max_opp_index(void)
-{
-	pr_notice("E_WF: %s doesn't exist\n", __func__);
-	return 0;
-}
 
-	unsigned int  __attribute__((weak))
-mt_gpufreq_get_dvfs_table_num(void)
-{
-	pr_notice("E_WF: %s doesn't exist\n", __func__);
-	return 0;
-}
 
 /*=============================================================*/
 long long thermal_get_current_time_us(void)
@@ -356,11 +345,21 @@ void set_taklking_flag(bool flag)
 	tscpu_printk("talking_flag=%d\n", talking_flag);
 }
 EXPORT_SYMBOL_GPL(set_taklking_flag);
-int mtk_gpufreq_register(struct mt_gpufreq_power_table_info *freqs, int num)
+
+#if IS_ENABLED(CONFIG_MTK_GPU_SUPPORT)
+
+int mtk_get_gpu_power_table(void)
 {
 	int i = 0;
+	struct mt_gpufreq_power_table_info *freqs;
+	int num = 0;
 
 	tscpu_dprintk("%s\n", __func__);
+
+	freqs = mtk_gpufreq_get_powtab(&num);
+
+	if (num <= 0)
+		return -ENOMEM;
 
 	mtk_gpu_power =
 		kzalloc((num) *
@@ -369,11 +368,12 @@ int mtk_gpufreq_register(struct mt_gpufreq_power_table_info *freqs, int num)
 	if (mtk_gpu_power == NULL)
 		return -ENOMEM;
 
+
 	for (i = 0; i < num; i++) {
 		mtk_gpu_power[i].gpufreq_khz = freqs[i].gpufreq_khz;
 		mtk_gpu_power[i].gpufreq_power = freqs[i].gpufreq_power;
 
-		tscpu_dprintk("[%d].gpufreq_khz=%u, .gpufreq_power=%u\n",
+		tscpu_printk("[%d].gpufreq_khz=%u, .gpufreq_power=%u\n",
 			i, freqs[i].gpufreq_khz, freqs[i].gpufreq_power);
 	}
 
@@ -387,8 +387,7 @@ int mtk_gpufreq_register(struct mt_gpufreq_power_table_info *freqs, int num)
 
 	return 0;
 }
-EXPORT_SYMBOL_GPL(mtk_gpufreq_register);
-
+#endif
 static int tscpu_bind
 (struct thermal_zone_device *thermal, struct thermal_cooling_device *cdev)
 {
@@ -2443,6 +2442,15 @@ static int tscpu_thermal_probe(struct platform_device *dev)
 		tscpu_warn("regulator_get vcore_reg_id failed\n");
 #endif
 #endif
+
+
+#if IS_ENABLED(CONFIG_MTK_GPU_SUPPORT)
+	err = mtk_get_gpu_power_table();
+	if (err) {
+		tscpu_warn("get gpu power table fail\n");
+		BUG();
+	}
+#endif
 	return err;
 }
 
@@ -2459,6 +2467,7 @@ static int __init tscpu_init(void)
 	ta_init();
 	mtk_cooler_atm_init();
 #endif
+
 	/*set init val*/
 	tscpu_g_curr_temp = 0;
 	tscpu_g_prev_temp = 0;

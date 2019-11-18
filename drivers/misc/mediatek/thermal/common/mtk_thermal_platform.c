@@ -36,14 +36,17 @@
  */
 unsigned long (*mtk_thermal_get_gpu_loading_fp)(void) = NULL;
 EXPORT_SYMBOL_GPL(mtk_thermal_get_gpu_loading_fp);
-
-bool __attribute__ ((weak))
-mtk_get_gpu_loading(unsigned int *pLoading)
+#if !IS_ENABLED(CONFIG_MTK_GPU_SUPPORT)
+static bool mtk_get_gpu_loading(unsigned int *pLoading)
 {
 	pr_notice("E_WF: %s doesn't exist\n", __func__);
 	return 0;
 }
-
+static unsigned int mt_gpufreq_get_cur_freq(void)
+{
+	return 0;
+}
+#endif
 int __attribute__ ((weak))
 force_get_tbat(void)
 {
@@ -51,11 +54,7 @@ force_get_tbat(void)
 	return 30;
 }
 
-unsigned int __attribute__ ((weak))
-mt_gpufreq_get_cur_freq(void)
-{
-	return 0;
-}
+
 
 /* ************************************ */
 /* Global Variable */
