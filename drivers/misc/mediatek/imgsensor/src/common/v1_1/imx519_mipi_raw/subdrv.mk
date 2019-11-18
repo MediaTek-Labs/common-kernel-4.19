@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: GPL-2.0
+
+MKFILE_PATH := $(lastword $(MAKEFILE_LIST))
+CURRENT_DIR := $(patsubst %/,%,$(dir $(realpath $(MKFILE_PATH))))
+RELPATH := ..$(subst $(IMGSENSOR_DRIVER_PATH),,$(CURRENT_DIR))
+
+imgsensor-objs += \
+	$(RELPATH)/imx519mipiraw_Sensor.o \
+	$(RELPATH)/imx519_eeprom.o \
+

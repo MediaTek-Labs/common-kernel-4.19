@@ -49,3 +49,4 @@ obj-$(CONFIG_PRINTK_MTK) += mtprintk/
 obj-$(CONFIG_MT6360_DBG) += subpmic/
 obj-$(CONFIG_MTK_CAMERA_ISP) += cameraisp/
 obj-$(CONFIG_MTK_DRAM_LOG_STORE) += log_store/
+obj-$(CONFIG_MTK_IMGSENSOR) += imgsensor/src/
