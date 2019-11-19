@@ -7,6 +7,7 @@
 #include <linux/string.h>
 #include <linux/kernel.h>
 #include <linux/types.h>
+#include <linux/cpufreq.h>
 
 #include "mtk_ppm_platform.h"
 #include "mtk_ppm_internal.h"
@@ -14,6 +15,17 @@
 
 static int __init ppm_power_data_init(void)
 {
+
+	struct cpufreq_policy *policy;
+
+	policy = cpufreq_cpu_get(6);
+
+	if (!policy) {
+		ppm_info("PPM not support!\n");
+		return 0;
+	}
+	cpufreq_cpu_put(policy);
+
 	ppm_lock(&ppm_main_info.lock);
 
 	mt_ppm_set_dvfs_table(0, NULL, 0, 0);
