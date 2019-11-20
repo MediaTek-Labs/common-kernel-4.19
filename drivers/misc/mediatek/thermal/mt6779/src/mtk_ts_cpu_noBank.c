@@ -37,6 +37,7 @@
 #include <linux/of.h>
 #include <linux/of_irq.h>
 #include <linux/of_address.h>
+
 #endif
 #define __MT_MTK_TS_CPU_C__
 
@@ -2443,14 +2444,15 @@ static int tscpu_thermal_probe(struct platform_device *dev)
 #endif
 #endif
 
-
 #if IS_ENABLED(CONFIG_MTK_GPU_SUPPORT)
 	err = mtk_get_gpu_power_table();
 	if (err) {
 		tscpu_warn("get gpu power table fail\n");
-		BUG();
 	}
 #endif
+
+
+
 	return err;
 }
 
