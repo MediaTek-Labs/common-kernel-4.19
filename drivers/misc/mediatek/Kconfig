@@ -204,7 +204,7 @@ source "drivers/misc/mediatek/iommu/Kconfig"
 endmenu # MultiMedia
 
 menu "Sensors"
-
+source "drivers/misc/mediatek/sensors-1.0/Kconfig"
 endmenu # Sensors
 
 menu "Modem & Connectivity"
