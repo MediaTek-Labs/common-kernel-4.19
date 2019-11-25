@@ -49,7 +49,7 @@ static int __init sspm_reserve_mem_of_init(struct reserved_mem *rmem)
 	sspm_mem_size      = rmem->size;
 
 #ifdef DEBUG
-	pr_debug("[SSPM] phys:0x%pa - 0x%pa (0x%pa)\n",
+	pr_debug("[SSPM] phys:0x%llx - 0x%llx (0x%llx)\n",
 		(unsigned long long)rmem->base,
 		(unsigned long long)rmem->base + (unsigned long long)rmem->size,
 		(unsigned long long)rmem->size);
