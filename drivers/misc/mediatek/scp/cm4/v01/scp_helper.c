@@ -1280,6 +1280,7 @@ void scp_register_feature(enum feature_id id)
 
 	mutex_unlock(&scp_feature_mutex);
 }
+EXPORT_SYMBOL_GPL(scp_register_feature);
 
 void scp_deregister_feature(enum feature_id id)
 {
@@ -1336,6 +1337,7 @@ void scp_deregister_feature(enum feature_id id)
 
 	mutex_unlock(&scp_feature_mutex);
 }
+EXPORT_SYMBOL_GPL(scp_deregister_feature);
 
 /*scp sensor type register*/
 void scp_register_sensor(enum feature_id id, enum scp_sensor_id sensor_id)
