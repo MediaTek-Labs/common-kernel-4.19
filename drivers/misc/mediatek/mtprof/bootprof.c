@@ -14,6 +14,9 @@
 #include <linux/utsname.h>
 #include <linux/uaccess.h>
 #include "mtk_printk_ctrl.h"
+#ifdef CONFIG_MTK_DRAM_LOG_STORE
+#include <log_store_kernel.h>
+#endif
 
 #define BOOT_STR_SIZE 256
 #define BUF_COUNT 12
@@ -173,6 +176,7 @@ static void bootup_finish(void)
 {
 	initcall_debug = 0;
 	mt_disable_uart();
+	/*set_logtoomuch_enable(1);*/
 }
 
 static void mt_bootprof_switch(int on)
@@ -192,6 +196,9 @@ static void mt_bootprof_switch(int on)
 			enabled = 0;
 			timestamp_off = ts;
 			boot_finish = true;
+#ifdef CONFIG_MTK_DRAM_LOG_STORE
+			log_store_bootup();
+#endif
 			bootup_finish();
 		}
 	}
