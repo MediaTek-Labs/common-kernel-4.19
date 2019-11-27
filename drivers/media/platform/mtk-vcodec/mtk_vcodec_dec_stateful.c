@@ -675,12 +675,6 @@ static void vb2ops_vdec_stateful_buf_queue(struct vb2_buffer *vb)
 		return;
 	}
 	buf = container_of(src_buf, struct mtk_video_dec_buf, vb);
-	if (buf->lastframe) {
-		/* This shouldn't happen. Just in case. */
-		mtk_v4l2_err("Invalid flush buffer.");
-		v4l2_m2m_src_buf_remove(ctx->m2m_ctx);
-		return;
-	}
 
 	src_mem.va = vb2_plane_vaddr(&src_buf->vb2_buf, 0);
 	src_mem.dma_addr = vb2_dma_contig_plane_dma_addr(&src_buf->vb2_buf, 0);
