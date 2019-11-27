@@ -1305,6 +1305,7 @@ firmware_class.path=/vendor/firmware loop.max_part=7";
 			ccipll {
 				mediatek,fh-id = <3>;
 				mediatek,fh-pll-id = <CLK_APMIXED_CCIPLL>;
+				mediatek,fh-cpu-pll;
 			};
 
 			mfgpll {
