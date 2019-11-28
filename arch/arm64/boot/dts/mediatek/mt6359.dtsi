@@ -477,5 +477,9 @@
 		mt6359_snd: mt6359_snd {
 			compatible = "mediatek,mt6359-sound";
 		};
+
+		mt6359_debug {
+			compatible = "mediatek,mt63xx-debug";
+		};
 	};
 };
