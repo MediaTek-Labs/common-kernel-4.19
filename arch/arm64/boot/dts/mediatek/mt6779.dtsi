@@ -3107,6 +3107,15 @@ firmware_class.path=/vendor/firmware loop.max_part=7";
 			#clock-cells = <1>;
 		};
 
+		mfb@15010000 {
+			compatible = "mediatek,mfb";
+			reg = <0 0x15010000 0 0x1000>;
+			interrupts = <GIC_SPI 294 IRQ_TYPE_LEVEL_LOW>;
+
+			clocks = <&imgsys CLK_IMG_MFB>;
+			clock-names = "MFB_CLK_IMG_MFB";
+		};
+
 		wpe_a@15011000 {
 			compatible = "mediatek,wpe_a";
 			reg = <0 0x15011000 0 0x1000>;
