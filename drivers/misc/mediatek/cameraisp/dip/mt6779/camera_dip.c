@@ -336,8 +336,8 @@ static struct DIP_MEM_INFO_STRUCT g_CmdqBaseAddrInfo = {0x0, 0x0, NULL, 0x0};
 static unsigned int m_CurrentPPB;
 
 #ifdef CONFIG_PM_WAKELOCKS
-struct wakeup_source dip_wake_lock;
-struct wakeup_source isp_mdp_wake_lock;
+struct wakeup_source *dip_wake_lock;
+struct wakeup_source *isp_mdp_wake_lock;
 #else
 struct wake_lock dip_wake_lock;
 struct wakeup_source isp_mdp_wake_lock;
@@ -3479,7 +3479,7 @@ static long DIP_ioctl(
 			if (wakelock_ctrl == 1) {    /* Enable     wakelock */
 				if (g_bWaitLock == 0) {
 #ifdef CONFIG_PM_WAKELOCKS
-					__pm_stay_awake(&dip_wake_lock);
+					__pm_stay_awake(dip_wake_lock);
 #else
 					wake_lock(&dip_wake_lock);
 #endif
@@ -3489,7 +3489,7 @@ static long DIP_ioctl(
 			} else {        /* Disable wakelock */
 				if (g_bWaitLock == 1) {
 #ifdef CONFIG_PM_WAKELOCKS
-					__pm_relax(&dip_wake_lock);
+					__pm_relax(dip_wake_lock);
 #else
 					wake_unlock(&dip_wake_lock);
 #endif
@@ -4128,14 +4128,14 @@ static signed int DIP_open(
 
 	/* Enable clock */
 #ifdef CONFIG_PM_WAKELOCKS
-	__pm_stay_awake(&dip_wake_lock);
+	__pm_stay_awake(dip_wake_lock);
 #else
 	wake_lock(&dip_wake_lock);
 #endif
 	DIP_EnableClock(MTRUE);
 	g_u4DipCnt = 0;
 #ifdef CONFIG_PM_WAKELOCKS
-	__pm_relax(&dip_wake_lock);
+	__pm_relax(dip_wake_lock);
 #else
 	wake_unlock(&dip_wake_lock);
 #endif
@@ -4209,7 +4209,7 @@ static signed int DIP_release(
 
 	if (g_bWaitLock == 1) {
 #ifdef CONFIG_PM_WAKELOCKS
-		__pm_relax(&dip_wake_lock);
+		__pm_relax(dip_wake_lock);
 #else
 		wake_unlock(&dip_wake_lock);
 #endif
@@ -4292,13 +4292,13 @@ static signed int DIP_release(
 #endif
 
 #ifdef CONFIG_PM_WAKELOCKS
-	__pm_stay_awake(&dip_wake_lock);
+	__pm_stay_awake(dip_wake_lock);
 #else
 	wake_lock(&dip_wake_lock);
 #endif
 	DIP_EnableClock(MFALSE);
 #ifdef CONFIG_PM_WAKELOCKS
-	__pm_relax(&dip_wake_lock);
+	__pm_relax(dip_wake_lock);
 #else
 	wake_unlock(&dip_wake_lock);
 #endif
@@ -4634,8 +4634,10 @@ static signed int DIP_probe(struct platform_device *pDev)
 			init_waitqueue_head(&IspInfo.WaitQueueHead[i]);
 
 #ifdef CONFIG_PM_WAKELOCKS
-		wakeup_source_init(&dip_wake_lock, "dip_lock_wakelock");
-		wakeup_source_init(&isp_mdp_wake_lock, "isp_mdp_wakelock");
+		dip_wake_lock = wakeup_source_register(NULL,
+			"dip_lock_wakelock");
+		isp_mdp_wake_lock = wakeup_source_register(NULL,
+			"isp_mdp_wakelock");
 #else
 		wake_lock_init(&dip_wake_lock,
 			WAKE_LOCK_SUSPEND,
@@ -5453,7 +5455,7 @@ int32_t DIP_MDPClockOnCallback(uint64_t engineFlag)
 	/* LOG_DBG("DIP_MDPClockOnCallback"); */
 	/*LOG_DBG("+MDPEn:%d", G_u4DipEnClkCnt);*/
 #ifdef CONFIG_PM_WAKELOCKS
-	__pm_stay_awake(&isp_mdp_wake_lock);
+	__pm_stay_awake(isp_mdp_wake_lock);
 #else
 	wake_lock(&isp_mdp_wake_lock);
 #endif
@@ -5531,7 +5533,7 @@ int32_t DIP_MDPClockOffCallback(uint64_t engineFlag)
 	/* LOG_DBG("DIP_MDPClockOffCallback"); */
 	DIP_EnableClock(MFALSE);
 #ifdef CONFIG_PM_WAKELOCKS
-	__pm_relax(&isp_mdp_wake_lock);
+	__pm_relax(isp_mdp_wake_lock);
 #else
 	wake_unlock(&isp_mdp_wake_lock);
 #endif
