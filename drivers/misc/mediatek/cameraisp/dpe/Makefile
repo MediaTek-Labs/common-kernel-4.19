@@ -11,16 +11,14 @@
 # GNU General Public License for more details.
 #
 
-obj-y += dip/
-#obj-y += src/
-#ifeq ($(CONFIG_MACH_MT6763),y)
-#obj-y += owe/
-#endif
-obj-y += rsc/
-obj-y += wpe/
-obj-y += dpe/
-#ifeq ($(CONFIG_MACH_MT6763),y)
-#obj-y += tsf/
-#endif
-#obj-y += mfb/
-#obj-y += fdvt/
+$(info $(srctree))
+ccflags-y += -I$(srctree)/drivers/misc/mediatek/mmp/
+ccflags-y += -I$(srctree)/drivers/misc/mediatek/cmdq/v3/
+ccflags-y += -I$(srctree)/drivers/staging/android/ion \
+             -I$(srctree)/drivers/staging/android/ion/mtk
+ccflags-y += -I$(srctree)/drivers/misc/mediatek/smi/
+
+obj-y += cameradpe_dummy.c
+obj-$(CONFIG_MTK_CAMERA_ISP_DPE_SUPPORT) += camera_dpe.o
+camera_dpe-objs += engine_request.o
+camera_dpe-objs += isp50/camera_dpe.o
