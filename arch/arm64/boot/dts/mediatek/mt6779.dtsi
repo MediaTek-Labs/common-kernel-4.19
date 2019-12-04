@@ -3312,6 +3312,26 @@ firmware_class.path=/vendor/firmware loop.max_part=7";
 			clock-names = "RSC_CLK_IPE_RSC";
 		};
 
+		dvs@1b100000 {
+			compatible = "mediatek,dvs";
+			reg = <0 0x1b100000 0 0x1000>;
+			interrupts = <GIC_SPI 302 IRQ_TYPE_LEVEL_LOW>;
+			clocks = <&topckgen CLK_TOP_DPE>,
+				<&ipesys CLK_IPE_DPE>;
+			clock-names = "DPE_TOP_MUX",
+				"DPE_CLK_IPE_DPE";
+		};
+
+		dvp@1b100800 {
+			compatible = "mediatek,dvp";
+			reg = <0 0x1b100000 0 0x1000>;
+			interrupts = <GIC_SPI 303 IRQ_TYPE_LEVEL_LOW>;
+			clocks = <&topckgen CLK_TOP_DPE>,
+				<&ipesys CLK_IPE_DPE>;
+			clock-names = "DPE_TOP_MUX",
+				"DPE_CLK_IPE_DPE";
+		};
+
 		larb8: larb@1b00f000 {
 			compatible = "mediatek,mt6779-smi-larb";
 			reg = <0 0x1b00f000 0 0x1000>;
