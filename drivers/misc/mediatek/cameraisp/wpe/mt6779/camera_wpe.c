@@ -243,11 +243,6 @@ static struct Tasklet_table WPE_tasklet[WPE_IRQ_TYPE_AMOUNT] = {
 	{ISP_TaskletFunc_WPE, &Wpetkt[WPE_IRQ_TYPE_INT_WPE_ST]},
 };
 
-#ifdef CONFIG_PM_WAKELOCKS
-struct wakeup_source WPE_wake_lock;
-#endif
-
-
 static DEFINE_MUTEX(gWpeMutex);
 static DEFINE_MUTEX(gWpeDequeMutex);
 
@@ -4765,9 +4760,6 @@ static signed int WPE_probe(struct platform_device *pDev)
 		init_waitqueue_head(&WPEInfo.WaitQueueHead);
 		INIT_WORK(&WPEInfo.ScheduleWpeWork, WPE_ScheduleWork);
 
-#ifdef CONFIG_PM_WAKELOCKS
-		wakeup_source_init(&WPE_wake_lock, "WPE_lock_wakelock");
-#endif
 
 		for (i = 0; i < WPE_IRQ_TYPE_AMOUNT; i++)
 			tasklet_init(WPE_tasklet[i].pWPE_tkt,
