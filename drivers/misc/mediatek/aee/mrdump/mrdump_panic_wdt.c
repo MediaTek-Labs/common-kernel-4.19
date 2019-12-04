@@ -405,7 +405,6 @@ void aee_wdt_atf_info(unsigned int cpu, struct pt_regs *regs)
 			cpu_relax();
 	}
 
-	show_kaslr();
 	/* Wait for other cpu dump */
 	mdelay(1000);
 
@@ -467,7 +466,7 @@ void aee_wdt_atf_info(unsigned int cpu, struct pt_regs *regs)
 	mt_aee_dump_sched_traces();
 #endif
 
-#ifdef CONFIG_SCHED_DEBUG
+#if IS_ENABLED(CONFIG_MTK_SCHED_EXTENSION)
 	sysrq_sched_debug_show_at_AEE();
 #endif
 
