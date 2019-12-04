@@ -19,11 +19,6 @@
 #define DVFS_STATUS_CMD_LIMITED			(-7)
 #define DVFS_STATUS_CMD_DISABLE			(-8)
 
-#define SCP_TO_PMIC_PORTING
-#define SCP_TO_GPIO_PORTING
-#define SCP_TO_DVFSRC_PORTING
-#define SCP_TO_SPM_PORTING
-
 #define CLK_26M					(26)
 
 enum scp_state_enum {
@@ -79,7 +74,8 @@ enum scp_request_resources {
 
 struct mt_scp_pll_t {
 	struct clk *clk_mux;
-	struct clk *clk_pll[7];
+	struct clk *clk_pll[8];
+	unsigned int pll_num;
 };
 
 struct reg_info {
@@ -123,9 +119,7 @@ struct dvfs_data {
 	int dvfsrc_opp_num;
 };
 
-#ifdef SCP_TO_SPM_PORTING
 extern void scp_to_spm_resource_req(unsigned long cmd, unsigned long val);
-#endif
 extern int scp_pll_ctrl_set(unsigned int pll_ctrl_flag, unsigned int pll_sel);
 extern int scp_set_pmic_vcore(unsigned int cur_freq);
 extern unsigned int scp_get_dvfs_opp(void);

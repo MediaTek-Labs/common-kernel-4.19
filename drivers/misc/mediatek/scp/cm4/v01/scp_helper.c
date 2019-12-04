@@ -82,7 +82,7 @@ unsigned int scp_reset_by_cmd;
 struct scp_region_info_st *scp_region_info;
 struct completion scp_sys_reset_cp;
 struct scp_work_struct scp_sys_reset_work;
-struct wakeup_source scp_reset_lock;
+struct wakeup_source *scp_reset_lock;
 phys_addr_t scp_loader_base_virt;
 DEFINE_SPINLOCK(scp_reset_spinlock);
 
@@ -365,13 +365,12 @@ static void scp_A_notify_ws(struct work_struct *ws)
 	/*clear reset status and unlock wake lock*/
 	pr_debug("[SCP] clear scp reset flag and unlock\n");
 #ifndef CONFIG_FPGA_EARLY_PORTING
-#ifdef SCP_TO_SPM_PORTING
 	scp_to_spm_resource_req(SCP_DVFS_SMC_RESOURCE_REL, 0);
-#endif
+
 #endif	// CONFIG_FPGA_EARLY_PORTING
 	/* register scp dvfs*/
 	msleep(2000);
-	__pm_relax(&scp_reset_lock);
+	__pm_relax(scp_reset_lock);
 	scp_register_feature(RTOS_FEATURE_ID);
 #endif  // SCP_RECOVERY_SUPPORT
 }
@@ -1502,15 +1501,13 @@ void scp_sys_reset_ws(struct work_struct *ws)
 	scp_ready[SCP_A_ID] = 0;
 
 	/* wake lock AP*/
-	__pm_stay_awake(&scp_reset_lock);
+	__pm_stay_awake(scp_reset_lock);
 
 #ifndef CONFIG_FPGA_EARLY_PORTING
-#ifdef SCP_TO_SPM_PORTING
 	/* keep 26Mhz */
 	scp_to_spm_resource_req(SCP_DVFS_SMC_RESOURCE_REQ,
 			SCP_REQ_RESOURCE_26M);
 #endif  // CONFIG_FPGA_EARLY_PORTING
-#endif
 	/*request pll clock before turn off scp */
 	pr_debug("[SCP] %s(): scp_pll_ctrl_set\n", __func__);
 #if SCP_DVFS_INIT_ENABLE
@@ -1689,7 +1686,7 @@ void scp_recovery_init(void)
 	/*init wake,
 	 *this is for prevent scp pll cpu clock disabled during reset flow
 	 */
-	wakeup_source_init(&scp_reset_lock, "scp reset wakelock");
+	scp_reset_lock = wakeup_source_register(NULL, "scp reset wakelock");
 	/* init reset by cmd flag */
 	scp_reset_by_cmd = 0;
 
@@ -1914,11 +1911,9 @@ static int __init scp_init(void)
 #endif
 
 #ifndef CONFIG_FPGA_EARLY_PORTING
-#ifdef SCP_TO_SPM_PORTING
 	/* keep 26Mhz */
 	scp_to_spm_resource_req(SCP_DVFS_SMC_RESOURCE_REQ,
 			SCP_REQ_RESOURCE_26M);
-#endif
 #endif  // CONFIG_FPGA_EARLY_PORTING
 
 	if (platform_driver_register(&mtk_scp_device)) {
