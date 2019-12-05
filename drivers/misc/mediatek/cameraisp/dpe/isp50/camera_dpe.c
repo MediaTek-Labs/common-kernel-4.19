@@ -228,10 +228,6 @@ static struct Tasklet_table DPE_tasklet[DPE_IRQ_TYPE_AMOUNT] = {
 static struct work_struct logWork;
 static void logPrint(struct work_struct *data);
 
-#ifdef CONFIG_PM_WAKELOCKS
-struct wakeup_source DPE_wake_lock;
-#endif
-
 static DEFINE_MUTEX(gDpeMutex);
 static DEFINE_MUTEX(gDpeDequeMutex);
 
@@ -3630,10 +3626,6 @@ static signed int DPE_probe(struct platform_device *pDev)
 		if (!DPEInfo.wkqueue)
 			LOG_ERR("NULL DPE-CMDQ-WQ\n");
 
-#ifdef CONFIG_PM_WAKELOCKS
-		wakeup_source_init(&DPE_wake_lock, "DPE_wake_lock");
-#endif
-
 		INIT_WORK(&logWork, logPrint);
 		for (i = 0; i < DPE_IRQ_TYPE_AMOUNT; i++)
 			tasklet_init(DPE_tasklet[i].pDPE_tkt,
@@ -4085,12 +4077,6 @@ int32_t DPE_ClockOnCallback(uint64_t engineFlag)
 {
 	/* LOG_DBG("DPE_ClockOnCallback"); */
 	/* LOG_DBG("+CmdqEn:%d", g_u4EnableClockCount); */
-
-#ifdef CONFIG_PM_WAKELOCKS
-	__pm_stay_awake(&DPE_wake_lock);
-#else
-	wake_lock(&DPE_wake_lock);
-#endif
 	/* DPE_EnableClock(MTRUE); */
 
 	return 0;
@@ -4118,12 +4104,6 @@ int32_t DPE_ClockOffCallback(uint64_t engineFlag)
 {
 	/* LOG_DBG("DPE_ClockOffCallback"); */
 	/* DPE_EnableClock(MFALSE); */
-#ifdef CONFIG_PM_WAKELOCKS
-	__pm_relax(&DPE_wake_lock);
-#else
-	wake_unlock(&DPE_wake_lock);
-#endif
-
 	/* LOG_DBG("-CmdqEn:%d", g_u4EnableClockCount); */
 	return 0;
 }
