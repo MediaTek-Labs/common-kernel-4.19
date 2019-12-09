@@ -60,7 +60,7 @@ struct nanohub_data {
 	atomic_t thread_state;
 	wait_queue_head_t kthread_wait;
 
-	struct wakeup_source ws;
+	struct wakeup_source *ws;
 
 	struct nanohub_io free_pool;
 

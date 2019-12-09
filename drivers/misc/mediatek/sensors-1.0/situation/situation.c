@@ -104,7 +104,7 @@ int situation_data_report_t(int handle, uint32_t one_sample_data,
 	err = sensor_input_event(situation_context_obj->mdev.minor, &event);
 	if (cxt->ctl_context[index].situation_ctl.open_report_data != NULL &&
 		cxt->ctl_context[index].situation_ctl.is_support_wake_lock)
-		__pm_wakeup_event(&cxt->ws[index], 250);
+		__pm_wakeup_event(cxt->ws[index], 250);
 	return err;
 }
 EXPORT_SYMBOL_GPL(situation_data_report_t);
@@ -135,7 +135,7 @@ int sar_data_report_t(int32_t value[3], int64_t time_stamp)
 	err = sensor_input_event(situation_context_obj->mdev.minor, &event);
 	if (cxt->ctl_context[index].situation_ctl.open_report_data != NULL &&
 		cxt->ctl_context[index].situation_ctl.is_support_wake_lock)
-		__pm_wakeup_event(&cxt->ws[index], 250);
+		__pm_wakeup_event(cxt->ws[index], 250);
 	return err;
 }
 int sar_data_report(int32_t value[3])
@@ -583,7 +583,12 @@ int situation_register_control_path(struct situation_control_path *ctl,
 	if (!cxt->wake_lock_name[index])
 		return -1;
 	sprintf(cxt->wake_lock_name[index], "situation_wakelock-%d", index);
-	wakeup_source_init(&cxt->ws[index], cxt->wake_lock_name[index]);
+	cxt->ws[index] = wakeup_source_register(NULL,
+						cxt->wake_lock_name[index]);
+	if (!cxt->ws[index]) {
+		pr_err("%s: wakeup source init fail\n", __func__);
+		return -ENOMEM;
+	}
 
 	return 0;
 }

@@ -756,7 +756,7 @@ static void nanohub_process_buffer(struct nanohub_data *data,
 	 * has time to grab its own wake lock
 	 */
 	if (wakeup)
-		__pm_wakeup_event(&data->ws, 10);
+		__pm_wakeup_event(data->ws, 10);
 	release_wakeup(data);
 }
 
@@ -899,7 +899,12 @@ struct iio_dev *nanohub_probe(struct device *dev, struct iio_dev *iio_dev)
 		nanohub_io_put_buf(&data->free_pool, &buf[i]);
 	atomic_set(&data->kthread_run, 0);
 
-	wakeup_source_init(&data->ws, "nanohub_wakelock_read");
+	data->ws = wakeup_source_register(NULL, "nanohub_wakelock_read");
+	if (!data->ws) {
+		pr_err("nanohub: wakeup source init fail\n");
+		ret = -ENOMEM;
+		goto fail_wakeup;
+	}
 
 	atomic_set(&data->lock_mode, LOCK_MODE_NONE);
 	atomic_set(&data->wakeup_cnt, 0);
@@ -923,7 +928,8 @@ fail_dev:
 	iio_device_unregister(iio_dev);
 
 fail_irq:
-	wakeup_source_trash(&data->ws);
+	wakeup_source_unregister(data->ws);
+fail_wakeup:
 	vfree(buf);
 fail_vma:
 	if (own_iio_dev)

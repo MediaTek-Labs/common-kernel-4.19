@@ -85,7 +85,7 @@ struct SCP_sensorHub_data {
 	struct workqueue_struct	*direct_push_workqueue;
 	struct timer_list sync_time_timer;
 	struct work_struct sync_time_worker;
-	struct wakeup_source ws;
+	struct wakeup_source *ws;
 
 	struct sensorFIFO *SCP_sensorFIFO;
 	struct curr_wp_queue wp_queue;
@@ -1236,9 +1236,9 @@ static int sensor_send_timestamp_to_hub(void)
 		return 0;
 	}
 
-	__pm_stay_awake(&obj->ws);
+	__pm_stay_awake(obj->ws);
 	err = sensor_send_timestamp_wake_locked();
-	__pm_relax(&obj->ws);
+	__pm_relax(obj->ws);
 	return err;
 }
 static void sensor_disable_report_flush(uint8_t handle)
@@ -2287,7 +2287,13 @@ static int sensorHub_probe(struct platform_device *pdev)
 	timer_setup(&obj->sync_time_timer, SCP_sensorHub_sync_time_func, 0);
 	mod_timer(&obj->sync_time_timer,
 		jiffies + msecs_to_jiffies(SYNC_TIME_START_CYCLC));
-	wakeup_source_init(&obj->ws, "sync_time");
+	obj->ws = wakeup_source_register(NULL, "sync_time");
+	if (!obj->ws) {
+		pr_err("SCP_sensorHub: wakeup source init fail\n");
+		err = -ENOMEM;
+		goto exit;
+	}
+
 	/* this call back can get scp power down status */
 	scp_A_register_notify(&sensorHub_ready_notifier);
 	/* this call back can get scp power UP status */
@@ -2314,6 +2320,11 @@ exit:
 
 static int sensorHub_remove(struct platform_device *pdev)
 {
+	struct SCP_sensorHub_data *obj = obj_data;
+
+	if (obj)
+		wakeup_source_unregister(obj->ws);
+
 	return 0;
 }
 

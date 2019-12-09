@@ -69,7 +69,7 @@ struct situation_context {
 	struct mutex situation_op_mutex;
 	struct situation_data_control_context
 		ctl_context[max_situation_support];
-	struct wakeup_source ws[max_situation_support];
+	struct wakeup_source *ws[max_situation_support];
 	char *wake_lock_name[max_situation_support];
 };
 

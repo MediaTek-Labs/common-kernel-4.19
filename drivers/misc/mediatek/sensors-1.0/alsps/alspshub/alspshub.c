@@ -37,7 +37,7 @@ struct alspshub_ipi_data {
 	bool ps_factory_enable;
 	bool als_android_enable;
 	bool ps_android_enable;
-	struct wakeup_source ps_wake_lock;
+	struct wakeup_source *ps_wake_lock;
 };
 
 static struct alspshub_ipi_data *obj_ipi_data;
@@ -323,7 +323,7 @@ static int ps_recv_data(struct data_unit_t *event, void *reserved)
 		err = ps_flush_report();
 	else if (event->flush_action == DATA_ACTION &&
 			READ_ONCE(obj->ps_android_enable) == true) {
-		__pm_wakeup_event(&obj->ps_wake_lock, msecs_to_jiffies(100));
+		__pm_wakeup_event(obj->ps_wake_lock, msecs_to_jiffies(100));
 		err = ps_data_report_t(event->proximity_t.oneshot,
 			SENSOR_STATUS_ACCURACY_HIGH,
 			(int64_t)event->time_stamp);
@@ -979,7 +979,12 @@ static int alspshub_probe(struct platform_device *pdev)
 		pr_err("tregister fail = %d\n", err);
 		goto exit_create_attr_failed;
 	}
-	wakeup_source_init(&obj->ps_wake_lock, "ps_wake_lock");
+	obj->ps_wake_lock = wakeup_source_register(NULL, "ps_wake_lock");
+	if (!obj->ps_wake_lock) {
+		pr_err("wakeup source init fail\n");
+		err = -ENOMEM;
+		goto exit_create_attr_failed;
+	}
 
 	alspshub_init_flag = 0;
 	pr_debug("%s: OK\n", __func__);
@@ -1001,7 +1006,10 @@ static int alspshub_remove(struct platform_device *pdev)
 	int err = 0;
 	struct platform_driver *paddr =
 			alspshub_init_info.platform_diver_addr;
+	struct alspshub_ipi_data *obj = obj_ipi_data;
 
+	if (obj)
+		wakeup_source_unregister(obj->ps_wake_lock);
 	err = alspshub_delete_attr(&paddr->driver);
 	if (err)
 		pr_err("alspshub_delete_attr fail: %d\n", err);
