@@ -4569,6 +4569,7 @@ static const char * const critical_lock_list[] = {
 	"&(&pool->lock)->rlock",
 	/* kmalloc */
 	"&(&n->list_lock)->rlock",
+	"&(&zone->lock)->rlock",
 	/* stacktrace */
 	"depot_lock"
 };
