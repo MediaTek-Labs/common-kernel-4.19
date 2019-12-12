@@ -121,9 +121,6 @@ struct unwind_info_rms {
 	int Userthread_mapsLength __packed __aligned(8);
 	unsigned char *Userthread_maps __packed __aligned(8);
 };
-#ifdef CONFIG_MTK_PRINTK_UART_CONSOLE
-extern int printk_disable_uart;
-#endif
 
 #ifdef CONFIG_MTK_AEE_IPANIC
 extern void aee_rr_rec_hang_detect_timeout_count(unsigned int timeout);

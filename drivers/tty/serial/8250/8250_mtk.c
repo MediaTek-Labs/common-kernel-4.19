@@ -18,6 +18,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/tty.h>
 #include <linux/tty_flip.h>
+#include "mt-plat/mtk_printk_ctrl.h"
 
 #include "8250.h"
 
@@ -395,7 +396,7 @@ static int mtk8250_handle_irq(struct uart_port *port)
 #ifndef CONFIG_FIQ_DEBUGGER
 #ifdef CONFIG_PRINTK_MTK_UART_CONSOLE
 	if (uart_console(port) && (serial_port_in(port, UART_LSR) & 0x01))
-		printk_disable_uart = 0;
+		mt_enable_uart();
 #endif
 #endif
 

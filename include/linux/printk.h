@@ -28,18 +28,6 @@ void set_logtoomuch_enable(int value);
 int get_logtoomuch_enable(void);
 #endif
 
-#ifdef CONFIG_PRINTK_MTK_UART_CONSOLE
-/*
- * 0: uart printk enable
- * 1: uart printk disable
- * 2: uart printk always enable
- * 2 only set in lk phase by cmline
- */
-extern int printk_disable_uart;
-#endif
-
-
-
 static inline int printk_get_level(const char *buffer)
 {
 	if (buffer[0] == KERN_SOH_ASCII && buffer[1]) {

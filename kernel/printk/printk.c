@@ -448,19 +448,6 @@ static char __log_buf[__LOG_BUF_LEN] __aligned(LOG_ALIGN);
 static char *log_buf = __log_buf;
 static u32 log_buf_len = __LOG_BUF_LEN;
 
-#ifdef CONFIG_PRINTK_MTK_UART_CONSOLE
-/*
- * 0: uart printk enable
- * 1: uart printk disable
- * 2: uart printk always enable
- * 2 only set in lk phase by cmline
- */
-int printk_disable_uart;
-
-module_param_named(disable_uart, printk_disable_uart, int, 0644);
-#endif
-
-
 /* console duration detect */
 #ifdef CONFIG_CONSOLE_LOCK_DURATION_DETECT
 struct __conwrite_stat_struct {
