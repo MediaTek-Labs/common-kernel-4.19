@@ -55,12 +55,22 @@
 #define RGU_STAGE_KERNEL	0x3
 #define WDT_BYPASS_PWR_KEY	(1 << 13)
 
+#define WDT_REQ_MODE		0x30
+#define WDT_REQ_MODE_KEY	0x33000000
+#define WDT_REQ_MODE_EINT	(1 << 2)
+#define WDT_REQ_MODE_SYSRST	(1 << 3)
+
+#define WDT_EXT_REQ_CON	0x38
+
 #define WDT_LATCH_CTL2	0x48
 #define WDT_DFD_EN              (1 << 17)
 #define WDT_DFD_THERMAL1_DIS    (1 << 18)
 #define WDT_DFD_THERMAL2_DIS    (1 << 19)
 #define WDT_DFD_TIMEOUT_MASK    0x1FFFF
 #define WDT_LATCH_CTL2_KEY	0x95000000
+
+#define WDT_SYSDBG_DEG_EN1	0x88
+#define WDT_SYSDBG_DEG_EN2	0x8c
 
 #define DRV_NAME		"mtk-wdt"
 #define DRV_VERSION		"1.0"
@@ -113,6 +123,25 @@ static void mtk_wdt_parse_dt(struct device_node *np,
 	}
 }
 
+static void mtk_wdt_request_dis(struct mtk_wdt_dev *mtk_wdt, u32 mark_bit)
+{
+	void __iomem *wdt_base = mtk_wdt->wdt_base;
+	u32 reg = readl(wdt_base + WDT_REQ_MODE);
+
+	if (mark_bit & WDT_REQ_MODE_EINT) {
+		writel(0, wdt_base + WDT_EXT_REQ_CON);
+		reg &= ~WDT_REQ_MODE_EINT;
+	}
+
+	if (mark_bit & WDT_REQ_MODE_SYSRST) {
+		writel(0, wdt_base + WDT_SYSDBG_DEG_EN1);
+		writel(0, wdt_base + WDT_SYSDBG_DEG_EN2);
+		reg &= ~WDT_REQ_MODE_SYSRST;
+	}
+
+	writel(reg | WDT_REQ_MODE_KEY, wdt_base + WDT_REQ_MODE);
+}
+
 static int mtk_wdt_restart(struct watchdog_device *wdt_dev,
 			   unsigned long action, void *cmd)
 {
@@ -144,6 +173,8 @@ static int mtk_wdt_restart(struct watchdog_device *wdt_dev,
 
 	writel(WDT_MODE_KEY | mode, wdt_base + WDT_MODE);
 	writel(nonrst2, wdt_base + WDT_NONRST2);
+
+	mtk_wdt_request_dis(mtk_wdt, WDT_REQ_MODE_EINT | WDT_REQ_MODE_SYSRST);
 
 	while (1) {
 		writel(WDT_SWRST_KEY, wdt_base + WDT_SWRST);
