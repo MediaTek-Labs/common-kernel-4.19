@@ -296,6 +296,15 @@ config MTK_MET
 	  Select "Y" if you want to use.
 	  Select "N" if you are not sure.
 
+config MTK_GCOV_KERNEL
+	bool "Enable GCOV on Mediatek Modules"
+	depends on GCOV_KERNEL
+	help
+	  Enable GCOV on Mediatek Modules
+	  It depends on GCOV_KERNEL
+	  Select "Y" if you want to use.
+	  Select "N" if you are not sure.
+
 source "drivers/misc/mediatek/met_drv/Kconfig"
 source "drivers/misc/mediatek/mtprof/Kconfig"
 source "drivers/misc/mediatek/aee/Kconfig"

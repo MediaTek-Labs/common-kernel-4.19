@@ -1,3 +1,6 @@
+ifeq ($(CONFIG_MTK_GCOV_KERNEL),y)
+GCOV_PROFILE := y
+endif
 ccflags-y += -I$(srctree)/drivers/misc/mediatek/sspm/
 
 mtk-dvfsrc-help-objs = dvfsrc.o dvfsrc-opp.o dvfsrc-sysfs.o dvfsrc-ipi.o

@@ -1,4 +1,9 @@
 # SPDX-License-Identifier: GPL-2.0
+
+ifeq ($(CONFIG_MTK_GCOV_KERNEL),y)
+GCOV_PROFILE_sspm-cpufreq.o := y
+endif
+
 # CPUfreq core
 obj-$(CONFIG_CPU_FREQ)			+= cpufreq.o freq_table.o
 

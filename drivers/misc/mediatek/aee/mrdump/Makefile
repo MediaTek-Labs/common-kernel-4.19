@@ -11,6 +11,10 @@
 # See http://www.gnu.org/licenses/gpl-2.0.html for more details.
 #
 
+ifeq ($(CONFIG_MTK_GCOV_KERNEL),y)
+GCOV_PROFILE := y
+endif
+
 subdir-ccflags-y += -Idrivers/misc/mediatek/mtprof/
 
 ifdef CONFIG_MTK_AEE_IPANIC

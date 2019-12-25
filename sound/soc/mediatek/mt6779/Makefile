@@ -1,5 +1,9 @@
 # SPDX-License-Identifier: GPL-2.0
 
+ifeq ($(CONFIG_MTK_GCOV_KERNEL),y)
+GCOV_PROFILE := y
+endif
+
 # platform driver
 snd-soc-mt6779-afe-objs := \
 	mt6779-afe-pcm.o \

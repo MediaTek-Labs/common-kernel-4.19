@@ -1,3 +1,8 @@
+ifeq ($(CONFIG_MTK_GCOV_KERNEL),y)
+GCOV_PROFILE_mtk-dvfsrc.o := y
+GCOV_PROFILE_mtk-mmdvfs.o := y
+GCOV_PROFILE_mtk-pmic-wrap.o := y
+endif
 obj-$(CONFIG_MTK_CMDQ) += mtk-cmdq-helper.o
 obj-$(CONFIG_MTK_INFRACFG) += mtk-infracfg.o mtk-scpsys-ext.o
 obj-$(CONFIG_MTK_DVFSRC) += mtk-dvfsrc.o
