@@ -2222,6 +2222,35 @@ static int sensorHub_ready_event(struct notifier_block *this,
 static struct notifier_block sensorHub_ready_notifier = {
 	.notifier_call = sensorHub_ready_event,
 };
+
+static int send_sensor_init_start_event(void)
+{
+	enum scp_ipi_status ipi_status = SCP_IPI_ERROR;
+	uint32_t sensor_init_start_event = 0;
+	uint32_t retry = 0;
+
+	do {
+		ipi_status = scp_ipi_send(IPI_SENSOR_INIT_START,
+			&sensor_init_start_event,
+			sizeof(sensor_init_start_event),
+			0, SCP_A_ID);
+		if (ipi_status == SCP_IPI_ERROR) {
+			pr_err("IPI_SENSOR_INIT_START: ipi_send fail\n");
+			return -1;
+		}
+		if (ipi_status == SCP_IPI_BUSY) {
+			if (retry++ == 1000) {
+				pr_err("retry fail\n");
+				return -1;
+			}
+			if (retry % 10 == 0)
+				usleep_range(1000, 2000);
+		}
+	} while (ipi_status == SCP_IPI_BUSY);
+
+	return 0;
+}
+
 static int sensorHub_probe(struct platform_device *pdev)
 {
 	struct SCP_sensorHub_data *obj;
@@ -2250,11 +2279,15 @@ static int sensorHub_probe(struct platform_device *pdev)
 		vzalloc(obj->wp_queue.bufsize * sizeof(uint32_t));
 	if (!obj->wp_queue.ringbuffer) {
 		pr_err("Alloc ringbuffer error!\n");
-		goto exit;
+		goto exit_wp_queue;
 	}
 	/* register ipi interrupt handler */
 	scp_ipi_registration(IPI_SENSOR,
 		SCP_sensorHub_IPI_handler, "SCP_sensorHub");
+
+	if (!send_sensor_init_start_event())
+		goto exit_ipi_start;
+
 	/* init receive scp dram data worker */
 	/* INIT_WORK(&obj->direct_push_work, SCP_sensorHub_direct_push_work); */
 	/* obj->direct_push_workqueue = alloc_workqueue("chre_work",
@@ -2273,7 +2306,7 @@ static int sensorHub_probe(struct platform_device *pdev)
 		NULL, "chre_kthread");
 	if (IS_ERR(task)) {
 		pr_err("SCP_sensorHub_direct_push_work create fail!\n");
-		goto exit;
+		goto exit_direct_push;
 	}
 	sched_setscheduler(task, SCHED_FIFO, &param);
 	/* init the debug trace flag */
@@ -2291,7 +2324,7 @@ static int sensorHub_probe(struct platform_device *pdev)
 	if (!obj->ws) {
 		pr_err("SCP_sensorHub: wakeup source init fail\n");
 		err = -ENOMEM;
-		goto exit;
+		goto exit_wakeup;
 	}
 
 	/* this call back can get scp power down status */
@@ -2302,7 +2335,7 @@ static int sensorHub_probe(struct platform_device *pdev)
 		NULL, "scp_power_reset");
 	if (IS_ERR(task_power_reset)) {
 		pr_err("sensorHub_power_up_work create fail!\n");
-		goto exit;
+		goto exit_kthread_power_up;
 	}
 
 	SCP_sensorHub_init_flag = 0;
@@ -2312,6 +2345,18 @@ static int sensorHub_probe(struct platform_device *pdev)
 	BUG_ON(sizeof(struct data_unit_t) != SENSOR_DATA_SIZE
 		|| sizeof(union SCP_SENSOR_HUB_DATA) != SENSOR_IPI_SIZE);
 	return 0;
+
+exit_kthread_power_up:
+	scp_A_unregister_notify(&sensorHub_ready_notifier);
+	wakeup_source_unregister(obj->ws);
+exit_wakeup:
+	if (!IS_ERR(task))
+		kthread_stop(task);
+exit_direct_push:
+exit_ipi_start:
+	vfree(obj->wp_queue.ringbuffer);
+exit_wp_queue:
+	kfree(obj);
 exit:
 	pr_err("%s: err = %d\n", __func__, err);
 	SCP_sensorHub_init_flag = -1;
