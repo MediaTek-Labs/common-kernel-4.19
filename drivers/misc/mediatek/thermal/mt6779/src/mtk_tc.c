@@ -848,6 +848,8 @@ u32 *tempmsr_name, enum tsmcu_sensor_enum ts_name)
 #if CONFIG_LVTS_ERROR_AEE_WARNING
 	int raw1;
 #endif
+	if (thermal_base == 0)
+		return 0;
 
 	if (tempmsr_name == 0)
 		return 0;
