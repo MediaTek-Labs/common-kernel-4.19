@@ -402,6 +402,14 @@
 			mediatek,spi_start_offset = <72>;
 		};
 
+		rng: rng@1020f000 {
+			compatible = "mediatek,mt8168-rng",
+				     "mediatek,mt7623-rng";
+			reg = <0 0x1020f000 0 0x100>;
+			clocks = <&infracfg CLK_IFR_TRNG>;
+			clock-names = "rng";
+		};
+
 		emicen: emicen@10219000 {
 			compatible = "mediatek,mt8168-emicen",
 				     "mediatek,common-emicen";
