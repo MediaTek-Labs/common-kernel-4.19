@@ -402,6 +402,80 @@
 			mediatek,spi_start_offset = <72>;
 		};
 
+		emicen: emicen@10219000 {
+			compatible = "mediatek,mt8168-emicen",
+				     "mediatek,common-emicen";
+			reg = <0 0x10219000 0 0x1000>;
+			mediatek,emi-reg = <&emichn>;
+		};
+
+		emimpu@10226000 {
+			compatible = "mediatek,mt8168-emimpu",
+				     "mediatek,common-emimpu";
+			reg = <0 0x10226000 0 0x1000>;
+			mediatek,emi-reg = <&emicen>;
+			interrupts = <GIC_SPI 88 IRQ_TYPE_LEVEL_LOW>;
+			region_cnt = <16>;
+			domain_cnt = <16>;
+			addr_align = <16>;
+			/* ap_region = <31>; */
+			ap_apc = <5 5 5 5 5 5 5 5>,
+					 <5 5 5 5 5 5 5 4>;
+			dump = <0x1f0 0x1f8 0x1fc>;
+			clear = <0x160 0xffffffff 16>,
+					<0x200 0x00000003 16>,
+					<0x1f0 0x80000000 1>;
+			clear_md = <0x1fc 0x80000000 1>;
+			ctrl_intf = <1>;
+			slverr = <0>;
+		};
+
+		dramc@1022c000 {
+			compatible = "mediatek,mt8168-dramc",
+				     "mediatek,common-dramc";
+			reg = <0 0x1022c000 0 0x2000>, /* DRAMC AO CHA */
+				  <0 0x10232000 0 0x2000>, /* DRAMC AO CHB */
+				  <0 0x1022e000 0 0x1000>, /* DRAMC NAO CHA */
+				  <0 0x10238000 0 0x1000>, /* DRAMC NAO CHB */
+				  <0 0x10228000 0 0x2000>, /* DDRPHY AO CHA */
+				  <0 0x10234000 0 0x2000>, /* DDRPHY AO CHB */
+				  <0 0x10230000 0 0x1000>, /* DDRPHY NAO CHA */
+				  <0 0x1023a000 0 0x1000>, /* DDRPHY NAO CHB */
+				  <0 0x10006000 0 0x1000>; /* SLEEP BASE */
+			mr4_version = <1>;
+			mr4_rg = <0x0090 0x0000ffff 0>;
+			fmeter_version = <1>;
+			crystal_freq = <52>;
+			pll_id = <0x0510 0x80000000 31>;
+			shu_lv = <0x00e4 0x00000006 1>;
+			shu_of = <0x500>;
+			sdmpcw = <0x0d9c 0xffff0000 16>,
+					 <0x0d94 0xffff0000 16>;
+			prediv = <0x0da8 0x000c0000 18>,
+					 <0x0da0 0x000c0000 18>;
+			posdiv = <0x0da8 0x00000007 0>,
+					 <0x0da0 0x00000007 0>;
+			ckdiv4 = <0x0d18 0x08000000 27>,
+					 <0x0d18 0x08000000 27>;
+			pll_md = <0x0d84 0x00000100 8>,
+					 <0x0d84 0x00000100 8>;
+			cldiv2 = <0x0c38 0x80000000 31>,
+					 <0x0c38 0x80000000 31>;
+		};
+
+		emichn: emichn@1022f000 {
+			compatible = "mediatek,mt8168-emichn",
+				     "mediatek,common-emichn";
+			reg = <0 0x1022f000 0 0x1000>,
+				  <0 0x10239000 0 0x1000>;
+		};
+
+		emiisu {
+			compatible = "mediatek,mt8168-emiisu",
+				     "mediatek,common-emiisu";
+			ctrl_intf = <0>;
+		};
+
 		uart0: uart0@11002000 {
 			compatible = "mediatek,mt8168-uart",
 				     "mediatek,mt6577-uart";
