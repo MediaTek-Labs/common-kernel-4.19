@@ -23,6 +23,9 @@
 #include <linux/smp.h>
 #include <linux/bitops.h>
 #include <linux/cpu.h>
+#ifdef CONFIG_MTK_IOMMU_MISC_DBG
+#include "m4u_debug.h"
+#endif
 
 /* The anchor node sits above the top of the usable address space */
 #define IOVA_ANCHOR	~0UL
@@ -212,6 +215,10 @@ static int __alloc_and_insert_iova_range(struct iova_domain *iovad,
 	} while (curr && new_pfn <= curr_iova->pfn_hi);
 
 	if (limit_pfn < size || new_pfn < iovad->start_pfn) {
+#ifdef CONFIG_MTK_IOMMU_MISC_DBG
+		pr_err("%s, alloc iova fail!!\n", __func__);
+		mtk_iova_dbg_dump(NULL);
+#endif
 		spin_unlock_irqrestore(&iovad->iova_rbtree_lock, flags);
 		return -ENOMEM;
 	}

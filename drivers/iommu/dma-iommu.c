@@ -385,7 +385,8 @@ static dma_addr_t iommu_dma_alloc_iova(struct iommu_domain *domain,
 		iova = alloc_iova_fast(iovad, iova_len, dma_limit >> shift,
 				       true);
 #ifdef CONFIG_MTK_IOMMU_MISC_DBG
-	mtk_iova_dbg_alloc(dev, ((dma_addr_t)iova << shift), size);
+	if (iova)
+		mtk_iova_dbg_alloc(dev, ((dma_addr_t)iova << shift), size);
 #endif
 	return (dma_addr_t)iova << shift;
 }
