@@ -138,7 +138,7 @@ static unsigned int irq_key;
 static const struct regmap_config toprgu_regmap_config = {
 	.reg_bits = 32,
 	.val_bits = 32,
-	.reg_stride = 4,
+	.reg_stride = 32,
 };
 
 struct platform_device *tscpu_pdev;
