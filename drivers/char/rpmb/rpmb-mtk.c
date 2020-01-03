@@ -43,7 +43,7 @@
 /* #define __RPMB_IOCTL_SUPPORT */
 
 /* TEE usage */
-#ifdef CONFIG_TRUSTONIC_TEE_SUPPORT
+#if IS_ENABLED(CONFIG_TRUSTONIC_TEE_SUPPORT)
 #include "mobicore_driver_api.h"
 #include "drrpmb_gp_Api.h"
 #include "drrpmb_Api.h"
@@ -1000,7 +1000,7 @@ static int rpmb_req_ioctl_read_data(struct rpmb_ioc_param *param)
  ******************************************************************************/
 
 
-#ifdef CONFIG_TRUSTONIC_TEE_SUPPORT
+#if IS_ENABLED(CONFIG_TRUSTONIC_TEE_SUPPORT)
 
 static enum mc_result rpmb_gp_execute(u32 cmdId)
 {
@@ -1323,7 +1323,7 @@ static int __init rpmb_init(void)
 		goto error;
 	}
 
-#ifdef CONFIG_TRUSTONIC_TEE_SUPPORT
+#if IS_ENABLED(CONFIG_TRUSTONIC_TEE_SUPPORT)
 	open_th = kthread_run(rpmb_thread, NULL, "rpmb_open");
 	if (IS_ERR(open_th))
 		MSG(ERR, "%s, init kthread_run failed!\n", __func__);
