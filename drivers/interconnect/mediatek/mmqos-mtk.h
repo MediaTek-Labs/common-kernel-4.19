@@ -41,6 +41,7 @@ struct common_node {
 	struct list_head list;
 	struct icc_path *icc_path;
 	struct work_struct work;
+	struct list_head comm_port_list;
 };
 
 struct common_port_node {
@@ -69,7 +70,6 @@ struct mtk_mmqos {
 	struct icc_provider prov;
 	struct notifier_block nb;
 	struct list_head comm_list;
-	struct list_head comm_port_list;
 	struct workqueue_struct *wq;
 	u32 max_ratio;
 	bool qos_bound; /* Todo: Set qos_bound to true if necessary */

@@ -49,26 +49,25 @@ static int update_mm_clk(struct notifier_block *nb,
 	struct mtk_mmqos *mmqos =
 		container_of(nb, struct mtk_mmqos, nb);
 	struct common_node *comm_node;
-	struct common_port_node *comm_port_node;
+	struct common_port_node *comm_port;
 
 	list_for_each_entry(comm_node, &mmqos->comm_list, list) {
 		comm_node->freq = clk_get_rate(comm_node->clk)/1000000;
-	}
-
-	list_for_each_entry(comm_port_node, &mmqos->comm_port_list, list) {
-		mutex_lock(&comm_port_node->bw_lock);
-		if (comm_port_node->latest_mix_bw
-			|| comm_port_node->latest_peak_bw) {
-			mmqos_update_comm_bw(comm_port_node->larb_dev,
-				comm_port_node->base->icc_node->id & 0xff,
-				comm_port_node->common->freq,
-				icc_to_MBps(comm_port_node->latest_mix_bw),
-				icc_to_MBps(comm_port_node->latest_peak_bw),
-				mmqos->qos_bound);
+		list_for_each_entry(comm_port,
+				    &comm_node->comm_port_list, list) {
+			mutex_lock(&comm_port->bw_lock);
+			if (comm_port->latest_mix_bw
+				|| comm_port->latest_peak_bw) {
+				mmqos_update_comm_bw(comm_port->larb_dev,
+					comm_port->base->icc_node->id & 0xff,
+					comm_port->common->freq,
+					icc_to_MBps(comm_port->latest_mix_bw),
+					icc_to_MBps(comm_port->latest_peak_bw),
+					mmqos->qos_bound);
+			}
+			mutex_unlock(&comm_port->bw_lock);
 		}
-		mutex_unlock(&comm_port_node->bw_lock);
 	}
-
 	return 0;
 }
 
@@ -76,13 +75,10 @@ static void set_comm_icc_bw_handler(struct work_struct *work)
 {
 	struct common_node *comm_node = container_of(
 				work, struct common_node, work);
-	struct mtk_mmqos *mmqos = container_of(
-				comm_node->base->icc_node->provider,
-				struct mtk_mmqos, prov);
 	struct common_port_node *comm_port_node;
 	u32 avg_bw = 0, peak_bw = 0;
 
-	list_for_each_entry(comm_port_node, &mmqos->comm_port_list, list) {
+	list_for_each_entry(comm_port_node, &comm_node->comm_port_list, list) {
 		mutex_lock(&comm_port_node->bw_lock);
 		avg_bw += comm_port_node->latest_avg_bw;
 		peak_bw += (comm_port_node->latest_peak_bw
@@ -247,7 +243,6 @@ int mtk_mmqos_probe(struct platform_device *pdev)
 	}
 
 	INIT_LIST_HEAD(&mmqos->comm_list);
-	INIT_LIST_HEAD(&mmqos->comm_port_list);
 
 	INIT_LIST_HEAD(&mmqos->prov.nodes);
 	mmqos->prov.set = mtk_mmqos_set;
@@ -317,6 +312,7 @@ int mtk_mmqos_probe(struct platform_device *pdev)
 			comm_node->freq = clk_get_rate(comm_node->clk)/1000000;
 			INIT_LIST_HEAD(&comm_node->list);
 			list_add_tail(&comm_node->list, &mmqos->comm_list);
+			INIT_LIST_HEAD(&comm_node->comm_port_list);
 			comm_node->icc_path = of_icc_get(&pdev->dev,
 				mmqos_desc->comm_icc_path_names[
 						node->id & 0xff]);
@@ -341,8 +337,8 @@ int mtk_mmqos_probe(struct platform_device *pdev)
 			mutex_init(&comm_port_node->bw_lock);
 			comm_port_node->common = node->links[0]->data;
 			INIT_LIST_HEAD(&comm_port_node->list);
-			list_add_tail(
-				&comm_port_node->list, &mmqos->comm_port_list);
+			list_add_tail(&comm_port_node->list,
+				      &comm_port_node->common->comm_port_list);
 			comm_port_node->base = base_node;
 			node->data = (void *)comm_port_node;
 			break;
