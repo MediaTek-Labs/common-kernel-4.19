@@ -23,4 +23,4 @@ obj-y += dpe/
 #obj-y += tsf/
 #endif
 obj-y += mfb/
-#obj-y += fdvt/
+obj-$(CONFIG_MTK_CAMERA_ISP_FD_SUPPORT) += fdvt/
