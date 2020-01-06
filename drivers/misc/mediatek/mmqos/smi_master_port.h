@@ -20,8 +20,8 @@
 #define SMI_COMM_MASTER_NR	(1 << 3)
 #define SMI_LARB_MMDVFS_NR	(12)
 
-#define PORT_VIRTUAL_DISP		MASTER_COMMON_PORT(0, 8)
-#define PORT_VIRTUAL_CCU_COMMON		SLAVE_LARB(12)
+#define PORT_VIRTUAL_DISP		SLAVE_LARB(12)
+#define PORT_VIRTUAL_CCU_COMMON		SLAVE_LARB(13)
 
 void smi_ostd_update(struct plist_head *head);
 void smi_bwl_update(const u32 larb, const u32 bwl, const bool soft);
