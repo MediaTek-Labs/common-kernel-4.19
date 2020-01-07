@@ -364,7 +364,10 @@ static const struct mtk_mmqos_desc mmqos_desc_mt6779 = {
 	.hrt = {
 		.hrt_bw = {1600, 0, 0},
 		.hrt_total_bw = 7466, /* Todo: Use DRAMC API */
-	}
+	},
+	.comm_port_channels = {
+		{ 0x1, 0x2, 0x2, 0x1, 0x2, 0x2, 0x2, 0x2, 0x3 }, {}
+	},
 };
 
 

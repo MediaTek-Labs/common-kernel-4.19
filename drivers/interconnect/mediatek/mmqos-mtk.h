@@ -14,6 +14,7 @@
 
 #define MMQOS_NO_LINK	(0xffffffff)
 #define MMQOS_MAX_COMM_PORT_NUM	(15)
+#define MMQOS_COMM_CHANNEL_NUM (2)
 
 struct mmqos_hrt {
 	u32 hrt_bw[HRT_TYPE_NUM];
@@ -35,6 +36,9 @@ struct mmqos_base_node {
 
 struct common_node {
 	struct mmqos_base_node *base;
+	struct device *comm_dev;
+	struct regulator *comm_reg;
+	u32 high_volt;
 	const char *clk_name;
 	struct clk *clk;
 	u64 freq;
@@ -53,6 +57,7 @@ struct common_port_node {
 	u32 latest_peak_bw;
 	u32 latest_avg_bw;
 	struct list_head list;
+	u8 channel;
 };
 
 struct larb_node {
@@ -89,6 +94,7 @@ struct mtk_mmqos_desc {
 	const char * const *comm_icc_path_names;
 	const u32 max_ratio;
 	const struct mmqos_hrt hrt;
+	const u8 comm_port_channels[][MMQOS_MAX_COMM_PORT_NUM];
 };
 
 #define DEFINE_MNODE(_name, _id, _bw_ratio, _link) {	\

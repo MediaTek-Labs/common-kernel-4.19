@@ -12,6 +12,7 @@
 #include <linux/of.h>
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
+#include <linux/pm_opp.h>
 #include <linux/pm_runtime.h>
 #include <soc/mediatek/smi.h>
 #include <dt-bindings/memory/mt2701-larb-port.h>
@@ -602,6 +603,7 @@ static int mtk_smi_common_probe(struct platform_device *pdev)
 			return PTR_ERR(common->base);
 	}
 	pm_runtime_enable(dev);
+	dev_pm_opp_of_add_table(dev);
 	platform_set_drvdata(pdev, common);
 	return 0;
 }

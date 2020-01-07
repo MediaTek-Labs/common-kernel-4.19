@@ -11,6 +11,8 @@
 #include <linux/module.h>
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
+#include <linux/pm_opp.h>
+#include <linux/regulator/consumer.h>
 #include <linux/soc/mediatek/mtk_mmdvfs.h>
 #include <soc/mediatek/smi.h>
 
@@ -71,20 +73,59 @@ static int update_mm_clk(struct notifier_block *nb,
 	return 0;
 }
 
+static void set_chn_bw(u32 *bw_array, u8 chn_id, u32 bw)
+{
+	u32 i;
+
+	for (i = 0; i < MMQOS_COMM_CHANNEL_NUM; i++)
+		if (chn_id & (1 << i))
+			bw_array[i] += bw;
+}
+
 static void set_comm_icc_bw_handler(struct work_struct *work)
 {
 	struct common_node *comm_node = container_of(
 				work, struct common_node, work);
 	struct common_port_node *comm_port_node;
-	u32 avg_bw = 0, peak_bw = 0;
+	u32 avg_bw = 0, peak_bw = 0, max_bw = 0;
+	u32 normalize_peak_bw, i;
+	u32 chn_hrt_bw[MMQOS_COMM_CHANNEL_NUM] = {0};
+	u32 chn_srt_bw[MMQOS_COMM_CHANNEL_NUM] = {0};
+	struct dev_pm_opp *opp;
+	unsigned long smi_clk = 0;
+	u32 volt;
 
 	list_for_each_entry(comm_port_node, &comm_node->comm_port_list, list) {
 		mutex_lock(&comm_port_node->bw_lock);
 		avg_bw += comm_port_node->latest_avg_bw;
-		peak_bw += (comm_port_node->latest_peak_bw
+		normalize_peak_bw = (comm_port_node->latest_peak_bw
 				& ~(MTK_MMQOS_MAX_BW));
+		peak_bw += normalize_peak_bw;
+		set_chn_bw(chn_hrt_bw, comm_port_node->channel,
+			       normalize_peak_bw);
+		set_chn_bw(chn_srt_bw, comm_port_node->channel,
+			       comm_port_node->latest_avg_bw);
 		mutex_unlock(&comm_port_node->bw_lock);
 	}
+	for (i = 0; i < MMQOS_COMM_CHANNEL_NUM; i++) {
+		max_bw = max_t(u32, max_bw, chn_hrt_bw[i]);
+		max_bw = max_t(u32, max_bw, chn_srt_bw[i]);
+	}
+	if (max_bw)
+		smi_clk = SHIFT_ROUND(max_bw, 4) * 1000;
+	if (comm_node->comm_dev) {
+		opp = dev_pm_opp_find_freq_ceil(comm_node->comm_dev, &smi_clk);
+		if (opp == ERR_PTR(-ERANGE))
+			opp = dev_pm_opp_find_freq_floor(comm_node->comm_dev,
+							 &smi_clk);
+		if (!IS_ERR_OR_NULL(opp)) {
+			volt = dev_pm_opp_get_voltage(opp);
+			dev_pm_opp_put(opp);
+			regulator_set_voltage(comm_node->comm_reg, volt,
+						    comm_node->high_volt);
+		}
+	}
+
 	icc_set_bw(comm_node->icc_path, avg_bw, peak_bw);
 }
 
@@ -206,11 +247,13 @@ int mtk_mmqos_probe(struct platform_device *pdev)
 	struct larb_node *larb_node;
 	struct larb_port_node *larb_port_node;
 	struct mtk_smi_iommu smi_imu;
-	int i, id, num_larbs = 0, ret;
+	int i, id, num_larbs = 0, num_volts, ret;
 	const struct mtk_mmqos_desc *mmqos_desc;
 	const struct mtk_node_desc *node_desc;
 	struct device *larb_dev;
 	struct mmqos_hrt *hrt;
+	struct device_node *np;
+	struct platform_device *comm_pdev;
 
 	mmqos = devm_kzalloc(&pdev->dev, sizeof(*mmqos), GFP_KERNEL);
 	if (!mmqos)
@@ -324,6 +367,44 @@ int mtk_mmqos_probe(struct platform_device *pdev)
 				ret = -EINVAL;
 				goto err;
 			}
+			np = of_parse_phandle(pdev->dev.of_node,
+					      "mediatek,commons",
+					      node->id & 0xff);
+			if (!of_device_is_available(np)) {
+				pr_notice("get common(%d) dev fail\n",
+					  node->id & 0xff);
+				break;
+			}
+			comm_pdev = of_find_device_by_node(np);
+			if (comm_pdev)
+				comm_node->comm_dev = &comm_pdev->dev;
+			else
+				pr_notice("comm(%d) pdev is null\n",
+					  node->id & 0xff);
+			comm_node->comm_reg =
+				devm_regulator_get(comm_node->comm_dev,
+						   "dvfsrc-vcore");
+			if (!comm_node->comm_reg) {
+				pr_notice("get common(%d) reg fail\n",
+				  node->id & 0xff);
+				break;
+			}
+			num_volts =
+				regulator_count_voltages(comm_node->comm_reg);
+			if (num_volts <= 0) {
+				pr_notice("get common(%d) num voltages fail\n",
+					  node->id & 0xff);
+				break;
+			}
+			comm_node->high_volt =
+				regulator_list_voltage(comm_node->comm_reg,
+						       num_volts-1);
+			if (comm_node->high_volt <= 0) {
+				pr_notice("get common(%d) high volt fail\n",
+					  node->id & 0xff);
+				break;
+			}
+
 			comm_node->base = base_node;
 			node->data = (void *)comm_node;
 			break;
@@ -334,6 +415,9 @@ int mtk_mmqos_probe(struct platform_device *pdev)
 				ret = -ENOMEM;
 				goto err;
 			}
+			comm_port_node->channel =
+				mmqos_desc->comm_port_channels[
+				(node->id >> 8) & 0xff][node->id & 0xff];
 			mutex_init(&comm_port_node->bw_lock);
 			comm_port_node->common = node->links[0]->data;
 			INIT_LIST_HEAD(&comm_port_node->list);
