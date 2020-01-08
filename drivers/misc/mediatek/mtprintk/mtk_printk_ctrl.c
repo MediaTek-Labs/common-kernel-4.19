@@ -55,10 +55,13 @@ void mt_disable_uart(void)
 	if (printk_ctrl != 2)
 		printk_ctrl = 1;
 }
+EXPORT_SYMBOL_GPL(mt_disable_uart);
+
 void mt_enable_uart(void)
 {
 	printk_ctrl = 0;
 }
+EXPORT_SYMBOL_GPL(mt_enable_uart);
 #endif
 
 static int mt_printk_ctrl_show(struct seq_file *m, void *v)
