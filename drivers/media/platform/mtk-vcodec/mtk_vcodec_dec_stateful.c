@@ -454,6 +454,7 @@ static void mtk_vdec_worker(struct work_struct *work)
 	if (src_buf_info->lastframe) {
 		mtk_v4l2_debug(1, "Got empty flush input buffer.");
 		src_buf = v4l2_m2m_src_buf_remove(ctx->m2m_ctx);
+		src_buf_info->used = false;
 
 		vdec_if_decode(ctx, NULL, NULL, &src_chg);
 		clean_free_bs_buffer(ctx, NULL, NULL);

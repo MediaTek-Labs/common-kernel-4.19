@@ -172,6 +172,7 @@ static int vidioc_decoder_cmd(struct file *file, void *priv,
 {
 	struct mtk_vcodec_ctx *ctx = fh_to_ctx(priv);
 	struct vb2_queue *src_vq, *dst_vq;
+	struct mtk_video_dec_buf *empty_buf;
 	int ret;
 	const struct mtk_vcodec_dec_pdata *dec_pdata = ctx->dev->vdec_pdata;
 
@@ -179,7 +180,9 @@ static int vidioc_decoder_cmd(struct file *file, void *priv,
 	if (ret)
 		return ret;
 
-	mtk_v4l2_debug(1, "decoder cmd=%u, flag=%u", cmd->cmd, cmd->flags);
+	empty_buf = ctx->empty_flush_buf;
+	mtk_v4l2_debug(1, "decoder cmd=%u, flag=%u, used:%d",
+		cmd->cmd, cmd->flags, empty_buf->used);
 	dst_vq = v4l2_m2m_get_vq(ctx->m2m_ctx,
 				V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE);
 	switch (cmd->cmd) {
@@ -190,15 +193,19 @@ static int vidioc_decoder_cmd(struct file *file, void *priv,
 			mtk_v4l2_debug(1, "Output stream is off. No need to flush.");
 			return 0;
 		}
-		if (!dec_pdata->uses_stateless_api) {
-			ctx->empty_flush_buf->lastframe = true;
-			if (cmd->flags & V4L2_BUF_FLAG_EARLY_EOS)
-				ctx->empty_flush_buf->isEarlyEos = true;
-			else
-				ctx->empty_flush_buf->isEarlyEos = false;
+		if (empty_buf->used == false) {
+			empty_buf->used = true;
+			if (!dec_pdata->uses_stateless_api) {
+				empty_buf->lastframe = true;
+				if (cmd->flags & V4L2_BUF_FLAG_EARLY_EOS)
+					empty_buf->isEarlyEos = true;
+				else
+					empty_buf->isEarlyEos = false;
+			}
+			v4l2_m2m_buf_queue(ctx->m2m_ctx,
+				&empty_buf->vb);
+			v4l2_m2m_try_schedule(ctx->m2m_ctx);
 		}
-		v4l2_m2m_buf_queue(ctx->m2m_ctx, &ctx->empty_flush_buf->vb);
-		v4l2_m2m_try_schedule(ctx->m2m_ctx);
 		break;
 
 	case V4L2_DEC_CMD_START:
