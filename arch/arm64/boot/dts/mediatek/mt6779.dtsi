@@ -3914,6 +3914,80 @@ firmware_class.path=/vendor/firmware loop.max_part=7";
 			input-schmitt-enable;
 		};
 	};
+
+	seninf1@1a004000 {
+		compatible = "mediatek,seninf1";
+		reg = <0 0x1a004000 0 0x1000>;
+	};
+
+	seninf2@1a005000 {
+		compatible = "mediatek,seninf2";
+		reg = <0 0x1a005000 0 0x1000>;
+	};
+
+	seninf3@1a006000 {
+		compatible = "mediatek,seninf3";
+		reg = <0 0x1a006000 0 0x1000>;
+	};
+
+	seninf4@1a007000 {
+		compatible = "mediatek,seninf4";
+		reg = <0 0x1a007000 0 0x1000>;
+	};
+
+	seninf5@1a008000 {
+		compatible = "mediatek,seninf5";
+		reg = <0 0x1a008000 0 0x1000>;
+	};
+
+	seninf_top@1a004000 {
+		compatible = "mediatek,seninf_top";
+		reg = <0 0x1a004000 0 0x1000>;
+		power-domains = <&scpsys MT6779_POWER_DOMAIN_CAM>;
+#if 0
+		interrupts = <GIC_SPI 251 IRQ_TYPE_LEVEL_LOW>;
+#endif
+
+		clocks = <&camsys CLK_CAM_SENINF>,
+			<&topckgen CLK_TOP_SENINF>,
+			<&topckgen CLK_TOP_SENINF1>,
+			<&topckgen CLK_TOP_SENINF2>,
+			<&topckgen CLK_TOP_CAMTG>,
+			<&topckgen CLK_TOP_CAMTG2>,
+			<&topckgen CLK_TOP_CAMTG3>,
+			<&topckgen CLK_TOP_CAMTG4>,
+			<&topckgen CLK_TOP_CAMTG5>,
+			<&clk26m>,
+			<&topckgen CLK_TOP_UNIVP_192M_D8>,
+			<&topckgen CLK_TOP_UNIVPLL_D3_D8>,
+			<&topckgen CLK_TOP_UNIVP_192M_D4>,
+			<&topckgen CLK_TOP_F26M_CK_D2>,
+			<&topckgen CLK_TOP_UNIVP_192M_D16>,
+			<&topckgen CLK_TOP_UNIVP_192M_D32>;
+		clock-names = "CAMSYS_SENINF_CGPDN",
+			"TOP_MUX_SENINF",
+			"TOP_MUX_SENINF1",
+			"TOP_MUX_SENINF2",
+			"TOP_MUX_CAMTG",
+			"TOP_MUX_CAMTG2",
+			"TOP_MUX_CAMTG3",
+			"TOP_MUX_CAMTG4",
+			"TOP_MUX_CAMTG5",
+			"TOP_CLK26M",
+			"TOP_UNIVP_192M_D8",
+			"TOP_UNIVPLL_D3_D8",
+			"TOP_UNIVP_192M_D4",
+			"TOP_F26M_CK_D2",
+			"TOP_UNIVP_192M_D16",
+			"TOP_UNIVP_192M_D32";
+		operating-points-v2 = <&opp_table_cam>;
+		dvfsrc-vcore-supply = <&dvfsrc_vcore>;
+	};
+
+	kd_camera_hw1:kd_camera_hw1@1a004000 {
+		compatible = "mediatek,imgsensor";
+	};
+
 };
 /* FINGERPRINT end */
 
@@ -4037,5 +4111,46 @@ firmware_class.path=/vendor/firmware loop.max_part=7";
 	};
 };
 
+&i2c2 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	clock-frequency = <400000>;
+	mediatek,use-open-drain;
+	camera_main_mtk:camera_main@1a {
+		compatible = "mediatek,camera_main";
+		reg = <0x1a>;
+		status = "okay";
+	};
+
+	camera_main_af_mtk:camera_main_af@0c {
+		compatible = "mediatek,camera_main_af";
+		reg = <0x0c>;
+		status = "okay";
+	};
+
+	camera_main_eeprom_mtk:camera_main_eeprom@50 {
+		compatible = "mediatek,camera_main_eeprom";
+		reg = <0x50>;
+		status = "okay";
+	};
+
+	ccu_sensor_i2c_2_hw_mtk:ccu_sensor_i2c_2_hw@11 {
+		compatible = "mediatek,ccu_sensor_i2c_2_hw";
+		reg = <0x11>;
+		status = "okay";
+	};
+
+};
+
+&kd_camera_hw1 {
+	vcamio-supply = <&mt6359_vcamio_ldo_reg>;
+	vcamio_sub-supply = <&mt6359_vcamio_ldo_reg>;
+	vcamio_main2-supply = <&mt6359_vcamio_ldo_reg>;
+	vcamaf-supply = <&mt6359_vcamio_ldo_reg>;
+	vcamaf_main2-supply = <&mt6359_vcamio_ldo_reg>;
+	status = "okay";
+};
+
 #include "cust_mt6779_msdc.dtsi"
+#include "cust_mt6779_camera.dtsi"
 #include "trusty.dtsi"
