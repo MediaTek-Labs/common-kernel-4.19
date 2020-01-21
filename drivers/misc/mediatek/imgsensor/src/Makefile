@@ -1,13 +1,14 @@
 # SPDX-License-Identifier: GPL-2.0
 
-ifneq ($(CONFIG_MTK_IMGSENSOR_PLATFORM),)
-CONFIG_MTK_PLATFORM := $(CONFIG_MTK_IMGSENSOR_PLATFORM)
-endif
-
 subdir-ccflags-y += -I$(srctree)/drivers/i2c/busses/ \
              -I$(srctree)/drivers/misc/mediatek/ccu/inc
 
+ifneq ($(subst ",,$(CONFIG_MTK_PLATFORM)),)
 MTK_PLATFORM := $(subst ",,$(CONFIG_MTK_PLATFORM))
+else ifneq ($(subst ",,$(CONFIG_MTK_DISP_PLATFORM)),)
+MTK_PLATFORM := $(subst ",,$(CONFIG_MTK_DISP_PLATFORM))
+endif
+
 ARCH_MTK_PROJECT := $(subst ",,$(CONFIG_ARCH_MTK_PROJECT))
 
 MTK_PLATFORM_PATH_ROOT := $(srctree)/drivers/misc/mediatek/mach/$(MTK_PLATFORM)
@@ -24,14 +25,14 @@ subdir-ccflags-y += -I$(MTK_DRIVER_PATH)/camera/$(MTK_PLATFORM) \
              -I$(MTK_DRIVER_PATH)/cam_cal/inc \
              -I$(MTK_DRIVER_PATH)/smi \
              -I$(MTK_DRIVER_PATH)/include/mt-plat/$(MTK_PLATFORM)/include/mach \
-             -I$(MTK_DRIVER_PATH)/imgsensor/src/$(CONFIG_MTK_PLATFORM_SENSOR)
+             -I$(MTK_DRIVER_PATH)/imgsensor/src/$(MTK_PLATFORM)
 
 
 CUSTOM_KERNEL_FLAGS := $(addprefix -D, $(shell echo \
              $(CONFIG_CUSTOM_KERNEL_IMGSENSOR) | tr a-z A-Z))
 subdir-ccflags-y += $(CUSTOM_KERNEL_FLAGS)
 
-ifneq ($(subst ",,$(CONFIG_MTK_PLATFORM_SENSOR)),)
-obj-y += $(subst ",,$(CONFIG_MTK_PLATFORM_SENSOR))/
+ifneq ($(MTK_PLATFORM),)
+obj-y += $(MTK_PLATFORM)/
 endif
 

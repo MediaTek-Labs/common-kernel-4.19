@@ -1,10 +1,11 @@
 # SPDX-License-Identifier: GPL-2.0
 
-ifneq ($(CONFIG_MTK_IMGSENSOR_PLATFORM),)
-CONFIG_MTK_PLATFORM := $(CONFIG_MTK_IMGSENSOR_PLATFORM)
+ifneq ($(subst ",,$(CONFIG_MTK_PLATFORM)),)
+MTK_PLATFORM := $(subst ",,$(CONFIG_MTK_PLATFORM))
+else ifneq ($(subst ",,$(CONFIG_MTK_DISP_PLATFORM)),)
+MTK_PLATFORM := $(subst ",,$(CONFIG_MTK_DISP_PLATFORM))
 endif
 
-MTK_PLATFORM := $(subst ",,$(CONFIG_MTK_PLATFORM))
 ARCH_MTK_PROJECT := $(subst ",,$(CONFIG_ARCH_MTK_PROJECT))
 IMGSENSOR_DRIVER_PATH  := $(srctree)/drivers/misc/mediatek/imgsensor/src
 COMMON_VERSION := v1_1
