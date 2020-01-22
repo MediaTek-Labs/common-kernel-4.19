@@ -324,4 +324,6 @@ endmenu # Debug
 
 menu "Misc"
 
+source "drivers/misc/mediatek/apusys/Kconfig"
+
 endmenu # Misc
