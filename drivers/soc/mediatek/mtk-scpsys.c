@@ -1453,7 +1453,7 @@ static const struct scp_domain_data scp_domain_data_mt6779[] = {
 		.name = "conn",
 		.sta_mask = BIT(1),
 		.ctl_offs = 0x320,
-		.caps = MTK_SCPD_STRICT_BUSP,
+		.caps = MTK_SCPD_STRICT_BUSP | MTK_SCPD_ACTIVE_WAKEUP,
 		.bp_table = {
 			BUS_PROT(IFR_TYPE, MT6779_IFR_SET, MT6779_IFR_CLR,
 				0, MT6779_IFR_STA1, BIT(13) | BIT(18),
