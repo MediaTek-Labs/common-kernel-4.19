@@ -28,9 +28,6 @@ mrdump-objs-y := \
 	mrdump_mini.o \
 	mrdump_panic.o
 
-ifndef CONFIG_KEXEC_CORE
-mrdump-objs-y += mrdump_key_setup.o
-endif
 mrdump-objs-$(CONFIG_ARM) += mrdump_arm.o
 mrdump-objs-$(CONFIG_ARM_PSCI) += mrdump_panic_wdt.o
 
