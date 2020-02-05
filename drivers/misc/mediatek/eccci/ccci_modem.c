@@ -2035,4 +2035,5 @@ int exec_ccci_kern_func_by_md_id(int md_id, unsigned int id, char *buf,
 	};
 	return ret;
 }
+EXPORT_SYMBOL(exec_ccci_kern_func_by_md_id);
 
