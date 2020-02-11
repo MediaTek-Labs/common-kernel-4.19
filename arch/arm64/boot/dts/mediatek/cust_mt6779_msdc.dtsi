@@ -17,7 +17,6 @@
 	cap-mmc-highspeed;
 	//mmc-hs200-1_8v;
 	//mmc-hs400-1_8v;
-	cap-mmc-hw-reset;
 	no-sdio;
 	no-sd;
 	hs400-ds-delay = <0x12814>;
