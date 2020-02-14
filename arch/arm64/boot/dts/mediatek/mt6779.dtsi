@@ -3450,6 +3450,18 @@ firmware_class.path=/vendor/firmware loop.max_part=7";
 				"mtcmos_vpu_core2_shutdown";
 		};
 
+		mtk_mdla: mdla@19390000 {
+			compatible = "mtk,mdla";
+			core_num = <1>;
+			reg = <0 0x19380000 0 0x1000>,   /* mdla config  */
+			      <0 0x19390000 0 0x1000>,   /* mdla command */
+			      <0 0x19391000 0 0x1000>,   /* mdla bui     */
+			      <0 0x1d000000 0 0x100000>, /* GSM          */
+			      <0 0x19000000 0 0x40000>,  /* APU CONN     */
+			      <0 0x10001000 0 0x1000>;   /* Infracfg_ao  */
+			interrupts = <GIC_SPI 322 IRQ_TYPE_LEVEL_LOW>;
+		};
+
 		camsys: clock-controller@1a000000 {
 			compatible = "mediatek,mt6779-camsys", "syscon";
 			reg = <0 0x1a000000 0 0x10000>;
