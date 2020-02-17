@@ -1467,7 +1467,7 @@ firmware_class.path=/vendor/firmware loop.max_part=7";
 		};
 
 		infracfg: infracfg@1020e000 {
-			compatible = "syscon";
+			compatible = "mediatek,mt6779-infracfg", "syscon";
 			reg = <0 0x1020e000 0 0x1000>;
 		};
 
@@ -3280,6 +3280,176 @@ firmware_class.path=/vendor/firmware loop.max_part=7";
 			#clock-cells = <1>;
 		};
 
+		ipu_conn@19000000 {
+			compatible = "mediatek,ipu_conn";
+			reg = <0 0x19000000 0 0x1000>;
+		};
+
+		ipu_vcore@19020000 {
+			compatible = "mediatek,ipu_vcore";
+			reg = <0 0x19020000 0 0x1000>;
+		};
+
+		apusys_power@19180000 {
+			compatible = "mediatek,apusys_power";
+			reg = <0 0x19180000 0 0x1000>;
+
+			power-domains = <&scpsys MT6779_POWER_DOMAIN_MM>;
+
+			VMDLA-supply = <&mt6360_mdla_buck_reg>;
+			vpu-supply = <&mt6359_vpu_buck_reg>;
+			vsram_others-supply = <&mt6359_vsram_others_ldo_reg>;
+			vcore-supply = <&mt6359_vcore_buck_reg>;
+
+			clocks = <&topckgen CLK_TOP_DSP>,
+				<&topckgen CLK_TOP_DSP1>,
+				<&topckgen CLK_TOP_DSP2>,
+				<&topckgen CLK_TOP_DSP3>,
+				<&topckgen CLK_TOP_IPU_IF>,
+				<&apu0 CLK_APU0_JTAG>,
+				<&apu0 CLK_APU0_AXI_M>,
+				<&apu0 CLK_APU0_APU>,
+				<&apu1 CLK_APU1_JTAG>,
+				<&apu1 CLK_APU1_AXI_M>,
+				<&apu1 CLK_APU1_APU>,
+				<&apu_mdla CLK_APU_MDLA_APB>,
+				<&apu_mdla CLK_APU_MDLA_B0>,
+				<&apu_mdla CLK_APU_MDLA_B1>,
+				<&apu_mdla CLK_APU_MDLA_B2>,
+				<&apu_mdla CLK_APU_MDLA_B3>,
+				<&apu_mdla CLK_APU_MDLA_B4>,
+				<&apu_mdla CLK_APU_MDLA_B5>,
+				<&apu_mdla CLK_APU_MDLA_B6>,
+				<&apu_mdla CLK_APU_MDLA_B7>,
+				<&apu_mdla CLK_APU_MDLA_B8>,
+				<&apu_mdla CLK_APU_MDLA_B9>,
+				<&apu_mdla CLK_APU_MDLA_B10>,
+				<&apu_mdla CLK_APU_MDLA_B11>,
+				<&apu_mdla CLK_APU_MDLA_B12>,
+				<&apu_conn CLK_APU_CONN_APU>,
+				<&apu_conn CLK_APU_CONN_AHB>,
+				<&apu_conn CLK_APU_CONN_AXI>,
+				<&apu_conn CLK_APU_CONN_ISP>,
+				<&apu_conn CLK_APU_CONN_CAM_ADL>,
+				<&apu_conn CLK_APU_CONN_IMG_ADL>,
+				<&apu_conn CLK_APU_CONN_EMI_26M>,
+				<&apu_conn CLK_APU_CONN_VPU_UDI>,
+				<&apu_vcore CLK_APU_VCORE_AHB>,
+				<&apu_vcore CLK_APU_VCORE_AXI>,
+				<&apu_vcore CLK_APU_VCORE_ADL>,
+				<&apu_vcore CLK_APU_VCORE_QOS>,
+				<&clk26m>,
+				<&topckgen CLK_TOP_UNIVPLL_D3_D8>,
+				<&topckgen CLK_TOP_UNIVPLL_D3_D4>,
+				<&topckgen CLK_TOP_MAINPLL_D2_D4>,
+				<&topckgen CLK_TOP_UNIVPLL_D3_D2>,
+				<&topckgen CLK_TOP_MAINPLL_D2_D2>,
+				<&topckgen CLK_TOP_UNIVPLL_D2_D2>,
+				<&topckgen CLK_TOP_MAINPLL_D3>,
+				<&topckgen CLK_TOP_UNIVPLL_D3>,
+				<&topckgen CLK_TOP_MMPLL_D7>,
+				<&topckgen CLK_TOP_MMPLL_D6>,
+				<&topckgen CLK_TOP_ADSPPLL_D5>,
+				<&topckgen CLK_TOP_TVDPLL_CK>,
+				<&topckgen CLK_TOP_TVDPLL_MAINPLL_D2_CK>,
+				<&topckgen CLK_TOP_UNIVPLL_D2>,
+				<&topckgen CLK_TOP_ADSPPLL_D4>,
+				<&topckgen CLK_TOP_MAINPLL_D2>,
+				<&topckgen CLK_TOP_MMPLL_D4>,
+				<&mmsys CLK_MM_GALS_IPU2MM>,
+				<&mmsys CLK_MM_GALS_IPU12MM>,
+				<&mmsys CLK_MM_GALS_COMM1>,
+				<&mmsys CLK_MM_GALS_COMM0>,
+				<&mmsys CLK_MM_SMI_COMMON>,
+				<&mmsys CLK_MM_IPU_DL_TXCK>,
+				<&mmsys CLK_MM_IPU_DL_RX_CK>,
+				<&scp_infra SCP_SYS_DIS>,
+				<&scp_infra SCP_SYS_VPU_VCORE_DORMANT>,
+				<&scp_infra SCP_SYS_VPU_VCORE_SHUTDOWN>,
+				<&scp_infra SCP_SYS_VPU_CONN_DORMANT>,
+				<&scp_infra SCP_SYS_VPU_CONN_SHUTDOWN>,
+				<&scp_infra SCP_SYS_VPU_CORE0_DORMANT>,
+				<&scp_infra SCP_SYS_VPU_CORE0_SHUTDOWN>,
+				<&scp_infra SCP_SYS_VPU_CORE1_DORMANT>,
+				<&scp_infra SCP_SYS_VPU_CORE1_SHUTDOWN>,
+				<&scp_infra SCP_SYS_VPU_CORE2_DORMANT>,
+				<&scp_infra SCP_SYS_VPU_CORE2_SHUTDOWN>;
+
+			clock-names = "clk_top_dsp_sel",
+				"clk_top_dsp1_sel",
+				"clk_top_dsp2_sel",
+				"clk_top_dsp3_sel",
+				"clk_top_ipu_if_sel",
+				"clk_apu_core0_jtag_cg",
+				"clk_apu_core0_axi_m_cg",
+				"clk_apu_core0_apu_cg",
+				"clk_apu_core1_jtag_cg",
+				"clk_apu_core1_axi_m_cg",
+				"clk_apu_core1_apu_cg",
+				"clk_apu_mdla_apb_cg",
+				"clk_apu_mdla_cg_b0",
+				"clk_apu_mdla_cg_b1",
+				"clk_apu_mdla_cg_b2",
+				"clk_apu_mdla_cg_b3",
+				"clk_apu_mdla_cg_b4",
+				"clk_apu_mdla_cg_b5",
+				"clk_apu_mdla_cg_b6",
+				"clk_apu_mdla_cg_b7",
+				"clk_apu_mdla_cg_b8",
+				"clk_apu_mdla_cg_b9",
+				"clk_apu_mdla_cg_b10",
+				"clk_apu_mdla_cg_b11",
+				"clk_apu_mdla_cg_b12",
+				"clk_apu_conn_apu_cg",
+				"clk_apu_conn_ahb_cg",
+				"clk_apu_conn_axi_cg",
+				"clk_apu_conn_isp_cg",
+				"clk_apu_conn_cam_adl_cg",
+				"clk_apu_conn_img_adl_cg",
+				"clk_apu_conn_emi_26m_cg",
+				"clk_apu_conn_vpu_udi_cg",
+				"clk_apu_vcore_ahb_cg",
+				"clk_apu_vcore_axi_cg",
+				"clk_apu_vcore_adl_cg",
+				"clk_apu_vcore_qos_cg",
+				"clk_top_clk26m",
+				"clk_top_univpll_d3_d8",
+				"clk_top_univpll_d3_d4",
+				"clk_top_mainpll_d2_d4",
+				"clk_top_univpll_d3_d2",
+				"clk_top_mainpll_d2_d2",
+				"clk_top_univpll_d2_d2",
+				"clk_top_mainpll_d3",
+				"clk_top_univpll_d3",
+				"clk_top_mmpll_d7",
+				"clk_top_mmpll_d6",
+				"clk_top_adsppll_d5",
+				"clk_top_tvdpll_ck",
+				"clk_top_tvdpll_mainpll_d2_ck",
+				"clk_top_univpll_d2",
+				"clk_top_adsppll_d4",
+				"clk_top_mainpll_d2",
+				"clk_top_mmpll_d4",
+				"clk_mmsys_gals_ipu2mm",
+				"clk_mmsys_gals_ipu12mm",
+				"clk_mmsys_gals_comm1",
+				"clk_mmsys_gals_comm0",
+				"clk_mmsys_smi_common",
+				"clk_mmsys_ipu_dl_txck",
+				"clk_mmsys_ipu_dl_rx_ck",
+				"mtcmos_dis",
+				"mtcmos_vpu_vcore_dormant",
+				"mtcmos_vpu_vcore_shutdown",
+				"mtcmos_vpu_conn_dormant",
+				"mtcmos_vpu_conn_shutdown",
+				"mtcmos_vpu_core0_dormant",
+				"mtcmos_vpu_core0_shutdown",
+				"mtcmos_vpu_core1_dormant",
+				"mtcmos_vpu_core1_shutdown",
+				"mtcmos_vpu_core2_dormant",
+				"mtcmos_vpu_core2_shutdown";
+		};
+
 		camsys: clock-controller@1a000000 {
 			compatible = "mediatek,mt6779-camsys", "syscon";
 			reg = <0 0x1a000000 0 0x10000>;
@@ -4017,7 +4187,7 @@ firmware_class.path=/vendor/firmware loop.max_part=7";
 		};
 		pmic {
 			compatible = "mediatek,mt6360_pmic";
-			buck1 {
+			mt6360_mdla_buck_reg: buck1 {
 				regulator-compatible = "BUCK1";
 				regulator-name = "mt6360,buck1";
 				regulator-min-microvolt = <300000>;
