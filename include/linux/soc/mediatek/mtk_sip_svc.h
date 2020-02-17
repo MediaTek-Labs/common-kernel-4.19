@@ -83,6 +83,10 @@
 #define MTK_SIP_UFS_CONTROL \
 	MTK_SIP_SMC_CMD(0x276)
 
+/* APU VCORE CG control related SMC call */
+#define MTK_SIP_KERNEL_APU_VCORE_CG_CTL \
+	MTK_SIP_SMC_CMD(0x2B1)
+
 /* M4U related SMC call */
 #define MTK_M4U_DEBUG_DUMP \
 	MTK_SIP_SMC_CMD(0x3E0)
