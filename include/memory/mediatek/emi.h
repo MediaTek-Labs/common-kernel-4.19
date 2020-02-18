@@ -27,6 +27,7 @@
 #define MTK_EMIMPU_READ			2
 #define MTK_EMIMPU_SLVERR		3
 #define MTK_EMIDBG_DUMP			4
+#define MTK_EMIDBG_MSG			5
 
 #define MTK_EMIMPU_READ_SA		0
 #define MTK_EMIMPU_READ_EA		1
@@ -120,6 +121,8 @@ int mtk_emimpu_prehandle_register(irqreturn_t (*bypass_func)
 int mtk_emimpu_postclear_register(void (*clear_func)
 	(unsigned int emi_id));
 int mtk_emimpu_debugdump_register(void (*debug_func)(void));
+int mtk_emimpu_md_handling_register(void (*md_handling_func)
+	(unsigned int emi_id, struct reg_info_t *dump, unsigned int leng));
 void mtk_clear_md_violation(void);
 
 #endif /* __EMI_H__ */

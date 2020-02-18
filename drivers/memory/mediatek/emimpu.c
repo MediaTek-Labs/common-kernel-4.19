@@ -27,6 +27,8 @@ static int emimpu_probe(struct platform_device *pdev);
 static irqreturn_t (*pre_handling_cb)(
 	unsigned int emi_id, struct reg_info_t *dump, unsigned int leng);
 static void (*post_clear_cb)(unsigned int emi_id);
+static void (*md_handling_cb)(
+	unsigned int emi_id, struct reg_info_t *dump, unsigned int leng);
 
 static unsigned int emimpu_read_protection(
 	unsigned int reg_type, unsigned int region, unsigned int dgroup)
@@ -308,8 +310,7 @@ static irqreturn_t emimpu_violation_irq(int irq, void *dev_id)
 		goto ignore_violation;
 
 	aee_msg = emimpu_dev_ptr->violation_msg;
-	aee_msg_cnt = snprintf(aee_msg,
-		MTK_EMI_MAX_CMD_LEN, "emimpu violation\n");
+	aee_msg_cnt = snprintf(aee_msg, MTK_EMI_MAX_CMD_LEN, "violation\n");
 
 	mpu_violation = false;
 	for (emi_id = 0; emi_id < emimpu_dev_ptr->emi_cen_cnt; emi_id++) {
@@ -333,17 +334,23 @@ static irqreturn_t emimpu_violation_irq(int irq, void *dev_id)
 				violation = true;
 		}
 
-		if (violation && pre_handling_cb)
+		if (!violation)
+			continue;
+
+		if (pre_handling_cb)
 			if (pre_handling_cb(emi_id,
 				dump_reg, emimpu_dev_ptr->dump_cnt)
 				== IRQ_HANDLED) {
 				clear_violation(emimpu_dev_ptr, emi_id);
 				mtk_clear_md_violation();
-				violation = false;
 				continue;
 			}
 
 		mpu_violation = true;
+		if (md_handling_cb) {
+			md_handling_cb(emi_id,
+				dump_reg, emimpu_dev_ptr->dump_cnt);
+		}
 	}
 
 	pr_info("%s: %s", __func__, aee_msg);
@@ -924,7 +931,7 @@ int mtk_emimpu_debugdump_register(void (*debug_func)(void))
 		(struct emimpu_dev_t *)platform_get_drvdata(emimpu_pdev);
 
 	if (!debug_func) {
-		pr_info("%s: clear_func is NULL\n", __func__);
+		pr_info("%s: debug_func is NULL\n", __func__);
 		return -EINVAL;
 	}
 
@@ -951,6 +958,26 @@ int mtk_emimpu_debugdump_register(void (*debug_func)(void))
 	return 0;
 }
 EXPORT_SYMBOL(mtk_emimpu_debugdump_register);
+
+/*
+ * mtk_emimpu_md_handling_register - register callback for md handling
+ * @md_handling_func:	function point for md handling
+ *
+ * Return 0 for success, -EINVAL for fail
+ */
+int mtk_emimpu_md_handling_register(
+	void (*md_handling_func)
+	(unsigned int emi_id, struct reg_info_t *dump, unsigned int leng))
+{
+	if (!md_handling_func) {
+		pr_info("%s: md_handling_func is NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	md_handling_cb = md_handling_func;
+	return 0;
+}
+EXPORT_SYMBOL(mtk_emimpu_md_handling_register);
 
 /*
  * mtk_clear_md_violation - clear irq for md violation
