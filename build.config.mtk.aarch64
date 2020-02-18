@@ -1,0 +1,9 @@
+ARCH=arm64
+CLANG_TRIPLE=aarch64-linux-gnu-
+CROSS_COMPILE=aarch64-linux-androidkernel-
+CC=clang
+LD_LIBRARY_PATH=prebuilts/clang/host/linux-x86/clang-r353983c/lib64:$$LD_LIBRARY_PATH
+# DEFCONFIG=defconfig
+KERNEL_DIR=kernel-4.19
+CLANG_PREBUILT_BIN=prebuilts/clang/host/linux-x86/clang-r353983c/bin
+LINUX_GCC_CROSS_COMPILE_PREBUILTS_BIN=prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9/bin
