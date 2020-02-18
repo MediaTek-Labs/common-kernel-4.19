@@ -30,6 +30,8 @@ struct fmeter_dev_t {
 	struct reg_ctrl_t posdiv[2];
 	struct reg_ctrl_t ckdiv4[2];
 	struct reg_ctrl_t cldiv2[2];
+	struct reg_ctrl_t fbksel[2];
+	struct reg_ctrl_t dqopen[2];
 };
 
 struct mr4_dev_t {
@@ -56,7 +58,18 @@ struct dramc_dev_t {
 	void *fmeter_dev_ptr;
 };
 
+enum DRAM_TYPE {
+	TYPE_DDR1 = 1,
+	TYPE_LPDDR2,
+	TYPE_LPDDR3,
+	TYPE_PCDDR3,
+	TYPE_LPDDR4,
+	TYPE_LPDDR4X,
+	TYPE_LPDDR4P
+};
+
 int mtk_dramc_get_steps_freq(unsigned int step);
+unsigned int mtk_dramc_get_ddr_type(void);
 unsigned int mtk_dramc_get_data_rate(void);
 unsigned int mtk_dramc_get_mr4(unsigned int ch);
 
