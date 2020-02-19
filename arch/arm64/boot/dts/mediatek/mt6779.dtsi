@@ -1395,6 +1395,7 @@ firmware_class.path=/vendor/firmware loop.max_part=7";
 				};
 			};
 
+
 			dvfsrc-debug {
 				compatible = "mediatek,mt6779-dvfsrc-debug";
 				interconnects = <&ddr_emi MT6779_MASTER_DEBUGSYS
@@ -1409,6 +1410,14 @@ firmware_class.path=/vendor/firmware loop.max_part=7";
 						<&dvfsrc_freq_opp3>,
 						<&dvfsrc_freq_opp4>,
 						<&dvfsrc_freq_opp5>;
+			};
+
+			dvfsrc-up {
+				compatible = "mediatek,mt6779-dvfsrc-up";
+			};
+
+			dvfsrc-met {
+				compatible = "mediatek,mt6779-dvfsrc-met";
 			};
 
 			qos@0011bb80 {
