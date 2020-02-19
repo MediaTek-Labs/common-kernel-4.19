@@ -478,6 +478,9 @@ int mtk_dvfsrc_query_info(const struct device *dev, u32 cmd, int *data)
 	case MTK_DVFSRC_CMD_VCP_QUERY:
 		*data = dvfsrc->dvd->get_vcp_level(dvfsrc);
 		break;
+	case MTK_DVFSRC_CMD_CURR_LEVEL_QUERY:
+		*data = dvfsrc->dvd->get_current_level(dvfsrc);
+		break;
 	default:
 		return -EINVAL;
 	}
