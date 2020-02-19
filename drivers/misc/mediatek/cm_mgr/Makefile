@@ -17,7 +17,7 @@ endif
 
 ccflags-y += \
 	-I$(srctree)/drivers/misc/mediatek/cm_mgr/ \
-	-I$(srctree)/drivers/misc/mediatek/dvfsrc/ \
+	-I$(srctree)/drivers/misc/mediatek/include/mt-plat \
 	-I$(srctree)/drivers/misc/mediatek/sspm \
 	-I$(srctree)/include \
 
