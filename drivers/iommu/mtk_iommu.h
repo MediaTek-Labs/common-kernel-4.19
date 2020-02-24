@@ -66,6 +66,7 @@ struct mtk_iommu_plat_data {
 	bool		    has_sub_comm[2];
 	bool		    has_wr_len;
 	bool		    has_misc_ctrl[2];
+	bool		    is_apusys[2];
 	u32		    inv_sel_reg;
 	u32		    m4u1_mask;
 #ifdef CONFIG_MTK_IOMMU_V2

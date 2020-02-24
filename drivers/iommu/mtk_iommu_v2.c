@@ -666,8 +666,8 @@ static int mtk_iommu_attach_device(struct iommu_domain *domain,
 
 	if (!data)
 		return -ENODEV;
-
-	mtk_iommu_config(data, dev, true);
+	if (!data->plat_data->is_apusys[data->m4u_id])
+		mtk_iommu_config(data, dev, true);
 	return 0;
 }
 
@@ -679,7 +679,8 @@ static void mtk_iommu_detach_device(struct iommu_domain *domain,
 	if (!data)
 		return;
 
-	mtk_iommu_config(data, dev, false);
+	if (!data->plat_data->is_apusys[data->m4u_id])
+		mtk_iommu_config(data, dev, false);
 }
 
 static int mtk_iommu_map(struct iommu_domain *domain, unsigned long iova,
@@ -1209,6 +1210,7 @@ static const struct mtk_iommu_plat_data mt6779_data = {
 	.has_sub_comm = {true, true},
 	.has_wr_len = true,
 	.has_misc_ctrl = {true, false},
+	.is_apusys = {false, true},
 	.inv_sel_reg = REG_MMU_INV_SEL_MT6779,
 	.m4u1_mask =  BIT(6),
 };
