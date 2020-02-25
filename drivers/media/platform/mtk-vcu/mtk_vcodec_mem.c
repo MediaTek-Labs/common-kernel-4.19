@@ -194,6 +194,7 @@ int vcu_buffer_flush_all(struct device *dev, struct mtk_vcu_queue *vcu_queue)
 
 			dma_buf_unmap_attachment(buf_att, sgt, DMA_TO_DEVICE);
 			dma_buf_detach(dbuf, buf_att);
+			dma_buf_put(dbuf);
 
 		}
 	}
@@ -258,6 +259,7 @@ int vcu_buffer_cache_sync(struct device *dev, struct mtk_vcu_queue *vcu_queue,
 					dma_buf_unmap_attachment(buf_att, sgt,
 						DMA_TO_DEVICE);
 					dma_buf_detach(dbuf, buf_att);
+					dma_buf_put(dbuf);
 				} else {
 
 					dbuf = vcu_queue->mem_ops->get_dmabuf(
@@ -286,6 +288,7 @@ int vcu_buffer_cache_sync(struct device *dev, struct mtk_vcu_queue *vcu_queue,
 					dma_buf_unmap_attachment(buf_att, sgt,
 						DMA_FROM_DEVICE);
 					dma_buf_detach(dbuf, buf_att);
+					dma_buf_put(dbuf);
 				}
 				break;
 			}
