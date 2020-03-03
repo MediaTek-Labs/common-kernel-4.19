@@ -3856,6 +3856,7 @@ firmware_class.path=/vendor/firmware loop.max_part=7";
 	amms_control {
 		compatible = "mediatek,amms";
 		interrupts = <GIC_SPI 334 IRQ_TYPE_EDGE_RISING>;
+		version    = "2";
 	};
 
 	mrdump_ext_rst: mrdump_ext_rst {
