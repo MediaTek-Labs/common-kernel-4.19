@@ -263,7 +263,7 @@ config MTK_ATF_LOGGER
 	  user space.
 
 config MTK_AMMS
-	bool "Support Mediatek AP and Modem Sharing Memory techonology"
+	tristate "Support Mediatek AP and Modem Sharing Memory techonology"
 	help
 	  Mediatek Memory sharing techonology
 	  It tries to free Modem memory once not
