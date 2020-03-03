@@ -1150,6 +1150,7 @@ static int cmdq_remove(struct platform_device *pdev)
 static int cmdq_mbox_send_data(struct mbox_chan *chan, void *data)
 {
 	cmdq_task_exec(data, chan->con_priv);
+
 	return 0;
 }
 

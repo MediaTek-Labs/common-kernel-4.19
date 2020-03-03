@@ -464,18 +464,18 @@ static struct ctl_table kern_table[] = {
 	},
 #ifdef CONFIG_UCLAMP_TASK
 	{
-		.procname	= "sched_uclamp_util_min",
+		.procname	= "sched_util_clamp_min",
 		.data		= &sysctl_sched_uclamp_util_min,
 		.maxlen		= sizeof(unsigned int),
 		.mode		= 0644,
-		.proc_handler	= sched_uclamp_handler,
+		.proc_handler	= sysctl_sched_uclamp_handler,
 	},
 	{
-		.procname	= "sched_uclamp_util_max",
+		.procname	= "sched_util_clamp_max",
 		.data		= &sysctl_sched_uclamp_util_max,
 		.maxlen		= sizeof(unsigned int),
 		.mode		= 0644,
-		.proc_handler	= sched_uclamp_handler,
+		.proc_handler	= sysctl_sched_uclamp_handler,
 	},
 #endif
 #ifdef CONFIG_SCHED_AUTOGROUP
