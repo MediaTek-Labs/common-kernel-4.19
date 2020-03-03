@@ -78,6 +78,7 @@
 #define PWRAP_CAP_MONITOR_V1	BIT(5)
 #define PWRAP_CAP_MONITOR_V2	BIT(6)
 #define PWRAP_CAP_ULPOSC_CLK	BIT(7)
+#define PWRAP_CAP_SYS_CLK	BIT(8)
 
 /* defines for slave device wrapper registers */
 enum dew_regs {
@@ -832,6 +833,46 @@ static int mt8135_regs[] = {
 	[PWRAP_DCM_DBC_PRD] =		0x160,
 };
 
+static int mt8168_regs[] = {
+	[PWRAP_MUX_SEL] =		0x0,
+	[PWRAP_WRAP_EN] =		0x4,
+	[PWRAP_DIO_EN] =		0x8,
+	[PWRAP_RDDMY] =			0x20,
+	[PWRAP_CSHEXT_WRITE] =		0x24,
+	[PWRAP_CSHEXT_READ] =		0x28,
+	[PWRAP_CSLEXT_WRITE] =		0x2C,
+	[PWRAP_CSLEXT_READ] =		0x30,
+	[PWRAP_EXT_CK_WRITE] =		0x34,
+	[PWRAP_STAUPD_CTRL] =		0x3C,
+	[PWRAP_STAUPD_GRPEN] =		0x40,
+	[PWRAP_EINT_STA0_ADR] =		0x44,
+	[PWRAP_EINT_STA1_ADR] =		0x48,
+	[PWRAP_EINT_STA] =		0x4C,
+	[PWRAP_EINT_CLR] =		0x50,
+	[PWRAP_HPRIO_ARB_EN] =		0x6C,
+	[PWRAP_MAN_EN] =		0x7C,
+	[PWRAP_MAN_CMD] =		0x80,
+	[PWRAP_WACS0_EN] =		0x8C,
+	[PWRAP_WACS2_EN] =		0x9C,
+	[PWRAP_INIT_DONE2] =		0xa0,
+	[PWRAP_INT_EN] =		0xB4,
+	[PWRAP_INT0_FLG_RAW] =		0xB8,
+	[PWRAP_INT0_FLG] =		0xBC,
+	[PWRAP_INT0_CLR] =		0xC0,
+	[PWRAP_INT1_EN] =		0xC4,
+	[PWRAP_INT1_FLG_RAW] =		0xC8,
+	[PWRAP_INT1_FLG] =		0xCC,
+	[PWRAP_INT1_CLR] =		0xD0,
+	[PWRAP_TIMER_EN] =		0xE8,
+	[PWRAP_WDT_UNIT] =		0xF0,
+	[PWRAP_WDT_SRC_EN] =		0xF4,
+	[PWRAP_DCM_EN] =		0x1DC,
+	[PWRAP_DCM_DBC_PRD] =		0x1E0,
+	[PWRAP_WACS2_CMD] =		0xC20,
+	[PWRAP_WACS2_RDATA] =		0xC24,
+	[PWRAP_WACS2_VLDCLR] =		0xC28,
+};
+
 enum pmic_type {
 	PMIC_MT6323,
 	PMIC_MT6351,
@@ -848,6 +889,7 @@ enum pwrap_type {
 	PWRAP_MT6797,
 	PWRAP_MT7622,
 	PWRAP_MT8135,
+	PWRAP_MT8168,
 	PWRAP_MT8173,
 };
 
@@ -876,6 +918,8 @@ struct pmic_wrapper {
 	struct clk *clk_spi;
 	struct clk *clk_wrap;
 	struct clk *clk_ulposc;
+	struct clk *clk_wrap_sys;
+	struct clk *clk_wrap_tmr;
 	struct reset_control *rstc;
 
 	struct reset_control *rstc_bridge;
@@ -1322,6 +1366,7 @@ static int pwrap_init_cipher(struct pmic_wrapper *wrp)
 	case PWRAP_MT6761:
 	case PWRAP_MT6779:
 	case PWRAP_MT6797:
+	case PWRAP_MT8168:
 	case PWRAP_MT8173:
 		pwrap_writel(wrp, 1, PWRAP_CIPHER_EN);
 		break;
@@ -1795,6 +1840,21 @@ static const struct pmic_wrapper_type pwrap_mt8173 = {
 	.init_soc_specific = pwrap_mt8173_init_soc_specific,
 };
 
+static const struct pmic_wrapper_type pwrap_mt8168 = {
+	.regs = mt8168_regs,
+	.type = PWRAP_MT8168,
+	.arb_en_all = 0x3fd25,
+	.int_en_all = 0x7,
+	.int1_en_all =  0xffffd800,
+	.spi_w = PWRAP_MAN_CMD_SPI_WRITE,
+	.wdt_src = PWRAP_WDT_SRC_MASK_ALL,
+	.has_bridge = 0,
+	.caps = PWRAP_CAP_INT1_EN | PWRAP_CAP_MONITOR_V1 |
+		PWRAP_CAP_SYS_CLK,
+	.init_reg_clock = pwrap_common_init_reg_clock,
+	.init_soc_specific = NULL,
+};
+
 static const struct of_device_id of_pwrap_match_tbl[] = {
 	{
 		.compatible = "mediatek,mt2701-pwrap",
@@ -1814,6 +1874,9 @@ static const struct of_device_id of_pwrap_match_tbl[] = {
 	}, {
 		.compatible = "mediatek,mt8135-pwrap",
 		.data = &pwrap_mt8135,
+	}, {
+		.compatible = "mediatek,mt8168-pwrap",
+		.data = &pwrap_mt8168,
 	}, {
 		.compatible = "mediatek,mt8173-pwrap",
 		.data = &pwrap_mt8173,
@@ -1905,18 +1968,44 @@ static int pwrap_probe(struct platform_device *pdev)
 		}
 	}
 
+	if (HAS_CAP(wrp->master->caps, PWRAP_CAP_SYS_CLK)) {
+		wrp->clk_wrap_sys = devm_clk_get(wrp->dev, "wrap_sys");
+		if (IS_ERR(wrp->clk_wrap_sys)) {
+			dev_dbg(wrp->dev, "failed to get clock: %ld\n",
+				PTR_ERR(wrp->clk_wrap_sys));
+			return PTR_ERR(wrp->clk_wrap_sys);
+		}
+
+		wrp->clk_wrap_tmr = devm_clk_get(wrp->dev, "wrap_tmr");
+		if (IS_ERR(wrp->clk_wrap_tmr)) {
+			dev_dbg(wrp->dev, "failed to get clock: %ld\n",
+				PTR_ERR(wrp->clk_wrap_tmr));
+			return PTR_ERR(wrp->clk_wrap_tmr);
+		}
+	}
+
 	ret = clk_prepare_enable(wrp->clk_spi);
 	if (ret)
 		return ret;
 
 	ret = clk_prepare_enable(wrp->clk_wrap);
 	if (ret)
-		goto err_out1;
+		goto err_out_wrap;
 
 	if (HAS_CAP(wrp->master->caps, PWRAP_CAP_ULPOSC_CLK)) {
 		ret = clk_prepare_enable(wrp->clk_ulposc);
 		if (ret)
-			goto err_out2;
+			goto err_out_ulposc;
+	}
+
+	if (HAS_CAP(wrp->master->caps, PWRAP_CAP_SYS_CLK)) {
+		ret = clk_prepare_enable(wrp->clk_wrap_sys);
+		if (ret)
+			goto err_out_wrap_sys;
+
+		ret = clk_prepare_enable(wrp->clk_wrap_tmr);
+		if (ret)
+			goto err_out_wrap_tmr;
 	}
 
 	/* Enable internal dynamic clock */
@@ -1933,14 +2022,14 @@ static int pwrap_probe(struct platform_device *pdev)
 		ret = pwrap_init(wrp);
 		if (ret) {
 			dev_dbg(wrp->dev, "init failed with %d\n", ret);
-			goto err_out2;
+			goto err_out_clk;
 		}
 	}
 
 	if (!(pwrap_readl(wrp, PWRAP_WACS2_RDATA) & PWRAP_STATE_INIT_DONE0)) {
 		dev_dbg(wrp->dev, "initialization isn't finished\n");
 		ret = -ENODEV;
-		goto err_out2;
+		goto err_out_clk;
 	}
 
 	/* Initialize watchdog, may not be done by the bootloader */
@@ -1973,12 +2062,12 @@ static int pwrap_probe(struct platform_device *pdev)
 	ret = devm_request_irq(wrp->dev, irq, pwrap_interrupt,
 			       IRQF_TRIGGER_HIGH, "mt-pmic-pwrap", wrp);
 	if (ret)
-		goto err_out2;
+		goto err_out_clk;
 
 	wrp->regmap = devm_regmap_init(wrp->dev, NULL, wrp, wrp->slave->regmap);
 	if (IS_ERR(wrp->regmap)) {
 		ret = PTR_ERR(wrp->regmap);
-		goto err_out2;
+		goto err_out_clk;
 	}
 
 	/* Write Test */
@@ -1990,7 +2079,7 @@ static int pwrap_probe(struct platform_device *pdev)
 		    (rdata != PWRAP_DEW_WRITE_TEST_VAL)) {
 			dev_notice(wrp->dev,
 				"[PWRAP] Write Test fail, rdata=0x%x\n", rdata);
-			goto err_out2;
+			goto err_out_clk;
 		} else {
 			dev_notice(wrp->dev, "[PWRAP] Write Test pass\n");
 		}
@@ -2000,16 +2089,23 @@ static int pwrap_probe(struct platform_device *pdev)
 	if (ret) {
 		dev_dbg(wrp->dev, "failed to create child devices at %pOF\n",
 				np);
-		goto err_out2;
+		goto err_out_clk;
 	}
 
 	return 0;
 
-err_out2:
+err_out_clk:
+	if (HAS_CAP(wrp->master->caps, PWRAP_CAP_SYS_CLK))
+		clk_disable_unprepare(wrp->clk_wrap_tmr);
+err_out_wrap_tmr:
+	if (HAS_CAP(wrp->master->caps, PWRAP_CAP_SYS_CLK))
+		clk_disable_unprepare(wrp->clk_wrap_sys);
+err_out_wrap_sys:
 	if (HAS_CAP(wrp->master->caps, PWRAP_CAP_ULPOSC_CLK))
 		clk_disable_unprepare(wrp->clk_ulposc);
+err_out_ulposc:
 	clk_disable_unprepare(wrp->clk_wrap);
-err_out1:
+err_out_wrap:
 	clk_disable_unprepare(wrp->clk_spi);
 
 	return ret;
