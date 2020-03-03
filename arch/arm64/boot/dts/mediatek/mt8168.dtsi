@@ -375,6 +375,18 @@
 			#clock-cells = <1>;
 		};
 
+		pwrap: pwrap@1000d000 {
+			compatible = "mediatek,mt8168-pwrap";
+			reg = <0 0x1000d000 0 0x1000>;
+			reg-names = "pwrap";
+			interrupts = <GIC_SPI 123 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&infracfg CLK_IFR_PWRAP_SPI>,
+				 <&infracfg CLK_IFR_PMIC_AP>,
+				 <&infracfg CLK_IFR_PWRAP_SYS>,
+				 <&infracfg CLK_IFR_PWRAP_TMR>;
+			clock-names = "spi", "wrap", "wrap_sys", "wrap_tmr";
+		};
+
 		mcusys: mcusys@10200000 {
 			compatible = "mediatek,mt8168-mcusys",
 				     "mediatek,mt8168-mcucfg", "syscon";
