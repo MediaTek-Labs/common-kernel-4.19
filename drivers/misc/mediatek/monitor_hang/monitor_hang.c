@@ -57,13 +57,13 @@
 #define TASK_STATE_TO_CHAR_STR "RSDTtXZxKWPNn"
 #endif
 
+#define CONFIG_MTK_ENG_BUILD
 
 #ifdef CONFIG_MTK_HANG_DETECT_DB
 #define MAX_HANG_INFO_SIZE (2*1024*1024) /* 2M info */
 static int MaxHangInfoSize = MAX_HANG_INFO_SIZE;
 #define MAX_STRING_SIZE 256
-char hang_buff[MAX_HANG_INFO_SIZE];
-char *Hang_Info = hang_buff;
+char *Hang_Info;
 static int Hang_Info_Size;
 #ifdef CONFIG_MTK_ENG_BUILD
 static int hang_aee_warn = 2;
@@ -86,6 +86,61 @@ DECLARE_WAIT_QUEUE_HEAD(dump_bt_start_wait);
 DECLARE_WAIT_QUEUE_HEAD(dump_bt_done_wait);
 DEFINE_RAW_SPINLOCK(white_list_lock);
 
+#ifdef MODULE
+rwlock_t *Ptasklist_lock;
+static int (*Pin_sched_functions)(unsigned long addr);
+static void (*Pput_task_stack)(struct task_struct *tsk);
+#ifdef __aarch64__		/* 64bit */
+static void (*Pwalk_stackframe)(struct task_struct *tsk,
+				struct stackframe *frame,
+			    int (*fn)(struct stackframe *, void *), void *data);
+#endif
+static const char * (*Parch_vma_name)(struct vm_area_struct *vma);
+static void (*Pdo_send_sig_info)(int sig, struct siginfo *info,
+	struct task_struct *p, bool group);
+
+int module_fun_init(void)
+{
+
+	pr_info("monitor_hang module fun init.");
+	Ptasklist_lock = (rwlock_t *)kallsyms_lookup_name("tasklist_lock");
+	if (Ptasklist_lock == NULL) {
+		pr_warn("Ptasklist_lock is null");
+		return 1;
+	}
+	Pin_sched_functions = (void *)kallsyms_lookup_name(
+		"in_sched_functions");
+	if (Pin_sched_functions == NULL) {
+		pr_warn("Pin_sched_functions is null");
+		return 1;
+	}
+	Pput_task_stack = (void *)kallsyms_lookup_name("put_task_stack");
+	if (Pput_task_stack == NULL) {
+		pr_warn("Pput_task_stack is null");
+		return 1;
+	}
+#ifdef __aarch64__		/* 64bit */
+	Pwalk_stackframe = (void *)kallsyms_lookup_name("walk_stackframe");
+	if (Pwalk_stackframe == NULL) {
+		pr_warn("Pwalk_stackframe is null");
+		return 1;
+	}
+
+#endif
+	Parch_vma_name = (void *)kallsyms_lookup_name("arch_vma_name");
+	if (Parch_vma_name == NULL) {
+		pr_warn("Parch_vma_name is null");
+		return 1;
+	}
+
+	Pdo_send_sig_info = (void *)kallsyms_lookup_name("do_send_sig_info");
+	if (Pdo_send_sig_info == NULL) {
+		pr_warn("Pdo_send_sig_info is null");
+		return 1;
+	}
+	return 0;
+}
+#endif
 
 static void ShowStatus(int flag);
 static void MonitorHangKick(int lParam);
@@ -408,7 +463,11 @@ static int FindTaskByName(char *name)
 	if (!name)
 		return ret;
 
+#ifdef MODULE
+	read_lock(Ptasklist_lock);
+#else
 	read_lock(&tasklist_lock);
+#endif
 	for_each_process(task) {
 		if (task && !strncmp(task->comm, name, strlen(name))) {
 			pr_info("[Hang_Detect] %s found pid:%d.\n",
@@ -417,7 +476,11 @@ static int FindTaskByName(char *name)
 			break;
 		}
 	}
+#ifdef MODULE
+	read_unlock(Ptasklist_lock);
+#else
 	read_unlock(&tasklist_lock);
+#endif
 	return ret;
 }
 
@@ -439,6 +502,7 @@ static void Log2HangInfo(const char *fmt, ...)
 }
 
 #ifdef CONFIG_MTK_HANG_DETECT_DB
+#ifndef MODULE
 static void Buff2HangInfo(const char *buff, unsigned long size)
 {
 	if (((unsigned long)Hang_Info_Size + size)
@@ -488,6 +552,7 @@ static void DumpMemInfo(void)
 		Buff2HangInfo(buff_add, buff_size);
 	}
 }
+#endif
 
 void get_hang_detect_buffer(unsigned long *addr, unsigned long *size,
 			    unsigned long *start)
@@ -547,7 +612,11 @@ static int save_trace(struct stackframe *frame, void *d)
 	struct stack_trace *trace = data->trace;
 	unsigned long addr = frame->pc;
 
+#ifdef MODULE
+	if (data->no_sched_functions && Pin_sched_functions(addr))
+#else
 	if (data->no_sched_functions && in_sched_functions(addr))
+#endif
 		return 0;
 	if (data->skip) {
 		data->skip--;
@@ -583,7 +652,11 @@ static void save_stack_trace_tsk_me(struct task_struct *tsk,
 	frame.graph = tsk->curr_ret_stack;
 #endif
 
+#if defined(MODULE) && defined(__aarch64__)
+	Pwalk_stackframe(tsk, &frame, save_trace, &data);
+#else
 	walk_stackframe(tsk, &frame, save_trace, &data);
+#endif
 	if (trace->nr_entries < trace->max_entries)
 		trace->entries[trace->nr_entries++] = ULONG_MAX;
 }
@@ -604,7 +677,11 @@ static int save_trace(struct stackframe *frame, void *d)
 	struct pt_regs *regs;
 	unsigned long addr = frame->pc;
 
+#ifdef MODULE
+	if (data->no_sched_functions && Pin_sched_functions(addr))
+#else
 	if (data->no_sched_functions && in_sched_functions(addr))
+#endif
 		return 0;
 	if (data->skip) {
 		data->skip--;
@@ -661,7 +738,11 @@ static noinline void __save_stack_trace(struct task_struct *tsk,
 		frame.pc = (unsigned long)__save_stack_trace;
 	}
 
+#if defined(MODULE) && defined(__aarch64__)
+	Pwalk_stackframe(tsk, &frame, save_trace, &data);
+#else
 	walk_stackframe(&frame, save_trace, &data);
+#endif
 	if (trace->nr_entries < trace->max_entries)
 		trace->entries[trace->nr_entries++] = ULONG_MAX;
 }
@@ -810,7 +891,11 @@ static int DumpThreadNativeMaps_log(pid_t pid, struct task_struct *current_task)
 				flags & VM_MAYSHARE ? 's' : 'p', path_p);
 			}
 		} else {
+#ifdef MODULE
+			const char *name = Parch_vma_name(vma);
+#else
 			const char *name = arch_vma_name(vma);
+#endif
 
 			mm = vma->vm_mm;
 			if (!name) {
@@ -1141,7 +1226,11 @@ void show_native_bt_by_pid(int task_pid)
 		DumpThreadNativeMaps_log(task_pid, p);
 		/* catch maps to Userthread_maps */
 		/* change send ptrace_stop to send signal stop */
+#ifdef MODULE
+		Pdo_send_sig_info(SIGSTOP, SEND_SIG_FORCED, p, true);
+#else
 		do_send_sig_info(SIGSTOP, SEND_SIG_FORCED, p, true);
+#endif
 		do {
 			if (t && try_get_task_stack(t)) {
 				pid_t tid = 0;
@@ -1153,7 +1242,11 @@ void show_native_bt_by_pid(int task_pid)
 					t->comm, tid, task_pid);
 				DumpThreadNativeInfo_By_tid_log(tid, t);
 				/* catch user-space bt */
+#ifdef MODULE
+				Pput_task_stack(t);
+#else
 				put_task_stack(t);
+#endif
 				put_task_struct(t);
 			}
 			if ((++count) % 5 == 4)
@@ -1161,8 +1254,16 @@ void show_native_bt_by_pid(int task_pid)
 		} while_each_thread(p, t);
 		/* change send ptrace_stop to send signal stop */
 		if (stat_nam[state] != 'T')
+#ifdef MODULE
+			Pdo_send_sig_info(SIGSTOP, SEND_SIG_FORCED, p, true);
+#else
 			do_send_sig_info(SIGCONT, SEND_SIG_FORCED, p, true);
+#endif
+#ifdef MODULE
+		Pput_task_stack(t);
+#else
 		put_task_stack(p);
+#endif
 		put_task_struct(p);
 	} else if (p)
 		put_task_struct(p);
@@ -1230,8 +1331,11 @@ static int DumpThreadNativeMaps(pid_t pid, struct task_struct *current_task)
 					path_p);
 			}
 		} else {
+#ifdef MODULE
+			const char *name = Parch_vma_name(vma);
+#else
 			const char *name = arch_vma_name(vma);
-
+#endif
 			mm = vma->vm_mm;
 			if (!name) {
 				if (mm) {
@@ -1624,14 +1728,22 @@ static void show_bt_by_pid(int task_pid)
 
 				if (dump_native == 1)
 					DumpThreadNativeInfo_By_tid(tid, t);
+#ifdef MODULE
+				Pput_task_stack(t);
+#else
 				put_task_stack(t);
+#endif
 				put_task_struct(t);
 			}
 			if ((++count) % 5 == 4)
 				msleep(20);
 			Log2HangInfo("-\n");
 		} while_each_thread(p, t);
+#ifdef MODULE
+		Pput_task_stack(t);
+#else
 		put_task_stack(p);
+#endif
 		put_task_struct(p);
 	} else if (p) {
 		put_task_struct(p);
@@ -1653,7 +1765,11 @@ static void hang_dump_backtrace(void)
 #endif
 	Log2HangInfo("dump backtrace start: %llu\n", local_clock());
 
+#ifdef MODULE
+	read_lock(Ptasklist_lock);
+#else
 	read_lock(&tasklist_lock);
+#endif
 	for_each_process(p) {
 		get_task_struct(p);
 		if (Hang_Detect_first == false) {
@@ -1671,9 +1787,17 @@ static void hang_dump_backtrace(void)
 			!strcmp(p->comm, "mmcqd/1") ||
 			!strcmp(p->comm, "vdc") ||
 			!strcmp(p->comm, "debuggerd")) {
+#ifdef MODULE
+			read_unlock(Ptasklist_lock);
+#else
 			read_unlock(&tasklist_lock);
+#endif
 			show_bt_by_pid(p->pid);
+#ifdef MODULE
+			read_lock(Ptasklist_lock);
+#else
 			read_lock(&tasklist_lock);
+#endif
 			put_task_struct(p);
 			continue;
 		}
@@ -1681,22 +1805,40 @@ static void hang_dump_backtrace(void)
 			if (try_get_task_stack(t)) {
 				get_task_struct(t);
 				show_thread_info(t, false);
+#ifdef MODULE
+				Pput_task_stack(t);
+#else
 				put_task_stack(t);
+#endif
 				put_task_struct(t);
 			}
 		}
 		put_task_struct(p);
 	}
+#ifdef MODULE
+	read_unlock(Ptasklist_lock);
+#else
 	read_unlock(&tasklist_lock);
+#endif
 	Log2HangInfo("dump backtrace end.\n");
 
 	if (Hang_Detect_first == false) {
 		if (system_server_task)
+#ifdef MODULE
+			Pdo_send_sig_info(SIGSTOP, SEND_SIG_FORCED,
+				system_server_task, true);
+#else
 			do_send_sig_info(SIGQUIT, SEND_SIG_FORCED,
 				system_server_task, true);
+#endif
 		if (monkey_task)
+#ifdef MODULE
+			Pdo_send_sig_info(SIGSTOP, SEND_SIG_FORCED,
+				monkey_task, true);
+#else
 			do_send_sig_info(SIGQUIT, SEND_SIG_FORCED,
 				monkey_task, true);
+#endif
 	}
 }
 
@@ -1704,10 +1846,12 @@ static void ShowStatus(int flag)
 {
 
 #ifdef CONFIG_MTK_HANG_DETECT_DB
+#ifndef MODULE
 	if (Hang_Detect_first)	{ /* the last dump */
 		DumpMemInfo();
 		DumpMsdc2HangInfo();
 	}
+#endif
 #endif
 
 	hang_dump_backtrace();
@@ -1715,9 +1859,11 @@ static void ShowStatus(int flag)
 	if (Hang_Detect_first)	{ /* the last dump */
 		/* debug_locks = 1; */
 		debug_show_all_locks();
+#ifndef MODULE
 		show_free_areas(0, NULL);
 		if (show_task_mem)
 			show_task_mem();
+#endif
 #ifdef CONFIG_MTK_ION
 		ion_mm_heap_memory_detail();
 #endif
@@ -1988,6 +2134,17 @@ static int __init monitor_hang_init(void)
 	int err = 0;
 #ifdef CONFIG_MTK_ENG_BUILD
 	struct proc_dir_entry *pe;
+#endif
+
+#ifdef MODULE
+	if (module_fun_init() == 1)
+		return 1;
+#endif
+
+#ifdef CONFIG_MTK_HANG_DETECT_DB
+	Hang_Info = kmalloc(MAX_HANG_INFO_SIZE, GFP_KERNEL);
+	if (Hang_Info == NULL)
+		return 1;
 #endif
 
 	err = misc_register(&Hang_Monitor_dev);

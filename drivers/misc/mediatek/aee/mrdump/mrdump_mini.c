@@ -688,6 +688,7 @@ void mrdump_mini_add_hang_raw(unsigned long vaddr, unsigned long size)
 	/* hang only remove mini rdump loads info to save storage space */
 	mrdump_mini_clear_loads();
 }
+EXPORT_SYMBOL(mrdump_mini_add_hang_raw);
 
 #define EXTRA_MISC(func, name, max_size) \
 	__weak void func(unsigned long *vaddr, unsigned long *size) \
@@ -753,6 +754,7 @@ void mrdump_mini_add_extra_misc(void)
 		}
 	}
 }
+EXPORT_SYMBOL(mrdump_mini_add_extra_misc);
 
 static void mrdump_mini_add_loads(void);
 void mrdump_mini_ke_cpu_regs(struct pt_regs *regs)

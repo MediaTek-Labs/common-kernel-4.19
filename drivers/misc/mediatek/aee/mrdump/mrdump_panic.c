@@ -128,6 +128,7 @@ int mrdump_common_die(int fiq_step, int reboot_reason, const char *msg,
 	aee_exception_reboot();
 	return NOTIFY_DONE;
 }
+EXPORT_SYMBOL(mrdump_common_die);
 
 int ipanic(struct notifier_block *this, unsigned long event, void *ptr)
 {

@@ -2184,7 +2184,7 @@ void aee_rr_rec_hang_detect_timeout_count(unsigned int val)
 		return;
 	LAST_RR_SET(hang_detect_timeout_count, val);
 }
-
+EXPORT_SYMBOL(aee_rr_rec_hang_detect_timeout_count);
 unsigned long *aee_rr_rec_gz_irq_pa(void)
 {
 	if (mboot_params_buffer_pa)

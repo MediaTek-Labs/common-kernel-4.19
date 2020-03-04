@@ -16,4 +16,4 @@ subdir-ccflags-y += -I$(srctree)/drivers/misc/mediatek/include
 subdir-ccflags-y += -I$(srctree)/drivers/misc/mediatek/include/mt-plat/
 
 
-obj-y	+= monitor_hang.o
+obj-$(CONFIG_MTK_HANG_DETECT)	+= monitor_hang.o
