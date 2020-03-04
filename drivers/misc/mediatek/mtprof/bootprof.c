@@ -13,9 +13,15 @@
 #include <linux/slab.h>
 #include <linux/utsname.h>
 #include <linux/uaccess.h>
+
+#ifdef MODULE
+#include <linux/tracepoint.h>
+#include <trace/events/initcall.h>
+#else
 #include "mtk_printk_ctrl.h"
 #ifdef CONFIG_MTK_DRAM_LOG_STORE
 #include <log_store_kernel.h>
+#endif
 #endif
 
 #define BOOT_STR_SIZE 256
@@ -38,11 +44,24 @@ static DEFINE_MUTEX(bootprof_lock);
 static bool enabled;
 static int bootprof_lk_t, bootprof_pl_t, bootprof_logo_t;
 static u64 timestamp_on, timestamp_off;
-bool boot_finish;
+static bool boot_finish;
 
+#ifdef MODULE
+static unsigned long long start_time;
+
+/* Data structures to store tracepoints information */
+struct bf_tp {
+	const char *name;
+	void *func;
+	struct tracepoint *tp;
+	void *data;
+	bool init;
+};
+#else /*Build-in*/
 module_param_named(pl_t, bootprof_pl_t, int, 0644);
 module_param_named(lk_t, bootprof_lk_t, int, 0644);
 module_param_named(logo_t, bootprof_logo_t, int, 0644);
+#endif
 
 static long long msec_high(unsigned long long nsec)
 {
@@ -63,6 +82,12 @@ static unsigned long msec_low(unsigned long long nsec)
 
 	return do_div(nsec, 1000000);
 }
+
+bool mt_boot_finish(void)
+{
+	return boot_finish;
+}
+EXPORT_SYMBOL_GPL(mt_boot_finish);
 
 void bootprof_log_boot(char *str)
 {
@@ -114,6 +139,24 @@ void bootprof_log_boot(char *str)
 out:
 	mutex_unlock(&bootprof_lock);
 }
+EXPORT_SYMBOL_GPL(bootprof_log_boot);
+
+static void bootprof_bootloader(void)
+{
+	struct device_node *node;
+	int err = 0;
+
+	node = of_find_node_by_name(NULL, "bootprof");
+	if (node) {
+		err |= of_property_read_s32(node, "pl_t", &bootprof_pl_t);
+		err |= of_property_read_s32(node, "lk_t", &bootprof_lk_t);
+		err |= of_property_read_s32(node, "lk_logo_t",
+						&bootprof_logo_t);
+
+		pr_info("BOOTPROF: DT(Err:0x%x) pl_t=%d, lk_t=%d, lk_logo_t=%d\n",
+			err, bootprof_pl_t, bootprof_lk_t, bootprof_logo_t);
+	}
+}
 
 void bootprof_initcall(initcall_t fn, unsigned long long ts)
 {
@@ -130,6 +173,8 @@ void bootprof_initcall(initcall_t fn, unsigned long long ts)
 	}
 }
 
+#ifndef MODULE
+/*Build-in*/
 void bootprof_probe(unsigned long long ts, struct device *dev,
 			   struct device_driver *drv, unsigned long probe)
 {
@@ -178,6 +223,7 @@ static void bootup_finish(void)
 	mt_disable_uart();
 	/*set_logtoomuch_enable(1);*/
 }
+#endif /*MODULE END*/
 
 static void mt_bootprof_switch(int on)
 {
@@ -192,14 +238,16 @@ static void mt_bootprof_switch(int on)
 			enabled = 1;
 			timestamp_on = ts;
 		} else {
-			/* boot up complete */
 			enabled = 0;
 			timestamp_off = ts;
-			boot_finish = true;
+			if (!boot_finish)
+				boot_finish = true;
+#ifndef MODULE
 #ifdef CONFIG_MTK_DRAM_LOG_STORE
 			log_store_bootup();
 #endif
 			bootup_finish();
+#endif
 		}
 	}
 	mutex_unlock(&bootprof_lock);
@@ -229,7 +277,6 @@ mt_bootprof_write(struct file *filp, const char *ubuf, size_t cnt, loff_t *data)
 	bootprof_log_boot(buf);
 
 	return cnt;
-
 }
 
 static int mt_bootprof_show(struct seq_file *m, void *v)
@@ -237,7 +284,7 @@ static int mt_bootprof_show(struct seq_file *m, void *v)
 	int i;
 	struct log_t *p;
 
-	if (m == NULL) {
+	if (!m) {
 		pr_info("seq_file is Null.\n");
 		return 0;
 	}
@@ -293,6 +340,139 @@ static const struct file_operations mt_bootprof_fops = {
 	.release = single_release,
 };
 
+#ifdef MODULE
+
+/*  initcalls tracepoint cb if initcall_debug=1 */
+static __init_or_module void
+tp_initcall_start_cb(void *data, initcall_t fn)
+{
+	unsigned long long *start_ts  = (unsigned long long *)data;
+	*start_ts  = sched_clock();
+}
+
+static __init_or_module void
+tp_initcall_finish_cb(void *data, initcall_t fn, int ret)
+{
+	unsigned long long *start_ts = (unsigned long long *)data;
+	unsigned long long end_ts, duration;
+
+	/*For bootprof module without initcall_start*/
+	if (*start_ts == 0) {
+		bootprof_log_boot("Kernel_init_done");
+		return;
+	}
+	end_ts = sched_clock();
+	duration = end_ts - *start_ts;
+	bootprof_initcall(fn, duration);
+	*start_ts = 0;
+}
+
+static struct bf_tp tp_table[] = {
+	{.name = "initcall_start", .func = tp_initcall_start_cb,
+	.data = &start_time},
+	{.name = "initcall_finish", .func = tp_initcall_finish_cb,
+	.data = &start_time},
+};
+
+/* Find the struct tracepoint* associated with a given tracepoint */
+/* name. */
+static void tp_lookup(struct tracepoint *tp, void *ignore)
+{
+	int i;
+
+	if (!tp || !tp->name)
+		return;
+
+	for (i = 0; i < sizeof(tp_table) / sizeof(struct bf_tp); i++) {
+		if (strcmp(tp_table[i].name, tp->name) == 0)
+			tp_table[i].tp = tp;
+	}
+}
+
+/* claen up initcalls tracepoints */
+static void tp_cleanup(void)
+{
+	int i;
+
+	for (i = 0; i < sizeof(tp_table) / sizeof(struct bf_tp); i++) {
+		if (tp_table[i].init) {
+			tracepoint_probe_unregister(tp_table[i].tp,
+				tp_table[i].func, tp_table[i].data);
+			tp_table[i].init = false;
+		}
+	}
+}
+
+/* Register initcalls tracepoints */
+static void tp_init(void)
+{
+	int i;
+	/* Install the tracepoints */
+	for_each_kernel_tracepoint(tp_lookup, NULL);
+	for (i = 0; i < sizeof(tp_table) / sizeof(struct bf_tp); i++) {
+		if (!tp_table[i].tp) {
+			pr_info("[BOOTPROF]TP: %s not found\n",
+					tp_table[i].name);
+			/* Unload previously loaded */
+			tp_cleanup();
+			return;
+		}
+		tracepoint_probe_register(tp_table[i].tp, tp_table[i].func,
+						tp_table[i].data);
+		tp_table[i].init = true;
+	}
+}
+
+static int __init bootprof_init(void)
+{
+	struct proc_dir_entry *pe;
+
+	memset(bootprof, 0, sizeof(struct log_t *) * BUF_COUNT);
+	bootprof[0] = kcalloc(LOGS_PER_BUF, sizeof(struct log_t),
+			GFP_ATOMIC | __GFP_NORETRY | __GFP_NOWARN);
+	if (!bootprof[0])
+		goto fail;
+
+	pe = proc_create("bootprof", 0664, NULL, &mt_bootprof_fops);
+	if (!pe)
+		return -ENOMEM;
+
+	bootprof_bootloader();
+	tp_init();
+	mt_bootprof_switch(1);
+fail:
+	return 0;
+}
+
+static void __exit bootprof_exit(void)
+{
+	struct log_t *p = NULL;
+	int i;
+
+	enabled = 0;
+	tp_cleanup();
+
+	if (log_count > 0) {
+		mutex_lock(&bootprof_lock);
+		for (i = 0; i < log_count; i++) {
+			p = &bootprof[i / LOGS_PER_BUF][i % LOGS_PER_BUF];
+			kfree(p->comm_event);
+		}
+
+		for (i = 0; i < ((log_count / LOGS_PER_BUF) + 1); i++)
+			kfree(bootprof[i]);
+
+		mutex_unlock(&bootprof_lock);
+	}
+	remove_proc_entry("bootprof", NULL);
+	pr_info("bootprof module exit.\n");
+}
+module_init(bootprof_init);
+module_exit(bootprof_exit);
+
+MODULE_DESCRIPTION("MEDIATEK BOOT TIME PROFILING");
+MODULE_LICENSE("GPL v2");
+#else /*Build-in*/
 static int __init init_boot_prof(void)
 {
 	struct proc_dir_entry *pe;
@@ -306,10 +486,12 @@ static int __init init_boot_prof(void)
 static int __init init_bootprof_buf(void)
 {
 	memset(bootprof, 0, sizeof(struct log_t *) * BUF_COUNT);
-	bootprof[0] = kzalloc(sizeof(struct log_t) * LOGS_PER_BUF,
+	bootprof[0] = kcalloc(LOGS_PER_BUF, sizeof(struct log_t),
 			      GFP_ATOMIC | __GFP_NORETRY | __GFP_NOWARN);
 	if (!bootprof[0])
 		goto fail;
+
+	bootprof_bootloader();
 	mt_bootprof_switch(1);
 fail:
 	return 0;
@@ -317,3 +499,4 @@ fail:
 
 early_initcall(init_bootprof_buf);
 device_initcall(init_boot_prof);
+#endif /*MODULE END*/
