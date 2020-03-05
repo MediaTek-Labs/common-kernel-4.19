@@ -5,6 +5,7 @@
 
 /dts-v1/;
 #include "mt8168.dtsi"
+#include "mt6357.dtsi"
 #include <dt-bindings/clock/mt8168-clk.h>
 #include <dt-bindings/interrupt-controller/irq.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
@@ -98,6 +99,14 @@
 	vqmmc-supply = <&mmc_fixed_1v8_io>;
 	no-mmc;
 	no-sdio;
+};
+
+&mt6357_vfe28_ldo_reg {
+	regulator-always-on;
+};
+
+&mt6357_vrf12_ldo_reg {
+	regulator-always-on;
 };
 
 &pio {
@@ -205,6 +214,11 @@
 			bias-pull-up = <MTK_PUPD_SET_R1R0_01>;
 		};
 	};
+};
+
+&pmic {
+	interrupt-parent = <&pio>;
+	interrupts = <145 IRQ_TYPE_LEVEL_HIGH>;
 };
 
 &uart0 {
