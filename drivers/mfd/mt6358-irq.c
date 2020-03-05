@@ -235,6 +235,7 @@ int mt6358_irq_init(struct mt6397_chip *chip)
 	mutex_init(&chip->irqlock);
 	switch (chip->chip_id) {
 	case MT6357_CHIP_ID:
+	case MT6390_CHIP_ID:
 		irqd->num_top = ARRAY_SIZE(mt6357_ints);
 		irqd->num_pmic_irqs = MT6357_IRQ_NR;
 		irqd->reg_width = MT6357_REG_WIDTH;

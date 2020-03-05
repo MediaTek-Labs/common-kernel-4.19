@@ -440,6 +440,7 @@ static int mt6397_probe(struct platform_device *pdev)
 	case MT6357_CHIP_ID:
 	case MT6358_CHIP_ID:
 	case MT6359_CHIP_ID:
+	case MT6390_CHIP_ID:
 		ret = mt6358_irq_init(pmic);
 		break;
 
@@ -465,6 +466,7 @@ static int mt6397_probe(struct platform_device *pdev)
 		break;
 
 	case MT6357_CHIP_ID:
+	case MT6390_CHIP_ID:
 		ret = devm_mfd_add_devices(&pdev->dev, -1, mt6357_devs,
 					   ARRAY_SIZE(mt6357_devs), NULL,
 					   0, pmic->irq_domain);
