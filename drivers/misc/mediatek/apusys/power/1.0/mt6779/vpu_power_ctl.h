@@ -6,19 +6,20 @@
 #ifndef _MT6779_VPU_POWER_CTL_H_
 #define _MT6779_VPU_POWER_CTL_H_
 
-#include <linux/arm-smccc.h>
-#include <linux/soc/mediatek/mtk_sip_svc.h>
-
+// CCF do not support mtcmos ctl anymore
 #define CCF_MTCMOS_SUPPORT	(0)
+
+// use wakelock of apusys_power_driver to replace this
 #define ENABLE_WAKELOCK		(0)
+
 #define MTK_MMDVFS_ENABLE	(0)
 
 #define VPU_MAX_NUM_STEPS               (16)
 #define VPU_MAX_NUM_OPPS                (16)
 
 #define OPP_WAIT_TIME_MS    (300)
-#define PWR_KEEP_TIME_MS    (2000)
-#define OPP_KEEP_TIME_MS    (3000)
+#define PWR_KEEP_TIME_MS    (0)
+#define OPP_KEEP_TIME_MS    (0)
 #define SDSP_KEEP_TIME_MS   (5000)
 #define POWER_ON_MAGIC          (2)
 #define OPPTYPE_VCORE           (0)
@@ -94,13 +95,19 @@ struct vpu_dvfs_opps {
 	uint8_t count;
 };
 
-/*move vcore cg ctl to atf*/
-#define vcore_cg_ctl(poweron) \
-	do { \
-		struct arm_smccc_res res; \
-		arm_smccc_smc(MTK_SIP_KERNEL_APU_VCORE_CG_CTL \
-				, poweron, 0, 0, 0, 0, 0, 0, &res); \
-	} while (0)
+enum VpuPowerOnType {
+	/* power on previously by setPower */
+	VPT_PRE_ON              = 1,
+
+	/* power on by enque */
+	VPT_ENQUE_ON    = 2,
+
+	/* power on by enque, but want to immediately off(when exception) */
+	VPT_IMT_OFF             = 3,
+
+	/* same as VPT_IMT_OFF, from secure DSP */
+	VPT_SDSP_OFF    = 4,
+};
 
 void vpu_opp_keep_routine(struct work_struct *);
 void vpu_sdsp_routine(struct work_struct *work);
@@ -115,4 +122,6 @@ extern void uninit_vpu_power_resource(void);
 
 extern void vpu_opp_check(int core, uint8_t vvpu_index, uint8_t freq_index);
 extern int vpu_get_power(int core, bool secure);
+extern void vpu_put_power(int core, enum VpuPowerOnType type);
+extern void vpu_put_power_nowq(int core);
 #endif

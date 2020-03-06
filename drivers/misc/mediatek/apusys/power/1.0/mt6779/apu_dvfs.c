@@ -8,7 +8,6 @@
 #include <linux/err.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
-#include <linux/pm_qos.h>
 #include <linux/pm_runtime.h>
 #include <linux/sched.h>
 #include <linux/mutex.h>
@@ -21,6 +20,7 @@
 //#include <mtk_qos_sram.h>
 #include <linux/delay.h>
 #include <linux/sched/clock.h>
+#include <linux/regulator/consumer.h>
 
 //#include <mt-plat/aee.h>
 //#include <spm/mtk_spm.h>
@@ -30,7 +30,9 @@
 #include "mdla_dvfs.h"
 #include "vpu_cmn.h"
 
-#include <linux/regulator/consumer.h>
+#ifdef ENABLE_PMQOS
+#include <linux/pm_qos.h>
+#endif
 
 // FIXME: cowork func not ready yet
 #define ENABLE_MTK_DEVINFO      (0)
@@ -42,6 +44,10 @@ static inline int get_devinfo_with_index(int idx)
 {
 	return 0;
 }
+#endif
+
+#ifndef ENABLE_PMQOS
+static int apusys_pm_device_opp[APUSYS_DVFS_USER_NUM];
 #endif
 
 /*regulator id*/
@@ -282,92 +288,6 @@ static struct mdla_ptp_count_info mdla_ptp_count_table[] = {
 	MDLA_PTP(0),
 };
 
-
-//#define APU_CONN_BASE (0x19000000)
-
-#define APU_CONN_QOS_CTRL0  (0x170)
-#define APU_CONN_QOS_CTRL1  (0x174)
-#define APU_CONN_QOS_CTRL2  (0x178)
-#define APU_CONN_QA_CTRL0   (0x17C)
-#define APU_CONN_QA_CTRL1   (0x180)
-#define APU_CONN_QA_CTRL2   (0x184)
-#define APU_CONN_QA_CTRL3   (0x188)
-#define APU_CONN_QA_CTRL4   (0x18C)
-#define APU_CONN_QA_CTRL5   (0x190)
-#define APU_CONN_QA_CTRL6   (0x194)
-#define APU_CONN_QA_CTRL7   (0x198)
-#define APU_CONN_QA_CTRL8   (0x19C)
-#define APU_CONN_QA_CTRL9   (0x1A0)
-#define APU_CONN_QA_CTRL10  (0x1A4)
-#define APU_CONN_QA_CTRL11  (0x1A8)
-#define APU_CONN_QA_CTRL12  (0x1AC)
-#define APU_CONN_QA_CTRL13  (0x1B0)
-#define APU_CONN_QA_CTRL14  (0x1B4)
-#define APU_CONN_QA_CTRL15  (0x1B8)
-#define APU_CONN_QA_CTRL16  (0x1BC)
-#define APU_CONN_QA_CTRL17  (0x1C0)
-#define APU_CONN_QA_CTRL18  (0x1C4)
-#define APU_CONN_QB_CTRL0   (0x1C8)
-#define APU_CONN_QB_CTRL1   (0x1CC)
-#define APU_CONN_QB_CTRL2   (0x1D0)
-#define APU_CONN_QB_CTRL3   (0x1D4)
-#define APU_CONN_QB_CTRL4   (0x1D8)
-#define APU_CONN_QB_CTRL5   (0x1DC)
-#define APU_CONN_QB_CTRL6   (0x1E0)
-#define APU_CONN_QB_CTRL7   (0x1E4)
-#define APU_CONN_QB_CTRL8   (0x1E8)
-#define APU_CONN_QB_CTRL9   (0x1EC)
-#define APU_CONN_QB_CTRL10  (0x1F0)
-#define APU_CONN_QB_CTRL11  (0x1F4)
-#define APU_CONN_QB_CTRL12  (0x1F8)
-#define APU_CONN_QB_CTRL13  (0x1FC)
-#define APU_CONN_QB_CTRL14  (0x200)
-#define APU_CONN_QB_CTRL15  (0x204)
-#define APU_CONN_QB_CTRL16  (0x208)
-#define APU_CONN_QB_CTRL17  (0x20C)
-#define APU_CONN_QB_CTRL18  (0x210)
-#define APU_CONN_QC_CTRL0   (0x214)
-#define APU_CONN_QC_CTRL1   (0x218)
-#define APU_CONN_QC_CTRL2   (0x21C)
-#define APU_CONN_QC_CTRL3   (0x220)
-#define APU_CONN_QC_CTRL4   (0x224)
-#define APU_CONN_QC_CTRL5   (0x228)
-#define APU_CONN_QC_CTRL6   (0x22C)
-#define APU_CONN_QC_CTRL7   (0x230)
-#define APU_CONN_QC_CTRL8   (0x234)
-#define APU_CONN_QC_CTRL9   (0x238)
-#define APU_CONN_QC_CTRL10  (0x23C)
-#define APU_CONN_QC_CTRL11  (0x240)
-#define APU_CONN_QC_CTRL12  (0x244)
-#define APU_CONN_QC_CTRL13  (0x248)
-#define APU_CONN_QC_CTRL14  (0x24C)
-#define APU_CONN_QC_CTRL15  (0x250)
-#define APU_CONN_QC_CTRL16  (0x254)
-#define APU_CONN_QC_CTRL17  (0x258)
-#define APU_CONN_QC_CTRL18  (0x25C)
-#define APU_CONN_QC1_CTRL0  (0x260)
-#define APU_CONN_QC1_CTRL1  (0x264)
-#define APU_CONN_QC1_CTRL2  (0x268)
-#define APU_CONN_QC1_CTRL3  (0x26C)
-#define APU_CONN_QC1_CTRL4  (0x270)
-#define APU_CONN_QC1_CTRL5  (0x274)
-#define APU_CONN_QC1_CTRL6  (0x278)
-#define APU_CONN_QC1_CTRL7  (0x27C)
-#define APU_CONN_QC1_CTRL8  (0x280)
-#define APU_CONN_QC1_CTRL9  (0x284)
-#define APU_CONN_QC1_CTRL10 (0x288)
-#define APU_CONN_QC1_CTRL11 (0x28C)
-#define APU_CONN_QC1_CTRL12 (0x290)
-#define APU_CONN_QC1_CTRL13 (0x294)
-#define APU_CONN_QC1_CTRL14 (0x298)
-#define APU_CONN_QC1_CTRL15 (0x29C)
-#define APU_CONN_QC1_CTRL16 (0x2A0)
-#define APU_CONN_QC1_CTRL17 (0x2A4)
-#define APU_CONN_QC1_CTRL18 (0x2A8)
-
-unsigned long apu_syscfg_base;
-
-static struct apu_dvfs *dvfs;
 int vvpu_orig_opp;
 int vmdla_orig_opp;
 int vvpu0_cpe_result;
@@ -377,28 +297,14 @@ int vmdla0_cpe_result;
 int vmdla1_cpe_result;
 int vmdla2_cpe_result;
 
-
 static DEFINE_MUTEX(vpu_opp_lock);
 static DEFINE_MUTEX(mdla_opp_lock);
 static DEFINE_MUTEX(power_check_lock);
-
 
 static void get_vvpu_from_efuse(void);
 static void get_vmdla_from_efuse(void);
 static int vmdla_vbin(int opp);
 static int vvpu_vbin(int opp);
-
-
-
-
-static void dvfs_get_timestamp(char *p)
-{
-	u64 sec = sched_clock();
-	u64 usec = do_div(sec, 1000000000);
-
-	do_div(usec, 1000000);
-	sprintf(p, "%llu.%llu", sec, usec);
-}
 
 void dump_opp_table(void)
 {
@@ -433,42 +339,7 @@ void dump_ptp_count(void)
 
 void apu_get_power_info_internal(void)
 {
-	int vvpu = 0;
-	int vmdla = 0;
-	int vcore = 0;
-	int dsp_freq = 0;
-	int dsp1_freq = 0;
-	int dsp2_freq = 0;
-	int dsp3_freq = 0;
-	int ipuif_freq = 0;
-	//	int temp_freq = 0;
-	mutex_lock(&power_check_lock);
-
-	if (vmdla_reg_id)
-		vmdla = regulator_get_voltage(vmdla_reg_id);
-
-	if (vvpu_reg_id)
-		vvpu = regulator_get_voltage(vvpu_reg_id);
-
-	if (vcore_reg_id)
-		vcore = regulator_get_voltage(vcore_reg_id);
-
-	LOG_INF("vvpu=%d, vmdla=%d, vcore=%d\n", vvpu, vmdla, vcore);
-	if (vvpu < 700000) {
-		if	((dsp_freq >= 364000) || (ipuif_freq >= 364000)) {
-			LOG_INF("freq check fail\n");
-			LOG_INF("dsp_freq = %d\n", dsp_freq);
-			LOG_INF("dsp1_freq = %d\n", dsp1_freq);
-			LOG_INF("dsp2_freq = %d\n", dsp2_freq);
-			LOG_INF("dsp3_freq = %d\n", dsp3_freq);
-			LOG_INF("ipuif_freq = %d\n", ipuif_freq);
-			LOG_INF("vvpu=%d, vmdla=%d, vcore=%d\n",
-						vvpu, vmdla, vcore);
-			aee_kernel_warning("freq check", "%s: failed.",
-								__func__);
-		}
-	}
-	mutex_unlock(&power_check_lock);
+	//vvpu_vmdla_vcore_checker();
 }
 EXPORT_SYMBOL(apu_get_power_info_internal);
 
@@ -512,20 +383,15 @@ bool vvpu_vmdla_vcore_checker(void)
 		ret = 1;
 		LOG_ERR("vcore_vmdla_diff fail\n");
 	}
-	LOG_DVFS("vvpu=%d, vmdla=%d, vcore=%d\n", vvpu, vmdla, vcore);
-	LOG_DVFS("get vvpu=%d, vmdla=%d, vcore=%d\n",
-			regulator_get_voltage(vvpu_reg_id),
-			regulator_get_voltage(vmdla_reg_id),
-			regulator_get_voltage(vcore_reg_id));
+
 	if (ret) {
-		LOG_INF("vvpuopp:%d, vmdlaopp:%d,\n",
+		LOG_ERR("vvpuopp:%d, vmdlaopp:%d,\n",
 				vvpu_orig_opp, vmdla_orig_opp);
-		LOG_INF("vvpu=%d, vmdla=%d, vcore=%d\n", vvpu, vmdla, vcore);
-		LOG_INF("get vvpu=%d, vmdla=%d, vcore=%d\n",
-				regulator_get_voltage(vvpu_reg_id),
-				regulator_get_voltage(vmdla_reg_id),
-				regulator_get_voltage(vcore_reg_id));
+		LOG_ERR("err chk vvpu=%d, vmdla=%d, vcore=%d\n",
+						vvpu, vmdla, vcore);
 		aee_kernel_warning("dvfs", "%s: failed.", __func__);
+	} else {
+		pr_info("vvpu=%d, vmdla=%d, vcore=%d\n", vvpu, vmdla, vcore);
 	}
 	mutex_unlock(&power_check_lock);
 	return ret;
@@ -882,21 +748,29 @@ int vvpu_regulator_set_mode(bool enable)
 		return ret;
 	}
 	mutex_lock(&vpu_opp_lock);
-	LOG_DVFS("vvpu_reg enable:%d, count:%d\n", enable, vvpu_count);
+	pr_info("vvpu_reg enable:%d, count:%d\n", enable, vvpu_count);
 	if (enable) {
 		if (vvpu_count == 0) {
-			ret = regulator_set_mode(vvpu_reg_id,
-					REGULATOR_MODE_NORMAL);
+			//ret = regulator_set_mode(vvpu_reg_id,
+			//		REGULATOR_MODE_NORMAL);
+			ret = regulator_set_voltage(vvpu_reg_id,
+					10*(vpu_opp_table[9].vpufreq_volt),
+					850000);
 		}
 		vvpu_count++;
 	} else {
 		if (vvpu_count == 1) {
-			ret = regulator_set_mode(vvpu_reg_id,
-					REGULATOR_MODE_IDLE);
+			//ret = regulator_set_mode(vvpu_reg_id,
+			//		REGULATOR_MODE_IDLE);
+			ret = regulator_set_voltage(vvpu_reg_id,
+					550000,
+					550000);
 			vvpu_count = 0;
-		} else if (vvpu_count > 1)
+		} else if (vvpu_count > 1) {
 			vvpu_count--;
+		}
 	}
+	pr_info("vvpu_reg enable:%d, count:%d end\n", enable, vvpu_count);
 	mutex_unlock(&vpu_opp_lock);
 	return ret;
 }
@@ -914,7 +788,7 @@ int vmdla_regulator_set_mode(bool enable)
 		return ret;
 	}
 	mutex_lock(&mdla_opp_lock);
-	LOG_DVFS("vmdla_reg enable:%d, count:%d\n", enable, vmdla_count);
+	pr_info("vmdla_reg enable:%d, count:%d\n", enable, vmdla_count);
 	if (enable) {
 		if (vmdla_count == 0) {
 			ret = regulator_set_voltage(vmdla_reg_id,
@@ -926,11 +800,13 @@ int vmdla_regulator_set_mode(bool enable)
 		if (vmdla_count == 1) {
 			ret = regulator_set_voltage(vmdla_reg_id,
 					550000,
-					850000);
+					550000);
 			vmdla_count = 0;
-		} else if (vmdla_count > 1)
+		} else if (vmdla_count > 1) {
 			vmdla_count--;
+		}
 	}
+	pr_info("vmdla_reg enable:%d, count:%d end\n", enable, vmdla_count);
 	mutex_unlock(&mdla_opp_lock);
 	return ret;
 }
@@ -1447,35 +1323,35 @@ static int commit_data(int type, int data)
 			} else
 				settle_time = 0;
 
-				vvpu_orig_opp = data;
+			vvpu_orig_opp = data;
 
-				/*--Set voltage--*/
-				if (data == 0) {
-					LOG_DBG("set_voltage %d\n",
-					10*(vpu_opp_table[0].vpufreq_volt));
-					ret = regulator_set_voltage(vvpu_reg_id,
-					10*(vpu_opp_table[0].vpufreq_volt),
-					850000);
-				} else if (data == 1) {
-					LOG_DBG("set_voltage %d\n",
-					10*(vpu_opp_table[5].vpufreq_volt));
-					ret = regulator_set_voltage(vvpu_reg_id,
-					10*(vpu_opp_table[5].vpufreq_volt),
-					850000);
-				} else {
-					LOG_DBG("set_voltage %d\n",
-					10*(vpu_opp_table[9].vpufreq_volt));
-					ret = regulator_set_voltage(vvpu_reg_id,
-					10*(vpu_opp_table[9].vpufreq_volt),
-					850000);
-				}
-				if (ret)
-					LOG_ERR(
-					"regulator_set_voltage  vvpu_reg_id  failed\n");
+			/*--Set voltage--*/
+			if (data == 0) {
+				LOG_DBG("set_voltage %d\n",
+				10*(vpu_opp_table[0].vpufreq_volt));
+				ret = regulator_set_voltage(vvpu_reg_id,
+				10*(vpu_opp_table[0].vpufreq_volt),
+				850000);
+			} else if (data == 1) {
+				LOG_DBG("set_voltage %d\n",
+				10*(vpu_opp_table[5].vpufreq_volt));
+				ret = regulator_set_voltage(vvpu_reg_id,
+				10*(vpu_opp_table[5].vpufreq_volt),
+				850000);
+			} else {
+				LOG_DBG("set_voltage %d\n",
+				10*(vpu_opp_table[9].vpufreq_volt));
+				ret = regulator_set_voltage(vvpu_reg_id,
+				10*(vpu_opp_table[9].vpufreq_volt),
+				850000);
 			}
-			udelay(settle_time);
-			mutex_unlock(&vpu_opp_lock);
-			break;
+			if (ret)
+				LOG_ERR(
+				"regulator_set_voltage  vvpu_reg_id  failed\n");
+		}
+		udelay(settle_time);
+		mutex_unlock(&vpu_opp_lock);
+		break;
 	case PM_QOS_VMDLA_OPP:
 		mutex_lock(&mdla_opp_lock);
 		if (get_vmdla_DVFS_is_paused_by_ptpod())
@@ -1497,7 +1373,6 @@ static int commit_data(int type, int data)
 				settle_time = 0;
 
 			vmdla_orig_opp = data;
-
 
 			/*--Set voltage--*/
 			if (data == 0) {
@@ -1529,6 +1404,7 @@ static int commit_data(int type, int data)
 		LOG_DBG("unsupported type of commit data\n");
 		break;
 	}
+
 	vvpu_vmdla_vcore_checker();
 
 	get_vvpu_efuse();
@@ -1540,9 +1416,17 @@ static int commit_data(int type, int data)
 		apu_dvfs_dump_reg(NULL);
 		aee_kernel_warning("dvfs", "%s: failed.", __func__);
 	}
-
-
 	return ret;
+}
+
+#ifdef ENABLE_PMQOS
+static void dvfs_get_timestamp(char *p)
+{
+	u64 sec = sched_clock();
+	u64 usec = do_div(sec, 1000000000);
+
+	do_div(usec, 1000000);
+	sprintf(p, "%llu.%llu", sec, usec);
 }
 
 static void get_pm_qos_info(char *p)
@@ -1564,22 +1448,6 @@ static void get_pm_qos_info(char *p)
 			"Force End Timestamp", dvfs->force_end);
 }
 
-char *apu_dvfs_dump_reg(char *ptr)
-{
-	char buf[1024];
-
-	get_pm_qos_info(buf);
-	if (ptr)
-		ptr += sprintf(ptr, "%s\n", buf);
-	else
-		pr_info("%s\n", buf);
-
-	return ptr;
-}
-
-static struct devfreq_dev_profile apu_devfreq_profile = {
-	.polling_ms	= 0,
-};
 static int pm_qos_vvpu_opp_notify(struct notifier_block *b,
 		unsigned long l, void *v)
 {
@@ -1595,7 +1463,6 @@ static int pm_qos_vmdla_opp_notify(struct notifier_block *b,
 	return NOTIFY_OK;
 }
 
-
 static void pm_qos_notifier_register(void)
 {
 
@@ -1609,43 +1476,144 @@ static void pm_qos_notifier_register(void)
 	pm_qos_add_notifier(PM_QOS_VMDLA_OPP,
 			&dvfs->pm_qos_vmdla_opp_nb);
 }
+#else
+// arbitration rule : keep higher voltage
+int apusys_pm_request_arbiter(void)
+{
+	int dev_id = 0;
+	/*
+	 * VVPU_OPP_NUM equals to VMDLA_OPP_NUM since these two voltages
+	 * should be raised/falled together
+	 */
+	int leading_opp = VVPU_OPP_NUM; // 0: fastest, VVPU_OPP_NUM: slowest
+	int ret = 0;
+
+	// find leading opp in this round
+	for (dev_id = 0 ; dev_id < APUSYS_DVFS_USER_NUM ; dev_id++)
+		if (apusys_pm_device_opp[dev_id] < leading_opp)
+			leading_opp = apusys_pm_device_opp[dev_id];
+
+	pr_info("%s parking voltage (opp1) to avoid vmdla vvpu constraint\n",
+								__func__);
+	ret = commit_data(PM_QOS_VVPU_OPP, 1);
+	ret |= commit_data(PM_QOS_VMDLA_OPP, 1);
+
+	if (leading_opp != 1) {
+		// config regulator
+		for (dev_id = 0 ; dev_id < APUSYS_DVFS_USER_NUM ; dev_id++) {
+
+			pr_info(
+				"%s device:%d set volt opp = %d (target opp = %d)\n",
+						__func__, dev_id, leading_opp,
+						apusys_pm_device_opp[dev_id]);
+
+			if (dev_id == VPU0 || dev_id == VPU1)
+				ret |= commit_data(PM_QOS_VVPU_OPP,
+							leading_opp);
+			else
+				ret |= commit_data(PM_QOS_VMDLA_OPP,
+							leading_opp);
+		}
+	}
+
+	return ret;
+}
+
+int apusys_pm_update_request(enum DVFS_USER device, int opp)
+{
+	if (device < 0 || device >= APUSYS_DVFS_USER_NUM) {
+		pr_info("%s with illegal device number : %d\n",
+				__func__, device);
+		return -1;
+	}
+
+	if (opp < 0) {
+		pr_info("%s with illegal opp number : %d, device : %d\n",
+				__func__, opp, device);
+		return -1;
+	}
+
+	if ((device == VPU0 || device == VPU1) && (opp > VVPU_OPP_NUM)) {
+		pr_info("%s with illegal opp number : %d, device : %d\n",
+				__func__, opp, device);
+		return -1;
+	}
+
+	if (device == MDLA0 && (opp > VMDLA_OPP_NUM)) {
+		pr_info("%s with illegal opp number : %d, device : %d\n",
+				__func__, opp, device);
+		return -1;
+	}
+
+	if (apusys_pm_device_opp[device] != opp) {
+		pr_info("%s device:%d, volt opp %d -> %d\n", __func__, device,
+				apusys_pm_device_opp[device], opp);
+		apusys_pm_device_opp[device] = opp;
+	} else {
+		pr_info("%s device:%d volt opp %d (no change)\n",
+						__func__, device, opp);
+	}
+
+	return 0;
+}
+
+int apusys_pm_vcore(enum DVFS_USER device, int volt)
+{
+	static int vcore_request[APUSYS_DVFS_USER_NUM] = {0};
+	int ret = 0;
+	int dev_id = 0;
+
+	if (volt < 10 * VCORE_DVFS_LOW_BOUND)
+		volt = 10 * VCORE_DVFS_LOW_BOUND;
+
+	vcore_request[device] = volt;
+
+	/*
+	 * do not adjust vcore voltage if any other device hold higher value
+	 */
+	for (dev_id = 0 ; dev_id < APUSYS_DVFS_USER_NUM ; dev_id++) {
+		if (vcore_request[dev_id] > volt) {
+			pr_info(
+			"%s device:%d, target:%d abort (dev:%d hold volt: %d)\n",
+						__func__, device, volt,
+						dev_id, vcore_request[dev_id]);
+			return -1;
+		}
+	}
+
+	ret = regulator_set_voltage(vcore_reg_id, volt, volt);
+
+	pr_info("%s device:%d, target:%d, ret:%d, volt:%d\n",
+					__func__, device, volt, ret,
+					regulator_get_voltage(vcore_reg_id));
+	return ret;
+}
+
+#endif // ifdef ENABLE_PMQOS
+
+char *apu_dvfs_dump_reg(char *ptr)
+{
+	char buf[1024];
+
+#ifdef ENABLE_PMQOS
+	get_pm_qos_info(buf);
+#endif
+	if (ptr)
+		ptr += sprintf(ptr, "%s\n", buf);
+	else
+		pr_info("%s\n", buf);
+
+	return ptr;
+}
 
 int apu_dvfs_init(struct platform_device *pdev)
 {
 	int ret;
-	struct resource *res;
-	struct device_node *ipu_conn_node = NULL;
 	struct device_node *ct_node = NULL;
-	u32 ct_flag;
+	u32 ct_flag = 0;
 
 	g_vpu_log_level = 1;
 	pr_info("%s g_vpu_log_level = %d\n", __func__, g_vpu_log_level);
-
-	dvfs = devm_kzalloc(&pdev->dev, sizeof(*dvfs), GFP_KERNEL);
-	if (!dvfs)
-		return -ENOMEM;
-
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	LOG_DBG("%s\n", __func__);
-
-	dvfs->regs = devm_ioremap_resource(&pdev->dev, res);
-	if (IS_ERR(dvfs->regs))
-		return PTR_ERR(dvfs->regs);
-	platform_set_drvdata(pdev, dvfs);
-
-	dvfs->devfreq = devm_devfreq_add_device(&pdev->dev,
-			&apu_devfreq_profile,
-			"apu_dvfs",
-			NULL);
-	dvfs->dvfs_node = of_find_compatible_node(
-			NULL, NULL, "mediatek,apu_dvfs");
-
-	ipu_conn_node = of_find_compatible_node(NULL, NULL,
-			"mediatek,ipu_conn");
-
-	apu_syscfg_base =
-		(unsigned long) of_iomap(ipu_conn_node, 0);
-
 
 	/*enable Vvpu Vmdla*/
 	/*--Get regulator handle--*/
@@ -1671,13 +1639,9 @@ int apu_dvfs_init(struct platform_device *pdev)
 	if (ret)
 		LOG_ERR("regulator_enable vmdla_reg_id failed\n");
 
-
-	ret = apu_dvfs_add_interface(&pdev->dev);
-
-	if (ret)
-		return ret;
-
+#ifdef ENABLE_PMQOS
 	pm_qos_notifier_register();
+#endif
 	vvpu_count = 0;
 	vmdla_count = 0;
 	ct_node = of_find_compatible_node(NULL, NULL, "mediatek,eem_fsm");
@@ -1693,11 +1657,9 @@ int apu_dvfs_init(struct platform_device *pdev)
 		ret = regulator_set_voltage(vvpu_reg_id,
 				10*(vpu_opp_table[9].vpufreq_volt),
 				850000);
-
 		ret = regulator_set_voltage(vmdla_reg_id,
 				10*(mdla_opp_table[9].mdlafreq_volt),
 				850000);
-
 		udelay(100);
 		ret = vvpu_regulator_set_mode(true);
 		udelay(100);
@@ -1706,28 +1668,15 @@ int apu_dvfs_init(struct platform_device *pdev)
 		udelay(100);
 		LOG_DVFS("vmdla set normal mode ret=%d\n", ret);
 
-		// FIXME: add this back for low power
-		/*
-		 * ret = vvpu_regulator_set_mode(false);
-		 * udelay(100);
-		 * LOG_DVFS("vvpu set sleep mode ret=%d\n", ret);
-		 * ret = vmdla_regulator_set_mode(false);
-		 * udelay(100);
-		 * LOG_DVFS("vmdla set sleep mode ret=%d\n", ret);
-		 *
-		 * vvpu_vmdla_vcore_checker();
-		 */
+		ret = vvpu_regulator_set_mode(false);
+		udelay(100);
+		LOG_DVFS("vvpu set sleep mode ret=%d\n", ret);
+		ret = vmdla_regulator_set_mode(false);
+		udelay(100);
+		LOG_DVFS("vmdla set sleep mode ret=%d\n", ret);
+
+		vvpu_vmdla_vcore_checker();
 	}
-
-	// FIXME: add this back for low power
-	regulator_set_voltage(vcore_reg_id, 725000, 725000);
-	regulator_set_voltage(vvpu_reg_id, 800000, 800000);
-	regulator_set_voltage(vmdla_reg_id, 800000, 800000);
-
-	pr_info("%s vvpu=%d, vmdla=%d, vcore=%d\n", __func__,
-			regulator_get_voltage(vvpu_reg_id),
-			regulator_get_voltage(vmdla_reg_id),
-			regulator_get_voltage(vcore_reg_id));
 
 	LOG_DVFS("%s: init done\n", __func__);
 
@@ -1736,7 +1685,5 @@ int apu_dvfs_init(struct platform_device *pdev)
 
 int apu_dvfs_remove(struct platform_device *pdev)
 {
-	apu_dvfs_remove_interface(&pdev->dev);
-
 	return 0;
 }

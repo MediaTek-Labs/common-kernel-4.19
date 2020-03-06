@@ -14,7 +14,16 @@
 #include <linux/platform_device.h>
 #include <linux/pm_qos.h>
 
+#include "apusys_power_user.h"
+
 #define MTK_MMDVFS_ENABLE     (0)
+
+#define PM_QOS_VCORE_OPP_DEFAULT_VALUE	(15)
+#define PM_QOS_VVPU_OPP_DEFAULT_VALUE	(3)
+#define PM_QOS_VMDLA_OPP_DEFAULT_VALUE	(3)
+#define	PM_QOS_VCORE_OPP	(0)
+#define	PM_QOS_VVPU_OPP		(1)
+#define	PM_QOS_VMDLA_OPP	(2)
 
 enum vcore_opp {
 	VCORE_OPP_0 = 0,
@@ -37,6 +46,7 @@ enum vcore_opp {
 	VCORE_OPP_UNREQ = PM_QOS_VCORE_OPP_DEFAULT_VALUE,
 };
 
+#define VCORE_DVFS_LOW_BOUND	(65000) /* mV x 100 */
 #define VVPU_DVFS_VOLT0	 (82500)	/* mV x 100 */
 #define VVPU_DVFS_VOLT1	 (72500)	/* mV x 100 */
 #define VVPU_DVFS_VOLT2	 (65000)	/* mV x 100 */
@@ -152,6 +162,10 @@ void ptpod_is_enabled(bool enable);
 
 int apu_dvfs_init(struct platform_device *pdev);
 int apu_dvfs_remove(struct platform_device *pdev);
-
+#ifndef ENABLE_PMQOS
+int apusys_pm_vcore(enum DVFS_USER device, int volt);
+int apusys_pm_update_request(enum DVFS_USER device, int opp);
+int apusys_pm_request_arbiter(void);
+#endif
 #endif /* __APU_DVFS_H */
 

@@ -28,6 +28,7 @@
 #include "mdla_dvfs.h"
 #include "spm_mtcmos_ctl.h"
 
+#define DEBUG_OPP_TEST	(0)
 
 int g_pwr_log_level = APUSYS_PWR_LOG_ERR;
 int g_pm_procedure;
@@ -402,6 +403,70 @@ void apu_device_set_opp(enum DVFS_USER user, uint8_t opp)
 }
 EXPORT_SYMBOL(apu_device_set_opp);
 
+static void init_regulator(struct device *pdev)
+{
+	int ret = 0;
+	struct regulator *vvpu_reg_id;
+	struct regulator *vmdla_reg_id;
+	struct regulator *vcore_reg_id;
+
+	pr_info("%s begin\n", __func__);
+
+	vvpu_reg_id = regulator_get(pdev, "vpu");
+	if (!vvpu_reg_id)
+		LOG_ERR("regulator_get vvpu_reg_id failed\n");
+	vmdla_reg_id = regulator_get(pdev, "VMDLA");
+	if (!vmdla_reg_id)
+		LOG_ERR("regulator_get vmdla_reg_id failed\n");
+	vcore_reg_id = regulator_get(pdev, "vcore");
+	if (!vcore_reg_id)
+		LOG_ERR("regulator_get vcore_reg_id failed\n");
+
+	/*--enable regulator--*/
+	ret = regulator_enable(vvpu_reg_id);
+	udelay(200);//slew rate:rising10mV/us
+	if (ret)
+		LOG_ERR("regulator_enable vvpu_reg_id failed\n");
+
+	ret = regulator_enable(vmdla_reg_id);
+	udelay(200);
+	if (ret)
+		LOG_ERR("regulator_enable vmdla_reg_id failed\n");
+
+	ret = regulator_set_voltage(vvpu_reg_id, 650000, 850000);
+	ret = regulator_set_voltage(vmdla_reg_id, 650000, 850000);
+	udelay(100);
+	pr_info("%s vvpu=%d, vmdla=%d, vcore=%d\n", __func__,
+			regulator_get_voltage(vvpu_reg_id),
+			regulator_get_voltage(vmdla_reg_id),
+			regulator_get_voltage(vcore_reg_id));
+
+	ret = regulator_set_voltage(vvpu_reg_id, 650000, 850000);
+	ret = regulator_set_voltage(vmdla_reg_id, 650000, 850000);
+	udelay(100);
+	pr_info("%s vvpu=%d, vmdla=%d, vcore=%d\n", __func__,
+			regulator_get_voltage(vvpu_reg_id),
+			regulator_get_voltage(vmdla_reg_id),
+			regulator_get_voltage(vcore_reg_id));
+
+	ret = regulator_set_voltage(vvpu_reg_id, 550000, 650000);
+	ret = regulator_set_voltage(vmdla_reg_id, 550000, 650000);
+	udelay(100);
+	pr_info("%s vvpu=%d, vmdla=%d, vcore=%d\n", __func__,
+			regulator_get_voltage(vvpu_reg_id),
+			regulator_get_voltage(vmdla_reg_id),
+			regulator_get_voltage(vcore_reg_id));
+
+	regulator_disable(vvpu_reg_id);
+	regulator_disable(vmdla_reg_id);
+	udelay(100);
+
+	regulator_put(vvpu_reg_id);
+	regulator_put(vmdla_reg_id);
+	regulator_put(vcore_reg_id);
+	pr_info("%s end\n", __func__);
+}
+
 static void initial_vpu_power(struct device *dev)
 {
 	int i;
@@ -420,10 +485,58 @@ static void initial_mdla_power(struct platform_device *pdev)
 	mdla_init_hw(0, pdev);
 }
 
+#if DEBUG_OPP_TEST
+static void opp_test(void)
+{
+	vpu_opp_check(0, 0, 0); // core, vvpu_index, freq_index
+	vpu_get_power(0, false); // core, secure
+	vpu_opp_check(1, 0, 0);
+	vpu_get_power(1, false);
+	mdla_opp_check(0, 0, 0);
+	mdla_get_power(0);
+
+	vpu_put_power_nowq(0);
+	vpu_put_power_nowq(1);
+	mdla_put_power(0);
+	pr_info("test 1 finish ##############\n");
+
+	vpu_opp_check(0, 9, 9); // core, vvpu_index, freq_index
+	vpu_get_power(0, false); // core, secure
+	vpu_opp_check(1, 9, 9);
+	vpu_get_power(1, false);
+	mdla_opp_check(0, 9, 9);
+	mdla_get_power(0);
+
+	vpu_put_power_nowq(0);
+	vpu_put_power_nowq(1);
+	mdla_put_power(0);
+	pr_info("test 2 finish ##############\n");
+
+	vpu_opp_check(0, 5, 5); // core, vvpu_index, freq_index
+	vpu_get_power(0, false); // core, secure
+	vpu_opp_check(1, 5, 5);
+	vpu_get_power(1, false);
+	mdla_opp_check(0, 5, 5);
+	mdla_get_power(0);
+
+	debug_reg();
+
+	vpu_put_power_nowq(0);
+	vpu_put_power_nowq(1);
+	mdla_put_power(0);
+	pr_info("test 3 finish ##############\n");
+}
+#endif
+
 static int apu_power_probe(struct platform_device *pdev)
 {
+	pr_info("%s begin\n", __func__);
 	if (!apusys_power_check())
 		return 0;
+
+	udelay(1000);
+	init_regulator(&pdev->dev);
+	apu_dvfs_init(pdev);
 
 	mutex_init(&power_device_list_mtx);
 	apu_pwr_wake_init();
@@ -436,20 +549,20 @@ static int apu_power_probe(struct platform_device *pdev)
 
 	queue_work(wq, &d_work_power_info);
 
-	apu_dvfs_init(pdev);
 	apusys_spm_mtcmos_init();
 	pm_runtime_enable(&pdev->dev);
 	initial_vpu_power(&pdev->dev);
 	initial_mdla_power(pdev);
-
+#if DEBUG_OPP_TEST
+	opp_test();
+#endif
 	vpu_opp_check(0, 0, 0); // core, vvpu_index, freq_index
 	vpu_get_power(0, false); // core, secure
-	vpu_get_power(1, false); // core, secure
-
+	vpu_opp_check(1, 0, 0);
+	vpu_get_power(1, false);
 	mdla_opp_check(0, 0, 0);
 	mdla_get_power(0);
 
-	debug_reg();
 	//apusys_power_debugfs_init();
 
 	return 0;

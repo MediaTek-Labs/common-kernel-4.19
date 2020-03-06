@@ -8,6 +8,7 @@
 #include <linux/workqueue.h>
 #include <linux/pm_runtime.h>
 
+// pmqos do not support vvpu, vmdla, vcore voting anymore
 //#define ENABLE_PMQOS
 #ifdef ENABLE_PMQOS
 #include <linux/pm_qos.h>
@@ -41,11 +42,9 @@ struct vup_service_info {
 	uint64_t vpu_base;
 	uint64_t bin_base;
 	bool is_cmd_done;
-	struct mutex state_mutex;
 	enum VpuCoreState state;
 };
 
-static struct vup_service_info vpu_service_cores[MTK_VPU_CORE];
 struct vpu_device *vpu_device;
 struct mutex power_mutex[MTK_VPU_CORE];
 struct mutex power_counter_mutex[MTK_VPU_CORE];
@@ -191,41 +190,6 @@ inline int Map_DSP_Freq_Table(int freq_opp)
 inline int wait_to_do_change_vcore_opp(int core)
 {
 	return 0;
-}
-
-bool vpu_opp_change_idle_check(int core)
-{
-	int i = 0;
-	bool idle = true;
-
-	for (i = 0 ; i < MTK_VPU_CORE ; i++) {
-		if (i == core) {
-			continue;
-		} else {
-			LOG_DBG("vpu test %d/%d/%d\n", core, i,
-					vpu_service_cores[i].state);
-
-			mutex_lock(&(vpu_service_cores[i].state_mutex));
-			switch (vpu_service_cores[i].state) {
-			case VCT_SHUTDOWN:
-			case VCT_BOOTUP:
-			case VCT_IDLE:
-			case VCT_EXECUTING:
-			case VCT_NONE:
-				break;
-			case VCT_VCORE_CHG:
-				idle = false;
-				mutex_unlock(
-					&(vpu_service_cores[i].state_mutex));
-				goto out;
-				/*break;*/
-			}
-			mutex_unlock(&(vpu_service_cores[i].state_mutex));
-		}
-	}
-
-out:
-	return idle;
 }
 
 #ifndef MTK_VPU_FPGA_PORTING
@@ -705,9 +669,6 @@ bool vpu_change_opp(int core, int type)
 			goto out;
 		}
 		LOG_DBG("[vpu_%d] to do vcore opp change", core);
-		mutex_lock(&(vpu_service_cores[core].state_mutex));
-		vpu_service_cores[core].state = VCT_VCORE_CHG;
-		mutex_unlock(&(vpu_service_cores[core].state_mutex));
 		mutex_lock(&opp_mutex);
 #ifdef ENABLE_PMQOS
 		switch (opps.vcore.index) {
@@ -726,14 +687,9 @@ bool vpu_change_opp(int core, int type)
 			break;
 		}
 #else
-#if MTK_MMDVFS_ENABLE
-		ret = mmdvfs_set_fine_step(MMDVFS_SCEN_VPU_KERNEL,
-				opps.vcore.index);
+		apusys_pm_vcore(core == 0 ? VPU0 : VPU1,
+				opps.vcore.values[opps.vcore.index]);
 #endif
-#endif
-		mutex_lock(&(vpu_service_cores[core].state_mutex));
-		vpu_service_cores[core].state = VCT_BOOTUP;
-		mutex_unlock(&(vpu_service_cores[core].state_mutex));
 		if (ret) {
 			LOG_ERR("[vpu_%d]fail to request vcore, step=%d\n",
 					core, opps.vcore.index);
@@ -822,47 +778,62 @@ bool vpu_change_opp(int core, int type)
 	case OPPTYPE_VVPU:
 		LOG_DBG("[vpu_%d] wait for changing vvpu opp", core);
 		LOG_DBG("[vpu_%d] to do vvpu opp change", core);
-		mutex_lock(&(vpu_service_cores[core].state_mutex));
-		vpu_service_cores[core].state = VCT_VCORE_CHG;
-		mutex_unlock(&(vpu_service_cores[core].state_mutex));
 		mutex_lock(&opp_mutex);
-#ifdef ENABLE_PMQOS
+
 		switch (opps.vvpu.index) {
 		case 0:
+#ifdef ENABLE_PMQOS
 			pm_qos_update_request(&vpu_qos_vcore_request[core],
 					VCORE_OPP_1);
 			pm_qos_update_request(&vpu_qos_vvpu_request[core],
 					VVPU_OPP_0);
 			pm_qos_update_request(&vpu_qos_vmdla_request[core],
 					VMDLA_OPP_0);
+#else
+			apusys_pm_vcore(core == 0 ? VPU0 : VPU1,
+					opps.vcore.values[VCORE_OPP_1]);
+			apusys_pm_update_request(core == 0 ? VPU0 : VPU1,
+					VVPU_OPP_0);
+			apusys_pm_update_request(MDLA0, VMDLA_OPP_0);
+			apusys_pm_request_arbiter();
+#endif
 			break;
 		case 1:
+#ifdef ENABLE_PMQOS
 			pm_qos_update_request(&vpu_qos_vvpu_request[core],
 					VVPU_OPP_1);
 			pm_qos_update_request(&vpu_qos_vmdla_request[core],
 					VMDLA_OPP_1);
 			pm_qos_update_request(&vpu_qos_vcore_request[core],
 					VCORE_OPP_2);
+#else
+			apusys_pm_update_request(core == 0 ? VPU0 : VPU1,
+					VVPU_OPP_1);
+			apusys_pm_update_request(MDLA0, VMDLA_OPP_1);
+			apusys_pm_request_arbiter();
+			apusys_pm_vcore(core == 0 ? VPU0 : VPU1,
+					opps.vcore.values[VCORE_OPP_2]);
+#endif
 			break;
 		case 2:
 		default:
+#ifdef ENABLE_PMQOS
 			pm_qos_update_request(&vpu_qos_vmdla_request[core],
 					VMDLA_OPP_2);
 			pm_qos_update_request(&vpu_qos_vvpu_request[core],
 					VVPU_OPP_2);
 			pm_qos_update_request(&vpu_qos_vcore_request[core],
 					VCORE_OPP_2);
+#else
+			apusys_pm_update_request(MDLA0, VMDLA_OPP_2);
+			apusys_pm_update_request(core == 0 ? VPU0 : VPU1,
+					VVPU_OPP_2);
+			apusys_pm_request_arbiter();
+			apusys_pm_vcore(core == 0 ? VPU0 : VPU1,
+					opps.vcore.values[VCORE_OPP_2]);
+#endif
 			break;
 		}
-#else
-#if MTK_MMDVFS_ENABLE
-		ret = mmdvfs_set_fine_step(MMDVFS_SCEN_VPU_KERNEL,
-				opps.vcore.index);
-#endif
-#endif
-		mutex_lock(&(vpu_service_cores[core].state_mutex));
-		vpu_service_cores[core].state = VCT_BOOTUP;
-		mutex_unlock(&(vpu_service_cores[core].state_mutex));
 
 		if (ret) {
 			LOG_ERR("[vpu_%d]fail to request vcore, step=%d\n",
@@ -1044,6 +1015,7 @@ int vpu_prepare_regulator_and_clock(struct device *pdev, int core)
 			LOG_ERR("can not find mtcmos: %s\n", #clk); \
 		} \
 	}
+	PREPARE_VPU_MTCMOS(mtcmos_dis);
 	PREPARE_VPU_MTCMOS(mtcmos_vpu_vcore_shutdown);
 	PREPARE_VPU_MTCMOS(mtcmos_vpu_conn_shutdown);
 	PREPARE_VPU_MTCMOS(mtcmos_vpu_core0_shutdown);
@@ -1178,41 +1150,61 @@ int vpu_enable_regulator_and_clock(int core)
 		}
 
 		LOG_DBG("[vpu_%d] en_rc to do vvpu opp change", core);
-#ifdef ENABLE_PMQOS
+
 		switch (opps.vvpu.index) {
 		case 0:
+#ifdef ENABLE_PMQOS
 			pm_qos_update_request(&vpu_qos_vcore_request[core],
 					VCORE_OPP_1);
 			pm_qos_update_request(&vpu_qos_vvpu_request[core],
 					VVPU_OPP_0);
 			pm_qos_update_request(&vpu_qos_vmdla_request[core],
 					VMDLA_OPP_0);
+#else
+			apusys_pm_vcore(core == 0 ? VPU0 : VPU1,
+					opps.vcore.values[VCORE_OPP_1]);
+			apusys_pm_update_request(core == 0 ? VPU0 : VPU1,
+					VVPU_OPP_0);
+			apusys_pm_update_request(MDLA0, VMDLA_OPP_0);
+			apusys_pm_request_arbiter();
+#endif
 			break;
 		case 1:
+#ifdef ENABLE_PMQOS
 			pm_qos_update_request(&vpu_qos_vvpu_request[core],
 					VVPU_OPP_1);
 			pm_qos_update_request(&vpu_qos_vmdla_request[core],
 					VMDLA_OPP_1);
 			pm_qos_update_request(&vpu_qos_vcore_request[core],
 					VCORE_OPP_2);
+#else
+			apusys_pm_update_request(core == 0 ? VPU0 : VPU1,
+					VVPU_OPP_1);
+			apusys_pm_update_request(MDLA0, VMDLA_OPP_1);
+			apusys_pm_request_arbiter();
+			apusys_pm_vcore(core == 0 ? VPU0 : VPU1,
+					opps.vcore.values[VCORE_OPP_2]);
+#endif
 			break;
 		case 2:
 		default:
+#ifdef ENABLE_PMQOS
 			pm_qos_update_request(&vpu_qos_vmdla_request[core],
 					VMDLA_OPP_2);
 			pm_qos_update_request(&vpu_qos_vvpu_request[core],
 					VVPU_OPP_2);
 			pm_qos_update_request(&vpu_qos_vcore_request[core],
 					VCORE_OPP_2);
-
+#else
+			apusys_pm_update_request(MDLA0, VMDLA_OPP_2);
+			apusys_pm_update_request(core == 0 ? VPU0 : VPU1,
+					VVPU_OPP_2);
+			apusys_pm_request_arbiter();
+			apusys_pm_vcore(core == 0 ? VPU0 : VPU1,
+					opps.vcore.values[VCORE_OPP_2]);
+#endif
 			break;
 		}
-#else
-#if MTK_MMDVFS_ENABLE
-		ret = mmdvfs_set_fine_step(MMDVFS_SCEN_VPU_KERNEL,
-				opps.vcore.index);
-#endif
-#endif
 	}
 	if (ret) {
 		LOG_ERR("[vpu_%d]fail to request vcore, step=%d\n",
@@ -1263,7 +1255,12 @@ clk_on:
 	ENABLE_VPU_CLK(clk_top_dsp1_sel);
 	ENABLE_VPU_CLK(clk_top_dsp2_sel);
 
-	pm_runtime_get_sync(vpu_device->dev[0]);
+#if CCF_MTCMOS_SUPPORT
+	ENABLE_VPU_MTCMOS(mtcmos_dis);
+#else
+	if (mm_dis_cnt++ == 0)
+		pm_runtime_get_sync(vpu_device->dev[0]);
+#endif
 	ENABLE_VPU_MTCMOS(mtcmos_vpu_vcore_shutdown);
 	ENABLE_VPU_MTCMOS(mtcmos_vpu_conn_shutdown);
 	ENABLE_VPU_MTCMOS(mtcmos_vpu_core0_shutdown);
@@ -1277,13 +1274,15 @@ clk_on:
 	ENABLE_VPU_CLK(clk_mmsys_gals_comm1);
 	ENABLE_VPU_CLK(clk_mmsys_smi_common);
 
-	ENABLE_VPU_CLK(clk_apu_vcore_ahb_cg);
-	ENABLE_VPU_CLK(clk_apu_vcore_axi_cg);
-	ENABLE_VPU_CLK(clk_apu_vcore_adl_cg);
-	ENABLE_VPU_CLK(clk_apu_vcore_qos_cg);
+	/*
+	 * ENABLE_VPU_CLK(clk_apu_vcore_ahb_cg);
+	 * ENABLE_VPU_CLK(clk_apu_vcore_axi_cg);
+	 * ENABLE_VPU_CLK(clk_apu_vcore_adl_cg);
+	 * ENABLE_VPU_CLK(clk_apu_vcore_qos_cg);
+	 */
+	// move vcore cg ctl to atf
+	atf_vcore_cg_ctl(1);
 
-	/*move vcore cg ctl to atf*/
-	vcore_cg_ctl(1);
 	ENABLE_VPU_CLK(clk_apu_conn_apu_cg);
 	ENABLE_VPU_CLK(clk_apu_conn_ahb_cg);
 	ENABLE_VPU_CLK(clk_apu_conn_axi_cg);
@@ -1371,7 +1370,13 @@ void vpu_enable_mtcmos(void)
 #else
 #define ENABLE_VPU_MTCMOS(func) (*(func))(STA_POWER_ON)
 #endif
-	pm_runtime_get_sync(vpu_device->dev[0]);
+
+#if CCF_MTCMOS_SUPPORT
+	ENABLE_VPU_MTCMOS(mtcmos_dis);
+#else
+	if (mm_dis_cnt++ == 0)
+		pm_runtime_get_sync(vpu_device->dev[0]);
+#endif
 	ENABLE_VPU_MTCMOS(mtcmos_vpu_vcore_shutdown);
 	ENABLE_VPU_MTCMOS(mtcmos_vpu_conn_shutdown);
 	ENABLE_VPU_MTCMOS(mtcmos_vpu_core0_shutdown);
@@ -1380,7 +1385,7 @@ void vpu_enable_mtcmos(void)
 
 	udelay(500);
 	/*move vcore cg ctl to atf*/
-	vcore_cg_ctl(1);
+	atf_vcore_cg_ctl(1);
 
 #undef ENABLE_VPU_MTCMOS
 }
@@ -1403,9 +1408,14 @@ void vpu_disable_mtcmos(void)
 	DISABLE_VPU_MTCMOS(mtcmos_vpu_core2_shutdown);
 	DISABLE_VPU_MTCMOS(mtcmos_vpu_core1_shutdown);
 	DISABLE_VPU_MTCMOS(mtcmos_vpu_core0_shutdown);
-	DISABLE_VPU_MTCMOS(mtcmos_vpu_conn_shutdown);
 	DISABLE_VPU_MTCMOS(mtcmos_vpu_vcore_shutdown);
-	pm_runtime_put_sync(vpu_device->dev[0]);
+	DISABLE_VPU_MTCMOS(mtcmos_vpu_conn_shutdown);
+#if CCF_MTCMOS_SUPPORT
+	DISABLE_VPU_MTCMOS(mtcmos_dis);
+#else
+	if (--mm_dis_cnt == 0)
+		pm_runtime_put_sync(vpu_device->dev[0]);
+#endif
 
 #undef DISABLE_VPU_MTCMOS
 }
@@ -1415,6 +1425,7 @@ int vpu_disable_regulator_and_clock(int core)
 {
 	int ret = 0;
 	int ret1 = 0;
+	int dbg_step = 0;
 
 #ifdef MTK_VPU_FPGA_PORTING
 	LOG_INF("%s skip at FPGA\n", __func__);
@@ -1453,10 +1464,36 @@ int vpu_disable_regulator_and_clock(int core)
 	LOG_DVFS("[vpu_%d] dis_rc + (0x%x)\n", core, smi_bus_vpu_value);
 #endif
 
+#if CCF_MTCMOS_SUPPORT
+#define DISABLE_VPU_MTCMOS(clk) \
+	{ \
+		if (clk != NULL) { \
+			clk_disable_unprepare(clk); \
+		} else { \
+			LOG_WRN("mtcmos not existed: %s\n", #clk); \
+		} \
+	}
+#else
+#define DISABLE_VPU_MTCMOS(func) (*(func))(STA_POWER_DOWN)
+#endif
+	pr_info("%s dbg_step : %d\n", __func__, ++dbg_step);
+	DISABLE_VPU_MTCMOS(mtcmos_vpu_core1_shutdown);
+	DISABLE_VPU_MTCMOS(mtcmos_vpu_core0_shutdown);
+	DISABLE_VPU_MTCMOS(mtcmos_vpu_vcore_shutdown);
+	DISABLE_VPU_MTCMOS(mtcmos_vpu_conn_shutdown);
+#if CCF_MTCMOS_SUPPORT
+	DISABLE_VPU_MTCMOS(mtcmos_dis);
+#else
+	if (--mm_dis_cnt == 0)
+		pm_runtime_put_sync(vpu_device->dev[0]);
+#endif
+
+	pr_info("%s dbg_step : %d\n", __func__, ++dbg_step);
 #define DISABLE_VPU_CLK(clk) \
 	{ \
 		if (clk != NULL) { \
 			clk_disable(clk); \
+			/* pr_info("bypss disable %s\n", #clk); */\
 		} else { \
 			LOG_WRN("clk not existed: %s\n", #clk); \
 		} \
@@ -1482,10 +1519,16 @@ int vpu_disable_regulator_and_clock(int core)
 	DISABLE_VPU_CLK(clk_apu_conn_img_adl_cg);
 	DISABLE_VPU_CLK(clk_apu_conn_emi_26m_cg);
 	DISABLE_VPU_CLK(clk_apu_conn_vpu_udi_cg);
-	DISABLE_VPU_CLK(clk_apu_vcore_ahb_cg);
-	DISABLE_VPU_CLK(clk_apu_vcore_axi_cg);
-	DISABLE_VPU_CLK(clk_apu_vcore_adl_cg);
-	DISABLE_VPU_CLK(clk_apu_vcore_qos_cg);
+	/*
+	 * DISABLE_VPU_CLK(clk_apu_vcore_ahb_cg);
+	 * DISABLE_VPU_CLK(clk_apu_vcore_axi_cg);
+	 * DISABLE_VPU_CLK(clk_apu_vcore_adl_cg);
+	 * DISABLE_VPU_CLK(clk_apu_vcore_qos_cg);
+	 */
+	// move vcore cg ctl to atf
+	// atf_vcore_cg_ctl(0);
+
+	pr_info("%s dbg_step : %d\n", __func__, ++dbg_step);
 	DISABLE_VPU_CLK(clk_mmsys_gals_ipu2mm);
 	DISABLE_VPU_CLK(clk_mmsys_gals_ipu12mm);
 	DISABLE_VPU_CLK(clk_mmsys_gals_comm0);
@@ -1493,25 +1536,7 @@ int vpu_disable_regulator_and_clock(int core)
 	DISABLE_VPU_CLK(clk_mmsys_smi_common);
 	LOG_DBG("[vpu_%d] dis_rc flag4\n", core);
 
-#if CCF_MTCMOS_SUPPORT
-#define DISABLE_VPU_MTCMOS(clk) \
-	{ \
-		if (clk != NULL) { \
-			clk_disable_unprepare(clk); \
-		} else { \
-			LOG_WRN("mtcmos not existed: %s\n", #clk); \
-		} \
-	}
-#else
-#define DISABLE_VPU_MTCMOS(func) (*(func))(STA_POWER_DOWN)
-#endif
-	DISABLE_VPU_MTCMOS(mtcmos_vpu_core1_shutdown);
-	DISABLE_VPU_MTCMOS(mtcmos_vpu_core0_shutdown);
-	DISABLE_VPU_MTCMOS(mtcmos_vpu_conn_shutdown);
-	DISABLE_VPU_MTCMOS(mtcmos_vpu_vcore_shutdown);
-	pm_runtime_put_sync(vpu_device->dev[0]);
-
-
+	pr_info("%s dbg_step : %d\n", __func__, ++dbg_step);
 	DISABLE_VPU_CLK(clk_top_dsp_sel);
 	DISABLE_VPU_CLK(clk_top_ipu_if_sel);
 	DISABLE_VPU_CLK(clk_top_dsp1_sel);
@@ -1526,10 +1551,11 @@ int vpu_disable_regulator_and_clock(int core)
 	pm_qos_update_request(&vpu_qos_vvpu_request[core], VVPU_OPP_2);
 	pm_qos_update_request(&vpu_qos_vcore_request[core], VCORE_OPP_UNREQ);
 #else
-#if MTK_MMDVFS_ENABLE
-	ret = mmdvfs_set_fine_step(MMDVFS_SCEN_VPU_KERNEL,
-			MMDVFS_FINE_STEP_UNREQUEST);
-#endif
+	apusys_pm_update_request(MDLA0, VMDLA_OPP_2);
+	apusys_pm_update_request(core == 0 ? VPU0 : VPU1, VVPU_OPP_2);
+	apusys_pm_request_arbiter();
+	apusys_pm_vcore(core == 0 ? VPU0 : VPU1,
+				opps.vcore.values[VCORE_OPP_UNREQ]);
 #endif
 	if (ret) {
 		LOG_ERR("[vpu_%d]fail to unrequest vcore!\n", core);
@@ -1539,6 +1565,7 @@ int vpu_disable_regulator_and_clock(int core)
 			core, regulator_get_voltage(vvpu_reg_id));
 out:
 
+	pr_info("%s dbg_step : %d\n", __func__, ++dbg_step);
 	/*--disable regulator--*/
 	ret1 = vmdla_regulator_set_mode(false);
 	udelay(100);//slew rate:rising10mV/us
@@ -1633,18 +1660,12 @@ int vpu_boot_up(int core, bool secure)
 			mutex_lock(&power_mutex[core]);
 		} else {
 			mutex_unlock(&power_mutex[core]);
-			mutex_lock(&(vpu_service_cores[core].state_mutex));
-			vpu_service_cores[core].state = VCT_BOOTUP;
-			mutex_unlock(&(vpu_service_cores[core].state_mutex));
 			wake_up_interruptible(&waitq_change_vcore);
 			return POWER_ON_MAGIC;
 		}
 	}
 	LOG_DBG("[vpu_%d] boot_up flag2\n", core);
 
-	mutex_lock(&(vpu_service_cores[core].state_mutex));
-	vpu_service_cores[core].state = VCT_BOOTUP;
-	mutex_unlock(&(vpu_service_cores[core].state_mutex));
 	wake_up_interruptible(&waitq_change_vcore);
 
 	ret = vpu_enable_regulator_and_clock(core);
@@ -1744,6 +1765,19 @@ int vpu_get_power(int core, bool secure)
 
 }
 
+void vpu_put_power_nowq(int core)
+{
+	mutex_lock(&power_counter_mutex[core]);
+	pr_info("%s power_counter[%d]=%d\n", __func__,
+				core, power_counter[core]);
+
+	if (--power_counter[core] == 0)
+		vpu_shut_down(core);
+	else
+		LOG_DBG("vpu_%d no need this time.\n", core);
+	mutex_unlock(&power_counter_mutex[core]);
+}
+
 void vpu_put_power(int core, enum VpuPowerOnType type)
 {
 	LOG_DBG("[vpu_%d/%d] pp +\n", core, power_counter[core]);
@@ -1823,9 +1857,6 @@ int vpu_set_power(struct vpu_user *user, struct vpu_power *power)
 	user->power_opp = power->opp_step;
 
 	ret = vpu_get_power(core, false);
-	mutex_lock(&(vpu_service_cores[core].state_mutex));
-	vpu_service_cores[core].state = VCT_IDLE;
-	mutex_unlock(&(vpu_service_cores[core].state_mutex));
 
 	/* to avoid power leakage, power on/off need be paired */
 	vpu_put_power(core, VPT_PRE_ON);
@@ -1845,9 +1876,6 @@ int vpu_sdsp_get_power(struct vpu_user *user)
 			vpu_opp_check(core, vcore_opp_index, dsp_freq_index);
 
 			ret = ret | vpu_get_power(core, true);
-			mutex_lock(&(vpu_service_cores[core].state_mutex));
-			vpu_service_cores[core].state = VCT_IDLE;
-			mutex_unlock(&(vpu_service_cores[core].state_mutex));
 		}
 	}
 	sdsp_power_counter++;
@@ -1906,36 +1934,6 @@ void vpu_power_counter_routine(struct work_struct *work)
 
 int vpu_quick_suspend(int core)
 {
-	LOG_DBG("[vpu_%d] q_suspend +\n", core);
-	mutex_lock(&power_counter_mutex[core]);
-	LOG_INF("[vpu_%d] q_suspend (%d/%d)\n", core,
-			power_counter[core], vpu_service_cores[core].state);
-
-	if (power_counter[core] == 0) {
-		mutex_unlock(&power_counter_mutex[core]);
-
-		mutex_lock(&(vpu_service_cores[core].state_mutex));
-
-		switch (vpu_service_cores[core].state) {
-		case VCT_SHUTDOWN:
-		case VCT_NONE:
-			/* vpu has already been shut down, do nothing*/
-			mutex_unlock(&(vpu_service_cores[core].state_mutex));
-			break;
-		case VCT_IDLE:
-		case VCT_BOOTUP:
-		case VCT_EXECUTING:
-		case VCT_VCORE_CHG:
-		default:
-			mutex_unlock(&(vpu_service_cores[core].state_mutex));
-			mod_delayed_work(wq,
-					&(power_counter_work[core].my_work),
-					msecs_to_jiffies(0));
-			break;
-		}
-	} else {
-		mutex_unlock(&power_counter_mutex[core]);
-	}
 	return 0;
 }
 
@@ -1965,30 +1963,10 @@ int vpu_shut_down(int core)
 
 	LOG_DBG("[vpu_%d] shutdown +\n", core);
 	mutex_lock(&power_mutex[core]);
+
 	if (!is_power_on[core]) {
 		mutex_unlock(&power_mutex[core]);
 		return 0;
-	}
-
-	mutex_lock(&(vpu_service_cores[core].state_mutex));
-	switch (vpu_service_cores[core].state) {
-	case VCT_SHUTDOWN:
-	case VCT_IDLE:
-	case VCT_NONE:
-#ifdef MTK_VPU_FPGA_PORTING
-	case VCT_BOOTUP:
-#endif
-		vpu_service_cores[core].state = VCT_SHUTDOWN;
-		mutex_unlock(&(vpu_service_cores[core].state_mutex));
-		break;
-#ifndef MTK_VPU_FPGA_PORTING
-	case VCT_BOOTUP:
-#endif
-	case VCT_EXECUTING:
-	case VCT_VCORE_CHG:
-		mutex_unlock(&(vpu_service_cores[core].state_mutex));
-		goto out;
-		/*break;*/
 	}
 
 	ret = vpu_disable_regulator_and_clock(core);
@@ -2782,12 +2760,20 @@ void init_vpu_power_resource(struct device *dev)
 		pm_qos_update_request(&vpu_qos_vmdla_request[i],
 				VMDLA_OPP_2);
 	}
+#else
+	apusys_pm_update_request(VPU0, VVPU_OPP_2);
+	apusys_pm_update_request(VPU1, VVPU_OPP_2);
+	apusys_pm_update_request(MDLA0, VMDLA_OPP_2);
+	apusys_pm_request_arbiter();
+	// FIXME: check if we need update the same device again
+	// for weighting ?
+	// apusys_pm_update_request(MDLA0, VMDLA_OPP_2);
+#endif
 
 	vmdla_regulator_set_mode(true);
 	udelay(100);
 	vmdla_regulator_set_mode(false);
 	udelay(100);
-#endif
 
 	/*init vpu lock power struct*/
 	for (i = 0 ; i < VPU_OPP_PRIORIYY_NUM ; i++) {

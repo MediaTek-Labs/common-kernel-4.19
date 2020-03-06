@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2018 MediaTek Inc.
+# Copyright (C) 2019 MediaTek Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 as
@@ -35,7 +35,7 @@ endif
 subdir-ccflags-y += -DMTK_VPU_CORE=$(MTK_VPU_CORE)
 
 obj-m += apu_power.o
-apu_power-objs:= $(PDIR)/apu_dvfs.o $(PDIR)/apu_dvfs_sysfs.o \
+apu_power-objs:= $(PDIR)/apu_dvfs.o \
 		$(PDIR)/vpu_power_ctl.o $(PDIR)/vpu_dbg.o \
 		$(PDIR)/mdla_debug.o $(PDIR)/mdla_dvfs.o \
 		$(PDIR)/spm_mtcmos_ctl.o apusys_power_driver.o

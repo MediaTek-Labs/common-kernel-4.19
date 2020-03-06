@@ -270,12 +270,29 @@ extern void __iomem *clk_apu_conn_base;
 #define APU_CONN_CG_CON		(clk_apu_conn_base)
 #define APU_CONN_CG_CLR		(clk_apu_conn_base + 0x0008)
 
+enum apusys_mtcmos_id {
+	VPU_VCORE = 0,
+	VPU_CONN,
+	VPU_CORE0,
+	VPU_CORE1,
+	VPU_CORE2, // mdla
+	APUSYS_MTCMOS_NR,
+};
+
+enum apusys_cg_id {
+	VPU_VCORE_CG = 0,
+	APUSYS_CG_NR,
+};
+
 int apusys_spm_mtcmos_init(void);
+int atf_vcore_cg_ctl(int state);
 int spm_mtcmos_ctrl_vpu_vcore_shut_down(int state);
 int spm_mtcmos_ctrl_vpu_conn_shut_down(int state);
 int spm_mtcmos_ctrl_vpu_core0_shut_down(int state);
 int spm_mtcmos_ctrl_vpu_core1_shut_down(int state);
 int spm_mtcmos_ctrl_vpu_core2_shut_down(int state);
 void debug_reg(void);
+
+extern int mm_dis_cnt;
 
 #endif //_MT6779_SPM_MTCMOS_CTL_H_

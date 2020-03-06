@@ -6,31 +6,11 @@
 #ifndef _APUSYS_POWER_H_
 #define _APUSYS_POWER_H_
 
+#include "apusys_power_user.h"
+
 /******************************************************
  * for apusys power platform device API
  ******************************************************/
-
-enum POWER_CALLBACK_USER {
-	IOMMU = 0,
-	REVISOR = 1,
-	MNOC = 2,
-	DEVAPC = 3,
-	APUSYS_POWER_CALLBACK_USER_NUM,
-};
-
-enum DVFS_USER {
-	VPU0 = 0,
-	VPU1 = 1,
-	VPU2 = 2,
-	MDLA0 = 3,
-	MDLA1 = 4,
-	APUSYS_DVFS_USER_NUM,
-
-	EDMA = 0x10,    // power user only
-	EDMA2 = 0x11,   // power user only
-	REVISER = 0x12, // power user only
-	APUSYS_POWER_USER_NUM,
-};
 
 extern int apu_power_device_register(enum DVFS_USER,
 				struct platform_device *pdev);

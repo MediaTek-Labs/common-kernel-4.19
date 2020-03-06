@@ -57,7 +57,7 @@ struct clk *clk_top_mmpll_d4;
 #if CCF_MTCMOS_SUPPORT
 
 /* mtcmos */
-//struct clk *mtcmos_dis;
+struct clk *mtcmos_dis;
 
 //struct clk *mtcmos_vpu_vcore_dormant;
 struct clk *mtcmos_vpu_vcore_shutdown;
@@ -73,7 +73,7 @@ struct clk *mtcmos_vpu_core2_shutdown;
 
 #else
 
-//int (*mtcmos_dis)(int) = spm_mtcmos_ctrl_dis;
+//int (*mtcmos_dis)(int) = NULL;
 int (*mtcmos_vpu_vcore_shutdown)(int) = spm_mtcmos_ctrl_vpu_vcore_shut_down;
 int (*mtcmos_vpu_conn_shutdown)(int) = spm_mtcmos_ctrl_vpu_conn_shut_down;
 int (*mtcmos_vpu_core0_shutdown)(int) = spm_mtcmos_ctrl_vpu_core0_shut_down;

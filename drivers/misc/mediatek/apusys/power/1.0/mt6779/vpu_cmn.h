@@ -52,20 +52,6 @@ enum VpuCoreState {
 };
 
 
-enum VpuPowerOnType {
-	/* power on previously by setPower */
-	VPT_PRE_ON              = 1,
-
-	/* power on by enque */
-	VPT_ENQUE_ON    = 2,
-
-	/* power on by enque, but want to immediately off(when exception) */
-	VPT_IMT_OFF             = 3,
-
-	/* same as VPT_IMT_OFF, from secure DSP */
-	VPT_SDSP_OFF    = 4,
-};
-
 
 /**
  * vpu_dump_opp_table - dump the OPP table

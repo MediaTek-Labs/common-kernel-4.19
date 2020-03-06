@@ -9,15 +9,19 @@
 #include <linux/pm_runtime.h>
 #include <linux/types.h>
 #include <linux/uaccess.h>
-#include <linux/arm-smccc.h>
-#include <linux/soc/mediatek/mtk_sip_svc.h>
 
 // FIXME: cowork func not ready yet
 #define ENABLE_MTK_DEVINFO	(0)
+
+// use wakelock of apusys_power_driver to replace this
 #define ENABLE_WAKELOCK	(0)
+
+// CCF do not support mtcmos ctl anymore
 #define CCF_MTCMOS_SUPPORT	(0)
 
 #ifndef MTK_MDLA_FPGA_PORTING
+
+// pmqos do not support vvpu, vmdla, vcore voting anymore
 //#define ENABLE_PMQOS
 
 #include <linux/clk.h>
@@ -65,8 +69,8 @@ struct MDLA_OPP_INFO mdla_power_table[MDLA_OPP_NUM] = {
 };
 #define CMD_WAIT_TIME_MS    (3 * 1000)
 #define OPP_WAIT_TIME_MS    (300)
-#define PWR_KEEP_TIME_MS    (500)
-#define OPP_KEEP_TIME_MS    (500)
+#define PWR_KEEP_TIME_MS    (0)
+#define OPP_KEEP_TIME_MS    (0)
 #define POWER_ON_MAGIC		(2)
 #define OPPTYPE_VCORE		(0)
 #define OPPTYPE_DSPFREQ		(1)
@@ -128,18 +132,18 @@ static struct clk *clk_top_mmpll_d4;
 
 /* mtcmos */
 #if CCF_MTCMOS_SUPPORT
-//static struct clk *mtcmos_dis;
+static struct clk *mtcmos_dis;
 static struct clk *mtcmos_vpu_vcore_shutdown;
 static struct clk *mtcmos_vpu_conn_shutdown;
 static struct clk *mtcmos_vpu_core2_shutdown;
 #else
-//static int (*mtcmos_dis)(int) = spm_mtcmos_ctrl_dis;
+//static int (*mtcmos_dis)(int) = NULL;
 static int (*mtcmos_vpu_vcore_shutdown)(int) =
-				spm_mtcmos_ctrl_vpu_vcore_shut_down;
+			spm_mtcmos_ctrl_vpu_vcore_shut_down;
 static int (*mtcmos_vpu_conn_shutdown)(int) =
-				spm_mtcmos_ctrl_vpu_conn_shut_down;
+			spm_mtcmos_ctrl_vpu_conn_shut_down;
 static int (*mtcmos_vpu_core2_shutdown)(int) =
-				spm_mtcmos_ctrl_vpu_core2_shut_down;
+			spm_mtcmos_ctrl_vpu_core2_shut_down;
 #endif
 
 /* smi */
@@ -943,40 +947,54 @@ static bool mdla_change_opp(int core, int type)
 		mdla_dvfs_debug("[mdla_%d] wait for changing vmdla opp", core);
 		LOG_DBG("[mdla_%d] to do vmdla opp change", core);
 		mutex_lock(&opp_mutex);
-		#ifdef ENABLE_PMQOS
 		switch (opps.vmdla.index) {
 		case 0:
+#ifdef ENABLE_PMQOS
 			pm_qos_update_request(&mdla_qos_vcore_request[core],
 								VCORE_OPP_1);
 			pm_qos_update_request(&mdla_qos_vvpu_request[core],
 								VVPU_OPP_0);
 			pm_qos_update_request(&mdla_qos_vmdla_request[core],
 								VMDLA_OPP_0);
+#else
+			apusys_pm_vcore(core, opps.vcore.values[VCORE_OPP_1]);
+			apusys_pm_update_request(VPU0, VVPU_OPP_0);
+			apusys_pm_update_request(MDLA0, VMDLA_OPP_0);
+			apusys_pm_request_arbiter();
+#endif
 			break;
 		case 1:
+#ifdef ENABLE_PMQOS
 			pm_qos_update_request(&mdla_qos_vvpu_request[core],
 								VVPU_OPP_1);
 			pm_qos_update_request(&mdla_qos_vmdla_request[core],
 								VMDLA_OPP_1);
 			pm_qos_update_request(&mdla_qos_vcore_request[core],
 								VCORE_OPP_2);
+#else
+			apusys_pm_update_request(VPU0, VVPU_OPP_1);
+			apusys_pm_update_request(MDLA0, VMDLA_OPP_1);
+			apusys_pm_vcore(core, opps.vcore.values[VCORE_OPP_2]);
+			apusys_pm_request_arbiter();
+#endif
 			break;
 		case 2:
 		default:
+#ifdef ENABLE_PMQOS
 			pm_qos_update_request(&mdla_qos_vmdla_request[core],
 								VMDLA_OPP_2);
 			pm_qos_update_request(&mdla_qos_vvpu_request[core],
 								VVPU_OPP_2);
 			pm_qos_update_request(&mdla_qos_vcore_request[core],
 								VCORE_OPP_2);
+#else
+			apusys_pm_update_request(MDLA0, VMDLA_OPP_2);
+			apusys_pm_update_request(VPU0, VVPU_OPP_2);
+			apusys_pm_vcore(core, opps.vcore.values[VCORE_OPP_2]);
+			apusys_pm_request_arbiter();
+#endif
 			break;
 		}
-		#else
-#if MTK_MMDVFS_ENABLE
-		ret = mmdvfs_set_fine_step(MMDVFS_SCEN_VPU_KERNEL,
-							opps.vcore.index);
-#endif
-		#endif
 
 		if (ret) {
 			LOG_ERR("[mdla_%d]fail to request vcore, step=%d\n",
@@ -1158,6 +1176,7 @@ static int mdla_prepare_regulator_and_clock(struct device *pdev)
 			LOG_ERR("can not find mtcmos: %s\n", #clk); \
 		} \
 	}
+	PREPARE_MDLA_MTCMOS(mtcmos_dis);
 	PREPARE_MDLA_MTCMOS(mtcmos_vpu_vcore_shutdown);
 	PREPARE_MDLA_MTCMOS(mtcmos_vpu_conn_shutdown);
 	PREPARE_MDLA_MTCMOS(mtcmos_vpu_core2_shutdown);
@@ -1274,40 +1293,54 @@ static int mdla_enable_regulator_and_clock(int core)
 	if (adjust_vmdla) {
 		mdla_dvfs_debug("[mdla_%d] adjust_vmdla", core);
 		LOG_DBG("[mdla_%d] en_rc to do vmdla opp change", core);
-#ifdef ENABLE_PMQOS
 		switch (opps.vmdla.index) {
 		case 0:
+#ifdef ENABLE_PMQOS
 			pm_qos_update_request(&mdla_qos_vcore_request[core],
 								VCORE_OPP_1);
 			pm_qos_update_request(&mdla_qos_vvpu_request[core],
 								VVPU_OPP_0);
 			pm_qos_update_request(&mdla_qos_vmdla_request[core],
 								VMDLA_OPP_0);
+#else
+			apusys_pm_vcore(core, opps.vcore.values[VCORE_OPP_1]);
+			apusys_pm_update_request(VPU0, VVPU_OPP_0);
+			apusys_pm_update_request(MDLA0, VMDLA_OPP_0);
+			apusys_pm_request_arbiter();
+#endif
 			break;
 		case 1:
+#ifdef ENABLE_PMQOS
 			pm_qos_update_request(&mdla_qos_vvpu_request[core],
 								VVPU_OPP_1);
 			pm_qos_update_request(&mdla_qos_vmdla_request[core],
 								VMDLA_OPP_1);
 			pm_qos_update_request(&mdla_qos_vcore_request[core],
 								VCORE_OPP_2);
+#else
+			apusys_pm_update_request(VPU0, VVPU_OPP_1);
+			apusys_pm_update_request(MDLA0, VMDLA_OPP_1);
+			apusys_pm_request_arbiter();
+			apusys_pm_vcore(core, opps.vcore.values[VCORE_OPP_2]);
+#endif
 				break;
 		case 2:
 		default:
+#ifdef ENABLE_PMQOS
 			pm_qos_update_request(&mdla_qos_vmdla_request[core],
 								VMDLA_OPP_2);
 			pm_qos_update_request(&mdla_qos_vvpu_request[core],
 								VVPU_OPP_2);
 			pm_qos_update_request(&mdla_qos_vcore_request[core],
 								VCORE_OPP_2);
+#else
+			apusys_pm_update_request(MDLA0, VMDLA_OPP_2);
+			apusys_pm_update_request(VPU0, VVPU_OPP_2);
+			apusys_pm_request_arbiter();
+			apusys_pm_vcore(core, opps.vcore.values[VCORE_OPP_2]);
+#endif
 			break;
 		}
-#else
-#if MTK_MMDVFS_ENABLE
-		ret = mmdvfs_set_fine_step(MMDVFS_SCEN_VPU_KERNEL,
-							opps.vcore.index);
-#endif
-#endif
 	}
 	if (ret) {
 		LOG_ERR("[mdla_%d]fail to request vcore, step=%d\n",
@@ -1355,19 +1388,16 @@ mdla_dvfs_debug("[mdla_%d] adjust(%d,%d) result vmdla=%d\n",
 		} \
 	}
 
-/*move vcore cg ctl to atf*/
-#define vcore_cg_ctl(poweron) \
-	do { \
-		struct arm_smccc_res res; \
-		arm_smccc_smc(MTK_SIP_KERNEL_APU_VCORE_CG_CTL \
-				, poweron, 0, 0, 0, 0, 0, 0, &res); \
-	} while (0)
-
 	ENABLE_MDLA_CLK(clk_top_dsp_sel);
 	ENABLE_MDLA_CLK(clk_top_ipu_if_sel);
 	ENABLE_MDLA_CLK(clk_top_dsp3_sel);
 
-	pm_runtime_get_sync(&g_pdev->dev);
+#if CCF_MTCMOS_SUPPORT
+	ENABLE_MDLA_MTCMOS(mtcmos_dis);
+#else
+	if (mm_dis_cnt++ == 0)
+		pm_runtime_get_sync(&g_pdev->dev);
+#endif
 	ENABLE_MDLA_MTCMOS(mtcmos_vpu_vcore_shutdown);
 	ENABLE_MDLA_MTCMOS(mtcmos_vpu_conn_shutdown);
 	ENABLE_MDLA_MTCMOS(mtcmos_vpu_core2_shutdown);
@@ -1380,12 +1410,15 @@ mdla_dvfs_debug("[mdla_%d] adjust(%d,%d) result vmdla=%d\n",
 	ENABLE_MDLA_CLK(clk_mmsys_gals_comm1);
 	ENABLE_MDLA_CLK(clk_mmsys_smi_common);
 
-	ENABLE_MDLA_CLK(clk_apu_vcore_ahb_cg);
-	ENABLE_MDLA_CLK(clk_apu_vcore_axi_cg);
-	ENABLE_MDLA_CLK(clk_apu_vcore_adl_cg);
-	ENABLE_MDLA_CLK(clk_apu_vcore_qos_cg);
-	/*move vcore cg ctl to atf*/
-	vcore_cg_ctl(1);
+	/*
+	 * ENABLE_MDLA_CLK(clk_apu_vcore_ahb_cg);
+	 * ENABLE_MDLA_CLK(clk_apu_vcore_axi_cg);
+	 * ENABLE_MDLA_CLK(clk_apu_vcore_adl_cg);
+	 * ENABLE_MDLA_CLK(clk_apu_vcore_qos_cg);
+	 */
+	// move vcore cg ctl to atf
+	atf_vcore_cg_ctl(1);
+
 	ENABLE_MDLA_CLK(clk_apu_conn_apu_cg);
 	ENABLE_MDLA_CLK(clk_apu_conn_ahb_cg);
 	ENABLE_MDLA_CLK(clk_apu_conn_axi_cg);
@@ -1499,6 +1532,28 @@ static int mdla_disable_regulator_and_clock(int core)
 	mdla_dvfs_debug("[mdla_%d] dis_rc + (0x%x)\n", core, smi_bus_vpu_value);
 #endif
 
+#if CCF_MTCMOS_SUPPORT
+#define DISABLE_MDLA_MTCMOS(clk) \
+	{ \
+		if (clk != NULL) { \
+			clk_disable_unprepare(clk); \
+		} else { \
+			LOG_WRN("mtcmos not existed: %s\n", #clk); \
+		} \
+	}
+#else
+#define DISABLE_MDLA_MTCMOS(func) (*(func))(STA_POWER_DOWN)
+#endif
+	DISABLE_MDLA_MTCMOS(mtcmos_vpu_core2_shutdown);
+	DISABLE_MDLA_MTCMOS(mtcmos_vpu_vcore_shutdown);
+	DISABLE_MDLA_MTCMOS(mtcmos_vpu_conn_shutdown);
+#if CCF_MTCMOS_SUPPORT
+	DISABLE_MDLA_MTCMOS(mtcmos_dis);
+#else
+	if (--mm_dis_cnt == 0)
+		pm_runtime_put_sync(&g_pdev->dev);
+#endif
+
 #define DISABLE_MDLA_CLK(clk) \
 	{ \
 		if (clk != NULL) { \
@@ -1535,34 +1590,21 @@ static int mdla_disable_regulator_and_clock(int core)
 	DISABLE_MDLA_CLK(clk_apu_conn_img_adl_cg);
 	DISABLE_MDLA_CLK(clk_apu_conn_emi_26m_cg);
 	DISABLE_MDLA_CLK(clk_apu_conn_vpu_udi_cg);
-	DISABLE_MDLA_CLK(clk_apu_vcore_ahb_cg);
-	DISABLE_MDLA_CLK(clk_apu_vcore_axi_cg);
-	DISABLE_MDLA_CLK(clk_apu_vcore_adl_cg);
-	DISABLE_MDLA_CLK(clk_apu_vcore_qos_cg);
+	/*
+	 * DISABLE_MDLA_CLK(clk_apu_vcore_ahb_cg);
+	 * DISABLE_MDLA_CLK(clk_apu_vcore_axi_cg);
+	 * DISABLE_MDLA_CLK(clk_apu_vcore_adl_cg);
+	 * DISABLE_MDLA_CLK(clk_apu_vcore_qos_cg);
+	 */
+	// move vcore cg ctl to atf
+	// atf_vcore_cg_ctl(0);
+
 	DISABLE_MDLA_CLK(clk_mmsys_gals_ipu2mm);
 	DISABLE_MDLA_CLK(clk_mmsys_gals_ipu12mm);
 	DISABLE_MDLA_CLK(clk_mmsys_gals_comm0);
 	DISABLE_MDLA_CLK(clk_mmsys_gals_comm1);
 	DISABLE_MDLA_CLK(clk_mmsys_smi_common);
 	mdla_dvfs_debug("[mdla_%d] dis_rc flag4\n", core);
-
-#if CCF_MTCMOS_SUPPORT
-#define DISABLE_MDLA_MTCMOS(clk) \
-	{ \
-		if (clk != NULL) { \
-			clk_disable_unprepare(clk); \
-		} else { \
-			LOG_WRN("mtcmos not existed: %s\n", #clk); \
-		} \
-	}
-#else
-#define DISABLE_MDLA_MTCMOS(func) (*(func))(STA_POWER_DOWN)
-#endif
-	DISABLE_MDLA_MTCMOS(mtcmos_vpu_core2_shutdown);
-	DISABLE_MDLA_MTCMOS(mtcmos_vpu_conn_shutdown);
-	DISABLE_MDLA_MTCMOS(mtcmos_vpu_vcore_shutdown);
-	pm_runtime_put_sync(&g_pdev->dev);
-
 
 	DISABLE_MDLA_CLK(clk_top_dsp_sel);
 	DISABLE_MDLA_CLK(clk_top_ipu_if_sel);
@@ -1576,10 +1618,10 @@ static int mdla_disable_regulator_and_clock(int core)
 	pm_qos_update_request(&mdla_qos_vcore_request[core], VCORE_OPP_UNREQ);
 	mdla_dvfs_debug("[mdla_%d]vvpu, vmdla unreq\n", core);
 #else
-#if MTK_MMDVFS_ENABLE
-	ret = mmdvfs_set_fine_step(MMDVFS_SCEN_VPU_KERNEL,
-						MMDVFS_FINE_STEP_UNREQUEST);
-#endif
+	apusys_pm_update_request(MDLA0, VMDLA_OPP_2);
+	apusys_pm_update_request(VPU0, VVPU_OPP_2);
+	apusys_pm_request_arbiter();
+	apusys_pm_vcore(core, opps.vcore.values[VCORE_OPP_UNREQ]);
 #endif
 	if (ret) {
 		LOG_ERR("[mdla_%d]fail to unrequest vcore!\n", core);
@@ -2004,6 +2046,11 @@ int mdla_init_hw(int core, struct platform_device *pdev)
 			pm_qos_update_request(&mdla_qos_vmdla_request[i],
 								VMDLA_OPP_2);
 		}
+		#else
+			apusys_pm_update_request(VPU0, VVPU_OPP_2);
+			apusys_pm_update_request(MDLA0, VMDLA_OPP_2);
+			apusys_pm_request_arbiter();
+		#endif
 		mdla_dvfs_debug("[mdla]init vvpu, vmdla to opp2\n");
 		ret = vmdla_regulator_set_mode(true);
 		udelay(100);
@@ -2011,7 +2058,6 @@ int mdla_init_hw(int core, struct platform_device *pdev)
 		ret = vmdla_regulator_set_mode(false);
 		mdla_dvfs_debug("vvpu set sleep mode ret=%d\n", ret);
 		udelay(100);
-		#endif
 
 	}
 	/*init mdla lock power struct*/
@@ -2051,6 +2097,7 @@ int mdla_uninit_hw(void)
 		pm_qos_remove_request(&mdla_qos_vmdla_request[i]);
 		pm_qos_remove_request(&mdla_qos_vvpu_request[i]);
 	}
+	#else
 	#endif
 
 	mdla_unprepare_regulator_and_clock();

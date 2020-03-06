@@ -10,6 +10,10 @@
 #include <linux/kernel.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
+#include <linux/spinlock.h>
+
+#include <linux/arm-smccc.h>
+#include <linux/soc/mediatek/mtk_sip_svc.h>
 
 #include "spm_mtcmos_ctl.h"
 
@@ -32,6 +36,205 @@ void __iomem *ckgen_base;/*ckgen*/
 void __iomem *smi_common_base;
 void __iomem *clk_mmsys_config_base;
 void __iomem *clk_apu_conn_base;
+
+static DEFINE_SPINLOCK(enable_lock);
+static struct task_struct *enable_owner;
+static int enable_refcnt;
+
+static int vpu_atf_vcore_cg_ctl(int state);
+static int vpu_vcore_shut_down(int state);
+static int vpu_conn_shut_down(int state);
+static int vpu_core0_shut_down(int state);
+static int vpu_core1_shut_down(int state);
+static int vpu_core2_shut_down(int state);
+
+int mm_dis_cnt;
+
+enum res_type {
+	RES_MTCMOS = 0,
+	RES_CG,
+	RESOURCE_NR,
+};
+
+struct resource_ctl_unit {
+	const int id;
+	int enable_count;
+	const char *name;
+	int (*ctl_func)(int state);
+};
+
+#define _RES(_id, _enable_count, _name, _ctl_func) {	\
+	.id = _id,					\
+	.enable_count = _enable_count,			\
+	.name = _name,					\
+	.ctl_func = _ctl_func,				\
+}
+
+static struct resource_ctl_unit apusys_mtcmos_array[] = {
+	_RES(VPU_VCORE, 0, "vpu_vcore", vpu_vcore_shut_down),
+	_RES(VPU_CONN, 0, "vpu_conn", vpu_conn_shut_down),
+	_RES(VPU_CORE0, 0, "vpu_core0", vpu_core0_shut_down),
+	_RES(VPU_CORE1, 0, "vpu_core1", vpu_core1_shut_down),
+	_RES(VPU_CORE2, 0, "vpu_core2", vpu_core2_shut_down),
+};
+
+/*
+ * We only have to handle vcore cg in ATF,
+ * and CCF will help to take care others cg.
+ */
+static struct resource_ctl_unit apusys_cg_array[] = {
+	_RES(VPU_VCORE_CG, 0, "vpu_vcore_cg", vpu_atf_vcore_cg_ctl),
+};
+
+static int resource_core_ctl(int res_type, int id, int state)
+{
+	int ret = 0;
+	struct resource_ctl_unit *res = NULL;
+
+	lockdep_assert_held(&enable_lock);
+
+	if (res_type == RES_MTCMOS)
+		res = &apusys_mtcmos_array[id];
+	else
+		res = &apusys_cg_array[id];
+
+	if (state == STA_POWER_ON) {
+
+		if (res->enable_count == 0) {
+
+			if (res->ctl_func)
+				ret = res->ctl_func(STA_POWER_ON);
+
+			if (ret) {
+				res->ctl_func(STA_POWER_DOWN);
+				pr_info("%s %d fail, id:%d, cnt:%d\n",
+						__func__, state, id,
+						res->enable_count);
+				return ret;
+			}
+		}
+
+		res->enable_count++;
+
+	} else { // STA_POWER_DOWN
+
+		if (WARN_ON(res->enable_count == 0))
+			return -1;
+
+		if (--res->enable_count > 0)
+			goto out;
+
+		if (res->ctl_func)
+			ret = res->ctl_func(STA_POWER_DOWN);
+
+		if (ret) {
+			pr_info("%s %d fail, id:%d, cnt:%d\n",
+					__func__, state, id,
+					res->enable_count);
+			return ret;
+		}
+	}
+
+out:
+	pr_info("%s state: %d success, type: %d, id:%d, cnt:%d\n",
+			__func__, state, res_type, id, res->enable_count);
+
+	return ret;
+}
+
+static unsigned long _resource_ctl_lock(void)
+	__acquires(enable_lock)
+{
+	unsigned long flags;
+
+	if (!spin_trylock_irqsave(&enable_lock, flags)) {
+		if (enable_owner == current) {
+			enable_refcnt++;
+			__acquire(enable_lock);
+			return flags;
+		}
+		spin_lock_irqsave(&enable_lock, flags);
+	}
+	WARN_ON_ONCE(enable_owner != NULL);
+	WARN_ON_ONCE(enable_refcnt != 0);
+	enable_owner = current;
+	enable_refcnt = 1;
+	return flags;
+}
+
+static void _resource_ctl_unlock(unsigned long flags)
+	__releases(enable_lock)
+{
+	WARN_ON_ONCE(enable_owner != current);
+	WARN_ON_ONCE(enable_refcnt == 0);
+
+	if (--enable_refcnt) {
+		__release(enable_lock);
+		return;
+	}
+	enable_owner = NULL;
+	spin_unlock_irqrestore(&enable_lock, flags);
+}
+
+static int resource_ctl_lock(int type, int id, int state)
+{
+	unsigned long flags;
+	int ret;
+	int nr_boundary;
+
+	if (type == RES_MTCMOS)
+		nr_boundary = APUSYS_MTCMOS_NR;
+	else if (type == RES_CG)
+		nr_boundary = APUSYS_CG_NR;
+	else
+		nr_boundary = 0;
+
+	if (type < 0 || type >= RESOURCE_NR) {
+		pr_info("%s type %d over range\n", __func__, type);
+		return -1;
+	}
+
+	if (id < 0 || id >= nr_boundary) {
+		pr_info("%s id %d over range\n", __func__, id);
+		return -1;
+	}
+
+	flags = _resource_ctl_lock();
+	ret = resource_core_ctl(type, id, state);
+	_resource_ctl_unlock(flags);
+
+	return ret;
+}
+
+int atf_vcore_cg_ctl(int state)
+{
+	return resource_ctl_lock(RES_CG, VPU_VCORE_CG, state);
+}
+
+int spm_mtcmos_ctrl_vpu_vcore_shut_down(int state)
+{
+	return resource_ctl_lock(RES_MTCMOS, VPU_VCORE, state);
+}
+
+int spm_mtcmos_ctrl_vpu_conn_shut_down(int state)
+{
+	return resource_ctl_lock(RES_MTCMOS, VPU_CONN, state);
+}
+
+int spm_mtcmos_ctrl_vpu_core0_shut_down(int state)
+{
+	return resource_ctl_lock(RES_MTCMOS, VPU_CORE0, state);
+}
+
+int spm_mtcmos_ctrl_vpu_core1_shut_down(int state)
+{
+	return resource_ctl_lock(RES_MTCMOS, VPU_CORE1, state);
+}
+
+int spm_mtcmos_ctrl_vpu_core2_shut_down(int state)
+{
+	return resource_ctl_lock(RES_MTCMOS, VPU_CORE2, state);
+}
 
 int apusys_spm_mtcmos_init(void)
 {
@@ -130,6 +333,16 @@ err_out:
 	return -1;
 }
 
+static int vpu_atf_vcore_cg_ctl(int state)
+{
+	struct arm_smccc_res res;
+
+	arm_smccc_smc(MTK_SIP_KERNEL_APU_VCORE_CG_CTL
+			, state, 0, 0, 0, 0, 0, 0, &res);
+
+	return 0;
+}
+
 #ifndef IGNORE_MTCMOS_CHECK
 static void ram_console_update(void)
 {
@@ -144,12 +357,12 @@ void enable_mm_clk(void)
 	clk_writel(MM_CG_CLR0, 0x000003ff);
 }
 
-void enable_apu_vcore_clk(void)
+static void enable_apu_vcore_clk(void)
 {
 	/*clk_writel(APU_VCORE_CG_CLR, 0x0000000F);*/
 }
 
-int spm_mtcmos_ctrl_vpu_vcore_shut_down(int state)
+static int vpu_vcore_shut_down(int state)
 {
 	int err = 0;
 
@@ -249,7 +462,7 @@ void enable_apu_conn_clk(void)
 	clk_writel(APU_CONN_CG_CLR, 0x0000FF);
 }
 
-int spm_mtcmos_ctrl_vpu_conn_shut_down(int state)
+static int vpu_conn_shut_down(int state)
 {
 	int err = 0;
 
@@ -449,7 +662,7 @@ int spm_mtcmos_ctrl_vpu_conn_shut_down(int state)
 	return err;
 }
 
-int spm_mtcmos_ctrl_vpu_core0_shut_down(int state)
+static int vpu_core0_shut_down(int state)
 {
 	int err = 0;
 
@@ -643,7 +856,7 @@ int spm_mtcmos_ctrl_vpu_core0_shut_down(int state)
 	return err;
 }
 
-int spm_mtcmos_ctrl_vpu_core1_shut_down(int state)
+static int vpu_core1_shut_down(int state)
 {
 	int err = 0;
 
@@ -839,7 +1052,7 @@ int spm_mtcmos_ctrl_vpu_core1_shut_down(int state)
 	return err;
 }
 
-int spm_mtcmos_ctrl_vpu_core2_shut_down(int state)
+static int vpu_core2_shut_down(int state)
 {
 	int err = 0;
 
@@ -1072,3 +1285,5 @@ void debug_reg(void)
 	iounmap(vpu1);
 	iounmap(mdla);
 }
+
+
