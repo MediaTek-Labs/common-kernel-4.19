@@ -3299,16 +3299,15 @@ firmware_class.path=/vendor/firmware loop.max_part=7";
 			reg = <0 0x19020000 0 0x1000>;
 		};
 
-		apusys_power@19180000 {
+		apusys_power {
 			compatible = "mediatek,apusys_power";
-			reg = <0 0x19180000 0 0x1000>;
 
 			power-domains = <&scpsys MT6779_POWER_DOMAIN_MM>;
 
 			VMDLA-supply = <&mt6360_mdla_buck_reg>;
 			vpu-supply = <&mt6359_vpu_buck_reg>;
 			vsram_others-supply = <&mt6359_vsram_others_ldo_reg>;
-			vcore-supply = <&mt6359_vcore_buck_reg>;
+			vcore-supply = <&dvfsrc_vcore>;
 
 			clocks = <&topckgen CLK_TOP_DSP>,
 				<&topckgen CLK_TOP_DSP1>,
