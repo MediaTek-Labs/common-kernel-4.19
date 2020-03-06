@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (c) 2019 MediaTek Inc.
+ * Copyright (c) 2020 MediaTek Inc.
  * Author: Mac Lu <mac.lu@mediatek.com>
  */
 
+#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
+
 #include <linux/device.h>
+#include <linux/io.h>
 #include <linux/module.h>
 #include <linux/mod_devicetable.h>
-#include <linux/io.h>
 #include <linux/nvmem-provider.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
@@ -15,7 +17,7 @@
 #include <linux/slab.h>
 
 struct mtk_devinfo_priv {
-	unsigned int *g_devinfo_data;
+	unsigned int *devinfo_data;
 };
 
 struct devinfo_tag {
@@ -23,7 +25,7 @@ struct devinfo_tag {
 	unsigned int data[0];
 };
 
-static int devinfo_parse_dt(struct mtk_devinfo_priv *priv)
+static int devinfo_parse_dt(struct mtk_devinfo_priv *priv, struct device *dev)
 {
 	struct device_node *chosen_node;
 	struct devinfo_tag *tags;
@@ -33,26 +35,30 @@ static int devinfo_parse_dt(struct mtk_devinfo_priv *priv)
 	if (!chosen_node) {
 		chosen_node = of_find_node_by_path("/chosen@0");
 		if (!chosen_node) {
-			dev_debug("chosen node is not found!!\n");
+			pr_warn("chosen node is not found!!\n");
 			return -ENXIO;
 		}
 	}
 
 	tags = (struct devinfo_tag *) of_get_property(chosen_node,
-			"atag,devinfo",	NULL);
+						"atag,devinfo",	NULL);
+
 	if (tags) {
 		size = tags->data_size;
 
-		priv->g_devinfo_data = kmalloc(sizeof(struct devinfo_tag) +
-				(size * sizeof(unsigned int)), GFP_KERNEL);
+		priv->devinfo_data = devm_kzalloc(dev,
+		    sizeof(struct devinfo_tag) + (size * sizeof(unsigned int)),
+		    GFP_KERNEL);
+		if (!priv->devinfo_data)
+			return -ENOMEM;
 
 		WARN_ON(size > 300); /* for size integer too big protection */
 
-		memcpy(priv->g_devinfo_data, tags->data,
+		memcpy(priv->devinfo_data, tags->data,
 				(size * sizeof(unsigned int)));
 
 	} else {
-		dev_debug("atag,devinfo is not found\n");
+		pr_warn("atag,devinfo is not found\n");
 		return -ENXIO;
 	}
 	return (size * sizeof(unsigned int));
@@ -66,7 +72,7 @@ static int mtk_reg_read(void *context,
 	int i = 0, words = bytes / 4;
 
 	while (words--) {
-		*val++ = priv->g_devinfo_data[i + (reg / 4)];
+		*val++ = priv->devinfo_data[i + (reg / 4)];
 		i++;
 	}
 	return 0;
@@ -84,9 +90,9 @@ static int mtk_devinfo_probe(struct platform_device *pdev)
 	if (!priv)
 		return -ENOMEM;
 
-	ret_size = devinfo_parse_dt(priv);
-	if (ret_size < 0) {
-		dev_debug("parse devinfo failed\n");
+	ret_size = devinfo_parse_dt(priv, dev);
+	if (ret_size <= 0) {
+		pr_warn("parse devinfo failed\n");
 		return ret_size;
 	}
 
@@ -123,7 +129,7 @@ static int __init mtk_devinfo_init(void)
 
 	ret = platform_driver_register(&mtk_devinfo_driver);
 	if (ret) {
-		dev_debug("Failed to register devinfo driver\n");
+		pr_err("Failed to register devinfo driver\n");
 		return ret;
 	}
 
