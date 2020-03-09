@@ -15,12 +15,10 @@ ifeq ($(CONFIG_MTK_GCOV_KERNEL),y)
 GCOV_PROFILE := y
 endif
 
-subdir-ccflags-y += -Idrivers/misc/mediatek/aee/mrdump/
-ifdef CONFIG_MTK_DRAM_LOG_STORE
-subdir-ccflags-y += -Idrivers/misc/mediatek/log_store/
-endif
+obj-$(CONFIG_MTK_AEE_AED)	+= aee_aed.o
+aee_aed-y	+= \
+	aed-main.o \
+	aed-debug.o \
+	aee-common.o \
+	reboot-reason.o
 
-ifdef CONFIG_MTK_AEE_AED
-obj-y += aed.o
-aed-y := aed-main.o aed-debug.o
-endif

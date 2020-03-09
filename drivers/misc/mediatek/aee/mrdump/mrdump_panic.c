@@ -3,33 +3,28 @@
  * Copyright (C) 2015 MediaTek Inc.
  */
 
+#include <linux/delay.h>
+#include <linux/kdebug.h>
 #include <linux/kernel.h>
-#include <linux/slab.h>
 #include <linux/mm.h>
+#include <linux/module.h>
+#include <linux/reboot.h>
+#include <linux/sched/clock.h>
+#include <linux/slab.h>
 #include <asm/cacheflush.h>
+#include <asm/kexec.h>
 #include <asm/memory.h>
 #include <asm/stacktrace.h>
-#include <asm/traps.h>
 #include <asm/system_misc.h>
-#include <asm/kexec.h>
-#include <linux/kdebug.h>
-#include <linux/module.h>
-#include <linux/delay.h>
-#include <linux/sched/clock.h>
+
 #include <mrdump.h>
-#include <linux/reboot.h>
-#include "mrdump_private.h"
-#include "mrdump_mini.h"
 #include <mt-plat/mboot_params.h>
+#include "mrdump_mini.h"
+#include "mrdump_private.h"
 
 /* for arm_smccc_smc */
 #include <linux/arm-smccc.h>
 #include <uapi/linux/psci.h>
-
-__weak void console_unlock(void)
-{
-	pr_notice("%s weak function\n", __func__);
-}
 
 static inline unsigned long get_linear_memory_size(void)
 {
@@ -94,11 +89,8 @@ int aee_dump_stack_top_binary(char *buf, int buf_len, unsigned long bottom,
 int mrdump_common_die(int fiq_step, int reboot_reason, const char *msg,
 		      struct pt_regs *regs)
 {
-	bust_spinlocks(1);
-	aee_disable_api();
-
 	show_kaslr();
-	print_modules();
+	aee_print_modules();
 	aee_rr_rec_fiq_step(fiq_step);
 	aee_rr_rec_scp();
 	__mrdump_create_oops_dump(reboot_reason, regs, msg);
@@ -106,7 +98,7 @@ int mrdump_common_die(int fiq_step, int reboot_reason, const char *msg,
 	switch (reboot_reason) {
 	case AEE_REBOOT_MODE_KERNEL_OOPS:
 		aee_rr_rec_exp_type(AEE_EXP_TYPE_KE);
-		__show_regs(regs);
+		aee_show_regs(regs);
 		dump_stack();
 		break;
 	case AEE_REBOOT_MODE_KERNEL_PANIC:
@@ -124,7 +116,12 @@ int mrdump_common_die(int fiq_step, int reboot_reason, const char *msg,
 	}
 	mrdump_mini_ke_cpu_regs(regs);
 	console_unlock();
+	/* TODO: remove flush APIs after full ramdump support  HW_Reboot*/
+#if IS_ENABLED(CONFIG_MEDIATEK_CACHE_API)
 	dis_D_inner_flush_all();
+#else
+	pr_info("dis_D_inner_flush_all invalid");
+#endif
 	aee_exception_reboot();
 	return NOTIFY_DONE;
 }
@@ -163,6 +160,9 @@ static struct notifier_block die_blk = {
 
 static int __init mrdump_panic_init(void)
 {
+#ifdef MODULE
+	mrdump_module_init_mboot_params();
+#endif
 	mrdump_hw_init();
 	mrdump_cblock_init();
 	mrdump_mini_init();
@@ -177,3 +177,13 @@ static int __init mrdump_panic_init(void)
 }
 
 arch_initcall(mrdump_panic_init);
+
+#ifdef MODULE
+static void __exit mrdump_panic_exit(void)
+{
+	atomic_notifier_chain_unregister(&panic_notifier_list, &panic_blk);
+	unregister_die_notifier(&die_blk);
+	pr_debug("ipanic: exit\n");
+}
+module_exit(mrdump_panic_exit);
+#endif
