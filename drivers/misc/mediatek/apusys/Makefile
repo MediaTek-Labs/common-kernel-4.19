@@ -61,6 +61,10 @@ apusys-objs += sample/$(APUSYS_VERSION_SAMPLE)/sample_inf.o
 # debug driver makefile
 apusys-objs += debug/debug_driver.o
 
+# apu tracepoints and apu tags
+ifeq ($(CONFIG_MTK_APUSYS_DEBUG), y)
+apusys-objs += debug/apu_tp.o debug/apu_tags.o
+endif
 
 # edma driver makefile
 
