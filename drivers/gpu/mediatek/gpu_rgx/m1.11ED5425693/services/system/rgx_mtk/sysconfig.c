@@ -79,28 +79,84 @@ static PVRSRV_DEVICE_CONFIG     gsDevices[1];
 static PHYS_HEAP_FUNCTIONS      gsPhysHeapFuncs;
 static PHYS_HEAP_CONFIG         gsPhysHeapConfig;
 
-#if  defined(SUPPORT_PDVFS)
-/* Dummy DVFS configuration used purely for testing purposes */
-static const IMG_OPP asOPPTable[] = {
-	{ 100000, 253500000},
-	{ 100000, 338000000},
-	{ 100000, 390000000},
-	{ 112500, 546000000},
-	{ 112500, 676000000},
-	{ 112500, 676000000},
-	{ 112500, 676000000},
-	{ 112500, 676000000},
-	{ 112500, 676000000},
-	{ 112500, 676000000},
-	{ 112500, 676000000},
-	{ 112500, 676000000},
-	{ 112500, 676000000},
-	{ 112500, 676000000},
-	{ 112500, 676000000},
-	{ 112500, 676000000},
-};
+#if defined(PVR_DVFS)
+#include "mtk_gpufreq.h"
 
-#define LEVEL_COUNT (sizeof(asOPPTable) / sizeof(IMG_OPP))
+static IMG_OPP * pasOPPTable;
+
+static void SetFrequency(IMG_UINT32 ui32FrequencyHz)
+{
+	int opp_idx = 0;
+	unsigned int pow = 0;
+	static int resume;
+
+	/* Now only thermal throttle will limit opps in devfreq
+	 * So the request opp freq would reflect the valid pow
+	 * Look up that power as throttle limit
+	 * and apply legacy throttle flow
+	 */
+
+	opp_idx = mt_gpufreq_get_opp_idx_by_freq(ui32FrequencyHz);
+	if (opp_idx) {
+		pow = mt_gpufreq_get_pow_by_idx(opp_idx);
+		mt_gpufreq_thermal_protect(pow);
+		resume = 0;
+	} else {
+		if (!resume) {
+			mt_gpufreq_thermal_protect(0);
+			resume = 1;
+		}
+	}
+}
+
+static void SetVoltage(IMG_UINT32 ui32Voltage)
+{
+	;
+}
+
+#if defined(CONFIG_DEVFREQ_THERMAL)
+/* use mt_gpufreq_get_leakage_mw */
+static unsigned long model_static_power(struct devfreq *devfreq,
+		unsigned long voltage_mv)
+{
+	PVR_UNREFERENCED_PARAMETER(voltage_mv);
+	return mt_gpufreq_get_leakage_mw();
+}
+
+static unsigned long model_dynamic_power(struct devfreq *devfreq,
+		unsigned long freqHz,	unsigned long voltage_mv)
+{
+	return mt_gpufreq_get_dyn_power(freqHz/1000, voltage_mv * 100);
+}
+/* look-up power table with current freq */
+int modelget_real_power(struct devfreq *df, u32 *power,
+			      unsigned long freqHz, unsigned long voltage_mv)
+
+{
+	PVR_UNREFERENCED_PARAMETER(voltage_mv);
+	PVR_UNREFERENCED_PARAMETER(df);
+	int opp_idx;
+
+	opp_idx = mt_gpufreq_get_opp_idx_by_freq(freqHz);
+	if (power) /* return power */
+		*power = mt_gpufreq_get_pow_by_idx(opp_idx);
+	/* assume success */
+	return 0;
+}
+/*
+ * GPU_POW_COEFF is (10^9) * GPU_ACT_REF_POWER/(GPU_ACT_REF_FREQ/1000)
+ * *(GPU_ACT_REF_VOLT/100)*(GPU_ACT_REF_VOLT/100)
+ */
+#define GPU_POW_COEFF (1763)
+
+struct devfreq_cooling_power g_mtk_power_model_ops = {
+	.get_static_power = model_static_power,
+	.get_dynamic_power = model_dynamic_power,
+	.get_real_power = modelget_real_power,
+	.dyn_power_coeff = GPU_POW_COEFF,
+};
+#endif
+
 #endif
 
 #if defined(CONFIG_MACH_MT6761)
@@ -192,8 +248,14 @@ static PHYS_HEAP_REGION gsHeapRegionsLocal[] = {
 	{ { 0 }, { 0 }, 0, },
 };
 
+
+
 PVRSRV_ERROR SysDevInit(void *pvOSDevice, PVRSRV_DEVICE_CONFIG **ppsDevConfig)
 {
+#if defined(PVR_DVFS)
+	unsigned int opp_num;
+	int i;
+#endif
 	PVRSRV_ERROR err = PVRSRV_OK;
 
 	gsPhysHeapFuncs.pfnCpuPAddrToDevPAddr = UMAPhysHeapCpuPAddrToDevPAddr;
@@ -315,11 +377,33 @@ PVRSRV_ERROR SysDevInit(void *pvOSDevice, PVRSRV_DEVICE_CONFIG **ppsDevConfig)
 	gsDevices[0].pfnSysDevFeatureDepInit = NULL;
 #endif
 
-#if defined(SUPPORT_PDVFS)
-	/* Dummy DVFS configuration used purely for testing purposes */
-	gsDevices[0].sDVFS.sDVFSDeviceCfg.pasOPPTable = asOPPTable;
-	gsDevices[0].sDVFS.sDVFSDeviceCfg.ui32OPPTableSize = LEVEL_COUNT;
+#if defined(PVR_DVFS)
+	opp_num = mt_gpufreq_get_dvfs_table_num();
+	pasOPPTable = (IMG_OPP *)OSAllocZMem(sizeof(IMG_OPP) * opp_num);
+
+	for (i = 0; i < opp_num; i++) {
+		mt_gpufreq_get_volt_by_idx(i);
+		/* mtk opp unit is 10uv, while Linux opp is uv */
+		pasOPPTable[i].ui32Volt = mt_gpufreq_get_volt_by_idx(i) * 10;
+		/* mtk opp unit is KHz, while Linux opp is Hz */
+		pasOPPTable[i].ui32Freq = mt_gpufreq_get_freq_by_idx(i) * 1000;
+	}
+
+	gsDevices[0].sDVFS.sDVFSDeviceCfg.pasOPPTable = pasOPPTable;
+	gsDevices[0].sDVFS.sDVFSDeviceCfg.ui32OPPTableSize = opp_num;
+	/* No polling timer */
+	gsDevices[0].sDVFS.sDVFSDeviceCfg.ui32PollMs = 1000;
+	/* No need to idle before chang*/
+	gsDevices[0].sDVFS.sDVFSDeviceCfg.bIdleReq = IMG_FALSE;
+	gsDevices[0].sDVFS.sDVFSDeviceCfg.pfnSetFrequency = SetFrequency;
+	gsDevices[0].sDVFS.sDVFSDeviceCfg.pfnSetVoltage = SetVoltage;
+	gsDevices[0].sDVFS.sDVFSGovernorCfg.ui32UpThreshold = 0;
+	gsDevices[0].sDVFS.sDVFSGovernorCfg.ui32DownDifferential = 0;
+#if defined(CONFIG_DEVFREQ_THERMAL)
+	gsDevices[0].sDVFS.sDVFSDeviceCfg.psPowerOps = &g_mtk_power_model_ops;
 #endif
+#endif
+
 
 	/* Setup other system specific stuff */
 #if defined(SUPPORT_ION)

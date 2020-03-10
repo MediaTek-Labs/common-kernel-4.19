@@ -51,7 +51,11 @@ extern unsigned int
 mt_gpufreq_update_volt(unsigned int pmic_volt[], unsigned int array_size);
 extern unsigned int mt_gpufreq_get_freq_by_idx(unsigned int idx);
 extern unsigned int mt_gpufreq_get_volt_by_idx(unsigned int idx);
+extern unsigned int mt_gpufreq_get_pow_by_idx(unsigned int idx);
 extern unsigned int mt_gpufreq_get_ori_opp_idx(unsigned int idx);
+extern unsigned int
+mt_gpufreq_get_dyn_power(unsigned int freq_khz, unsigned int volt);
+extern int mt_gpufreq_get_opp_idx_by_freq(unsigned int gpufreq_hz);
 extern void mt_gpufreq_thermal_protect(unsigned int limited_power);
 extern void mt_gpufreq_restore_default_volt(void);
 extern void mt_gpufreq_enable_by_ptpod(void);

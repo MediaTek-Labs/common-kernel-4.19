@@ -160,6 +160,7 @@ pvrsrvkm-y += \
 	services/server/env/linux/pvr_debugfs.o \
 	services/server/env/linux/osconnection_server.o \
 	services/shared/devices/rgx/rgx_hwperf_table.o \
+	services/server/env/linux/pvr_dvfs_device.o \
 	services/shared/common/devicemem_utils.o \
 	services/shared/common/hash.o \
 	services/shared/common/ra.o \
@@ -237,7 +238,8 @@ ccflags-y += \
 	-I$(RGX_TOP)/services/srvinit/include \
 	-I$(RGX_TOP)/services/system/include \
 	-I$(RGX_TOP)/services/system/rgx_mtk \
-	-I$(RGX_TOP)/services/system/rgx_mtk/$(MTK_PLATFORM)
+	-I$(RGX_TOP)/services/system/rgx_mtk/$(MTK_PLATFORM) \
+
 
 ccflags-y += \
 	-I$(srctree)/drivers/staging/android/ion \
@@ -246,6 +248,7 @@ ccflags-y += \
 	-I$(srctree)/drivers/gpu/mediatek \
 	-I$(srctree)/drivers/gpu/mediatek/gpufreq/include \
 	-I$(srctree)/drivers/gpu/mediatek/gpu_bm \
+	-I$(srctree)/drivers/devfreq \
 #	-I$(srctree)/drivers/misc/mediatek/base/power/$(MTK_PLATFORM)
 
 

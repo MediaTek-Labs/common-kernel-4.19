@@ -820,6 +820,21 @@ unsigned int mt_gpufreq_get_volt_by_idx(unsigned int idx)
 	gpufreq_pr_debug("@%s: not found, idx = %d\n", __func__, idx);
 	return 0;
 }
+EXPORT_SYMBOL(mt_gpufreq_get_volt_by_idx);
+
+
+unsigned int mt_gpufreq_get_pow_by_idx(unsigned int idx)
+{
+	if (idx < g_opp_idx_num) {
+		gpufreq_pr_debug("@%s: idx = %d, volt = %d\n", __func__,
+			idx, g_power_table[idx].gpufreq_power);
+		return g_power_table[idx].gpufreq_power;
+	}
+
+	gpufreq_pr_debug("@%s: not found, idx = %d\n", __func__, idx);
+	return 0;
+}
+EXPORT_SYMBOL(mt_gpufreq_get_pow_by_idx);
 
 /* API: get opp idx in original opp tables. */
 /* This is usually for ptpod use. */
@@ -1180,6 +1195,7 @@ void mt_gpufreq_pbm_set_power_limit(unsigned int limited_power)
 
 	mutex_unlock(&mt_gpufreq_power_lock);
 }
+EXPORT_SYMBOL(mt_gpufreq_pbm_set_power_limit);
 
 /*
  * API : set GPU loading for SSPM
@@ -2036,6 +2052,24 @@ static unsigned int __mt_gpufreq_calculate_dds(unsigned int freq_khz,
 	return dds;
 }
 
+unsigned int mt_gpufreq_get_dyn_power(unsigned int freq_khz, unsigned int volt)
+{
+	unsigned int p_dynamic = 0;
+	unsigned int ref_freq = 0;
+	unsigned int ref_volt = 0;
+
+	p_dynamic = GPU_ACT_REF_POWER;
+	ref_freq = GPU_ACT_REF_FREQ;
+	ref_volt = GPU_ACT_REF_VOLT;
+
+	p_dynamic = p_dynamic *
+			((freq_khz * 100) / ref_freq) *
+			((volt * 100) / ref_volt) *
+			((volt * 100) / ref_volt) / (100 * 100 * 100);
+	return p_dynamic;
+}
+EXPORT_SYMBOL(mt_gpufreq_get_dyn_power);
+
 /* power calculation for power table */
 static void __mt_gpufreq_calculate_power(unsigned int idx,
 	unsigned int freq, unsigned int volt, unsigned int temp)
@@ -2233,6 +2267,26 @@ static int __mt_gpufreq_get_opp_idx_by_volt(unsigned int volt)
 EXIT:
 	return i+1;
 }
+
+
+/*
+ * get OPP table index by freq (Hz)
+ */
+int mt_gpufreq_get_opp_idx_by_freq(unsigned int gpufreq_hz)
+{
+	int i = g_opp_idx_num - 1;
+	unsigned int gpufreq_khz;
+
+	gpufreq_khz = gpufreq_hz / 1000;
+	while (i >= 0) {
+		if (g_opp_table[i--].gpufreq_khz >= gpufreq_khz)
+			goto EXIT;
+	}
+
+EXIT:
+	return i+1;
+}
+EXPORT_SYMBOL(mt_gpufreq_get_opp_idx_by_freq);
 
 /*
  * get limited frequency by limited power (mW)

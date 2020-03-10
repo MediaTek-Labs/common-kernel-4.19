@@ -50,6 +50,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <linux/version.h>
 #include <linux/device.h>
 
+#include "governor.h"
+
 #include "power.h"
 #include "pvrsrv.h"
 #include "pvrsrv_device.h"
@@ -358,6 +360,70 @@ static int RegisterCoolingDevice(struct device *dev,
 }
 #endif
 
+static int devfreq_throttle_gov_func(struct devfreq *df,
+				    unsigned long *freq)
+{
+	/*
+	 * target callback should be able to get floor value as
+	 * said in devfreq.h
+	 */
+	int err;
+
+	err = devfreq_update_stats(df);
+
+	if (err)
+		return err;
+
+	if (!df->max_freq)
+		*freq = UINT_MAX;
+	else
+		*freq = df->max_freq;
+
+
+	return 0;
+}
+
+static int devfreq_throttle_gov_handler(struct devfreq *devfreq,
+				unsigned int event, void *data)
+{
+	int ret = 0;
+
+	switch (event) {
+	case DEVFREQ_GOV_START:
+		devfreq_monitor_start(devfreq);
+		break;
+
+	case DEVFREQ_GOV_STOP:
+		devfreq_monitor_stop(devfreq);
+		break;
+
+	case DEVFREQ_GOV_INTERVAL:
+		devfreq_interval_update(devfreq, (unsigned int *)data);
+		break;
+
+	case DEVFREQ_GOV_SUSPEND:
+		devfreq_monitor_suspend(devfreq);
+		break;
+
+	case DEVFREQ_GOV_RESUME:
+		devfreq_monitor_resume(devfreq);
+		break;
+
+	default:
+		break;
+	}
+
+	return ret;
+}
+
+
+static struct devfreq_governor devfreq_throttle_gov = {
+	.name = "ahlahuagua",
+	.get_target_freq = devfreq_throttle_gov_func,
+	.event_handler = devfreq_throttle_gov_handler,
+};
+
+
 #define TO_IMG_ERR(err) ((err == -EPROBE_DEFER) ? PVRSRV_ERROR_PROBE_DEFER : PVRSRV_ERROR_INIT_FAILURE)
 
 PVRSRV_ERROR InitDVFS(PPVRSRV_DEVICE_NODE psDeviceNode)
@@ -378,6 +444,15 @@ PVRSRV_ERROR InitDVFS(PPVRSRV_DEVICE_NODE psDeviceNode)
 		PVR_DPF((PVR_DBG_ERROR,
 				 "DVFS already initialised for device node %p",
 				 gpsDeviceNode));
+		return PVRSRV_ERROR_INIT_FAILURE;
+	}
+
+	err = devfreq_add_governor(&devfreq_throttle_gov);
+
+	if (err) {
+		PVR_DPF((PVR_DBG_ERROR,
+				 "init Governor %s failed\n",
+				 devfreq_throttle_gov.name));
 		return PVRSRV_ERROR_INIT_FAILURE;
 	}
 
@@ -452,12 +527,12 @@ PVRSRV_ERROR InitDVFS(PPVRSRV_DEVICE_NODE psDeviceNode)
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0))
 	psDVFSDevice->psDevFreq = devm_devfreq_add_device(psDev,
 													  &img_devfreq_dev_profile,
-													  "simple_ondemand",
+													  "ahlahuagua",
 													  &psDVFSDevice->data);
 #else
 	psDVFSDevice->psDevFreq = devfreq_add_device(psDev,
 												 &img_devfreq_dev_profile,
-												 "simple_ondemand",
+												 "ahlahuagua",
 												 &psDVFSDevice->data);
 #endif
 
@@ -570,13 +645,14 @@ void DeinitDVFS(PPVRSRV_DEVICE_NODE psDeviceNode)
 	SORgxGpuUtilStatsUnregister(psDVFSDevice->hGpuUtilUserDVFS);
 	psDVFSDevice->hGpuUtilUserDVFS = NULL;
 
+	devfreq_remove_governor(&devfreq_throttle_gov);
+
 	gpsDeviceNode = NULL;
 }
 
 PVRSRV_ERROR SuspendDVFS(void)
 {
 	IMG_DVFS_DEVICE	*psDVFSDevice = &gpsDeviceNode->psDevConfig->sDVFS.sDVFSDevice;
-
 	psDVFSDevice->bEnabled = IMG_FALSE;
 
 	return PVRSRV_OK;
