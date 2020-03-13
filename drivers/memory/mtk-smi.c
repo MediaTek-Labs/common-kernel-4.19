@@ -8,6 +8,7 @@
 #include <linux/device.h>
 #include <linux/err.h>
 #include <linux/io.h>
+#include <linux/iopoll.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_platform.h>
@@ -41,6 +42,11 @@
 /* mt2712 */
 #define SMI_LARB_NONSEC_CON(id)	(0x380 + ((id) * 4))
 #define F_MMU_EN		BIT(0)
+
+/* mt8168 */
+#define SMI_LARB_SLP_CON		0x00c
+#define SLP_PROT_EN			BIT(0)
+#define SLP_PROT_RDY			BIT(16)
 
 #define SMI_LARB_CMD_THRT_CON		0x24
 #define SMI_LARB_SW_FLAG		0x40
@@ -92,8 +98,9 @@ struct mtk_smi_common_plat {
 struct mtk_smi_larb_gen {
 	int port_in_larb[MTK_LARB_NR_MAX + 1];
 	void (*config_port)(struct device *);
+	void (*sleep_ctrl)(struct device *dev, bool toslp);
 	unsigned int larb_direct_to_common_mask;
-	bool             has_gals;
+	bool            has_gals;
 	bool		has_bwl;
 	u8		*bwl;
 	struct mtk_smi_reg_pair *misc;
@@ -260,6 +267,21 @@ static void mtk_smi_larb_config_port_gen1(struct device *dev)
 	}
 }
 
+static void mtk_smi_larb_sleep_ctrl(struct device *dev, bool toslp)
+{
+	struct mtk_smi_larb *larb = dev_get_drvdata(dev);
+	void __iomem *base = larb->base;
+	u32 tmp;
+
+	if (toslp) {
+		writel_relaxed(SLP_PROT_EN, base + SMI_LARB_SLP_CON);
+		if (readl_poll_timeout_atomic(base + SMI_LARB_SLP_CON,
+				tmp, !!(tmp & SLP_PROT_RDY), 10, 10000))
+			dev_notice(dev, "sleep cond not ready(%d)\n", tmp);
+	} else
+		writel_relaxed(0, base + SMI_LARB_SLP_CON);
+}
+
 static void
 mtk_smi_larb_unbind(struct device *dev, struct device *master, void *data)
 {
@@ -340,6 +362,12 @@ static const struct mtk_smi_larb_gen mtk_smi_larb_mt6779 = {
 	.misc = (struct mtk_smi_reg_pair *)mtk_smi_larb_mt6779_misc,
 };
 
+static const struct mtk_smi_larb_gen mtk_smi_larb_mt8168 = {
+	.has_gals                   = true,
+	.config_port                = mtk_smi_larb_config_port_gen2_general,
+	.sleep_ctrl                 = mtk_smi_larb_sleep_ctrl,
+};
+
 static const struct mtk_smi_larb_gen mtk_smi_larb_mt8183 = {
 	.has_gals                   = true,
 	.config_port                = mtk_smi_larb_config_port_gen2_general,
@@ -363,6 +391,10 @@ static const struct of_device_id mtk_smi_larb_of_ids[] = {
 	{
 		.compatible = "mediatek,mt6779-smi-larb",
 		.data = &mtk_smi_larb_mt6779
+	},
+	{
+		.compatible = "mediatek,mt8168-smi-larb",
+		.data = &mtk_smi_larb_mt8168
 	},
 	{
 		.compatible = "mediatek,mt8183-smi-larb",
@@ -453,6 +485,8 @@ static int __maybe_unused mtk_smi_larb_resume(struct device *dev)
 		return ret;
 	}
 
+	if (larb_gen->sleep_ctrl)
+		larb_gen->sleep_ctrl(dev, false);
 	/* Configure the basic setting for this larb */
 	larb_gen->config_port(dev);
 
@@ -462,7 +496,10 @@ static int __maybe_unused mtk_smi_larb_resume(struct device *dev)
 static int __maybe_unused mtk_smi_larb_suspend(struct device *dev)
 {
 	struct mtk_smi_larb *larb = dev_get_drvdata(dev);
+	const struct mtk_smi_larb_gen *larb_gen = larb->larb_gen;
 
+	if (larb_gen->sleep_ctrl)
+		larb_gen->sleep_ctrl(dev, true);
 	mtk_smi_clk_disable(&larb->smi);
 	return 0;
 }
@@ -515,6 +552,12 @@ static const struct mtk_smi_common_plat mtk_smi_common_mt6779 = {
 	.misc     = mtk_smi_common_mt6779_misc,
 };
 
+static const struct mtk_smi_common_plat mtk_smi_common_mt8168 = {
+	.gen = MTK_SMI_GEN2,
+	.has_gals = true,
+	.bus_sel  = F_MMU1_LARB(2),
+};
+
 static const struct mtk_smi_common_plat mtk_smi_common_mt8183 = {
 	.gen      = MTK_SMI_GEN2,
 	.has_gals = true,
@@ -538,6 +581,10 @@ static const struct of_device_id mtk_smi_common_of_ids[] = {
 	{
 		.compatible = "mediatek,mt6779-smi-common",
 		.data = &mtk_smi_common_mt6779,
+	},
+	{
+		.compatible = "mediatek,mt8168-smi-common",
+		.data = &mtk_smi_common_mt8168,
 	},
 	{
 		.compatible = "mediatek,mt8183-smi-common",
