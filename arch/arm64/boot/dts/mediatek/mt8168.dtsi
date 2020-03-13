@@ -8,6 +8,7 @@
 #include <dt-bindings/iio/mt635x-auxadc.h>
 #include <dt-bindings/interrupt-controller/irq.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/memory/mt8168-larb-port.h>
 #include <dt-bindings/phy/phy.h>
 #include <dt-bindings/pinctrl/mt8168-pinfunc.h>
 
@@ -414,6 +415,14 @@
 			mediatek,spi_start_offset = <72>;
 		};
 
+		iommu: m4u@10205000 {
+			compatible = "mediatek,mt8168-m4u";
+			reg = <0 0x10205000 0 0x1000>;
+			mediatek,larbs = <&larb0 &larb1 &larb2 &larb3>;
+			interrupts = <GIC_SPI 102 IRQ_TYPE_LEVEL_LOW>;
+			#iommu-cells = <1>;
+		};
+
 		infracfg_nao: infracfg_nao@1020e000 {
 			compatible = "syscon";
 			reg = <0 0x1020e000 0 0x1000>;
@@ -563,10 +572,42 @@
 			#clock-cells = <1>;
 		};
 
+		smi_common: smi@14002000 {
+			compatible = "mediatek,mt8168-smi-common", "syscon";
+			reg = <0 0x14002000 0 0x1000>;
+			clocks = <&mmsys CLK_MM_MM_SMI_COMMON>,
+				 <&mmsys CLK_MM_MM_SMI_COMMON>,
+				 <&mmsys CLK_MM_MM_SMI_COMM0>,
+				 <&mmsys CLK_MM_MM_SMI_COMM1>;
+			clock-names = "apb", "smi", "gals0", "gals1";
+		};
+
+		larb0: larb@14003000 {
+			compatible = "mediatek,mt8168-smi-larb",
+				     "mediatek,mt8183-smi-larb";
+			reg = <0 0x14003000 0 0x1000>;
+			mediatek,smi = <&smi_common>;
+			mediatek,larb-id = <0>;
+			clocks = <&mmsys CLK_MM_MM_SMI_LARB0>,
+				 <&mmsys CLK_MM_MM_SMI_LARB0>;
+			clock-names = "apb", "smi";
+		};
+
 		camsys: syscon@15000000 {
 			compatible = "mediatek,mt8168-imgsys", "syscon";
 			reg = <0 0x15000000 0 0x1000>;
 			#clock-cells = <1>;
+		};
+
+		larb2: larb@15001000 {
+			compatible = "mediatek,mt8168-smi-larb",
+				     "mediatek,mt8183-smi-larb";
+			reg = <0 0x15001000 0 0x1000>;
+			mediatek,smi = <&smi_common>;
+			mediatek,larb-id = <2>;
+			clocks = <&mmsys CLK_MM_MM_SMI_IMG>,
+				 <&camsys CLK_CAM_LARB2>;
+			clock-names = "apb", "smi";
 		};
 
 		vdecsys: syscon@16000000 {
@@ -575,10 +616,31 @@
 			#clock-cells = <1>;
 		};
 
+		larb3: larb@16010000 {
+			compatible = "mediatek,mt8168-smi-larb",
+				     "mediatek,mt8183-smi-larb";
+			reg = <0 0x16010000 0 0x1000>;
+			mediatek,smi = <&smi_common>;
+			mediatek,larb-id = <3>;
+			clocks = <&vdecsys CLK_VDEC_LARB1>,
+				 <&vdecsys CLK_VDEC_LARB1>;
+			clock-names = "apb", "smi";
+		};
+
 		vencsys: syscon@17000000 {
 			compatible = "mediatek,mt8168-vencsys", "syscon";
 			reg = <0 0x17000000 0 0x1000>;
 			#clock-cells = <1>;
+		};
+
+		larb1: larb@17010000 {
+			compatible = "mediatek,mt8168-smi-larb",
+				     "mediatek,mt8183-smi-larb";
+			reg = <0 0x17010000 0 0x1000>;
+			mediatek,smi = <&smi_common>;
+			mediatek,larb-id = <1>;
+			clocks = <&vencsys CLK_VENC>, <&vencsys CLK_VENC>;
+			clock-names = "apb", "smi";
 		};
 
 		apu: apu@19020000 {
