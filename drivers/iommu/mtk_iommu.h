@@ -32,6 +32,7 @@ enum mtk_iommu_plat {
 	M4U_MT2701,
 	M4U_MT2712,
 	M4U_MT6779,
+	M4U_MT8168,
 	M4U_MT8173,
 	M4U_MT8183,
 };
@@ -67,6 +68,7 @@ struct mtk_iommu_plat_data {
 	bool		    has_wr_len;
 	bool		    has_misc_ctrl[2];
 	bool		    is_apusys[2];
+	bool		    allow_64_portid;
 	u32		    inv_sel_reg;
 	u32		    m4u1_mask;
 #ifdef CONFIG_MTK_IOMMU_V2

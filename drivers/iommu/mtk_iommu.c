@@ -112,6 +112,8 @@
 #define F_MMU_INT_ID_SUB_COMM_ID(a)		(((a) >> 7) & 0x3)
 #define F_MMU_INT_ID_LARB_ID(a)			(((a) >> 7) & 0x7)
 #define F_MMU_INT_ID_PORT_ID(a)			(((a) >> 2) & 0x1f)
+#define F_MMU_INT_ID_LARB_ID_MT8168(a)		(((a) >> 8) & 0x7)
+#define F_MMU_INT_ID_PORT_ID_MT8168(a)		(((a) >> 2) & 0x3f)
 #define F_MMU_INT_ID_COMM_APU_ID(a)		((a) & 0x3)
 #define F_MMU_INT_ID_SUB_APU_ID(a)		(((a) >> 2) & 0x3)
 
@@ -285,7 +287,13 @@ static irqreturn_t mtk_iommu_isr(int irq, void *dev_id)
 	}
 	layer = fault_iova & F_MMU_FAULT_VA_LAYER_BIT;
 	write = fault_iova & F_MMU_FAULT_VA_WRITE_BIT;
-	fault_port = F_MMU_INT_ID_PORT_ID(regval);
+	if (data->plat_data->allow_64_portid) {
+		fault_larb = F_MMU_INT_ID_LARB_ID_MT8168(regval);
+		fault_port = F_MMU_INT_ID_PORT_ID_MT8168(regval);
+	} else {
+		fault_larb = F_MMU_INT_ID_LARB_ID(regval);
+		fault_port = F_MMU_INT_ID_PORT_ID(regval);
+	}
 	if (data->plat_data->has_sub_comm[data->m4u_id]) {
 		/* m4u1 is VPU in mt6779.*/
 		if (data->m4u_id && data->plat_data->m4u_plat == M4U_MT6779) {
@@ -296,8 +304,6 @@ static irqreturn_t mtk_iommu_isr(int irq, void *dev_id)
 			fault_larb = F_MMU_INT_ID_COMM_ID(regval);
 			sub_comm = F_MMU_INT_ID_SUB_COMM_ID(regval);
 		}
-	} else {
-		fault_larb = F_MMU_INT_ID_LARB_ID(regval);
 	}
 
 	fault_larb = data->plat_data->larbid_remap[data->m4u_id][fault_larb];
@@ -917,6 +923,14 @@ static const struct mtk_iommu_resv_iova_region mt2712_iommu_rsv_list[] = {
 #endif
 };
 
+
+static const struct mtk_iommu_resv_iova_region mt8168_iommu_rsv_list[3] = {
+	{	.iova_base = 0x7D100000,
+		.iova_size = 0x05500000,	/* VPU: s 9M + ns 76M */
+		.type = IOMMU_RESV_RESERVED,
+	},
+};
+
 static const struct mtk_iommu_resv_iova_region mt6779_iommu_rsv_list[] = {
 	{	.iova_base = 0x40000000,	/* CCU */
 		.iova_size = 0x8000000,
@@ -957,6 +971,16 @@ static const struct mtk_iommu_plat_data mt6779_data = {
 	.m4u1_mask =  BIT(6),
 };
 
+static const struct mtk_iommu_plat_data mt8168_data = {
+	.m4u_plat = M4U_MT8168,
+	.has_4gb_mode = true,
+	.reset_axi    = true,
+	.allow_64_portid = true,
+	.resv_cnt    = ARRAY_SIZE(mt8168_iommu_rsv_list),
+	.resv_region = mt8168_iommu_rsv_list,
+	.inv_sel_reg = REG_MMU_INV_SEL,
+};
+
 static const struct mtk_iommu_plat_data mt8173_data = {
 	.m4u_plat     = M4U_MT8173,
 	.has_4gb_mode = true,
@@ -976,6 +1000,7 @@ static const struct mtk_iommu_plat_data mt8183_data = {
 static const struct of_device_id mtk_iommu_of_ids[] = {
 	{ .compatible = "mediatek,mt2712-m4u", .data = &mt2712_data},
 	{ .compatible = "mediatek,mt6779-m4u", .data = &mt6779_data},
+	{ .compatible = "mediatek,mt8168-m4u", .data = &mt8168_data},
 	{ .compatible = "mediatek,mt8173-m4u", .data = &mt8173_data},
 	{ .compatible = "mediatek,mt8183-m4u", .data = &mt8183_data},
 	{}
