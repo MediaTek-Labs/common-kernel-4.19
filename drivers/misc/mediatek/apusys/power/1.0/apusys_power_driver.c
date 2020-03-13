@@ -21,14 +21,15 @@
 // power 2.0
 #include "apu_log.h"
 #include "apusys_power.h"
+#include "apusys_power_debug.h"
 
 // legacy power
 #include "apu_dvfs.h"
 #include "vpu_power_ctl.h"
+#if SUPPORT_MDLA
 #include "mdla_dvfs.h"
+#endif
 #include "spm_mtcmos_ctl.h"
-
-#define DEBUG_OPP_TEST	(0)
 
 int g_pwr_log_level = APUSYS_PWR_LOG_ERR;
 int g_pm_procedure;
@@ -129,25 +130,44 @@ uint64_t apu_get_power_info(uint8_t force)
 }
 EXPORT_SYMBOL(apu_get_power_info);
 
-void apu_power_reg_dump(void)
-{
-}
-EXPORT_SYMBOL(apu_power_reg_dump);
-
-void apu_set_vcore_boost(bool enable)
-{
-
-}
-EXPORT_SYMBOL(apu_set_vcore_boost);
-
-
 static int apusys_power_off(int dev_id)
 {
+	if (dev_id == VPU0)
+		vpu_put_power_nowq(0);
+	else if (dev_id == VPU1)
+		vpu_put_power_nowq(1);
+#if SUPPORT_MDLA
+	else if (dev_id == MDLA0)
+		mdla_put_power(0);
+#endif
+	else
+		return -1;
+
 	return 0;
 }
 
-static int apusys_power_on(int dev_id)
+static int apusys_power_on(int dev_id, uint8_t opp)
 {
+	if (dev_id >= 0 && dev_id < APUSYS_DVFS_USER_NUM) {
+		if (dev_id == VPU0) {
+			// core, vvpu_index, freq_index
+			vpu_opp_mapping_check(0, opp);
+			// core, secure
+			vpu_get_power(0, false);
+		} else if (dev_id == VPU1) {
+			vpu_opp_mapping_check(1, opp);
+			vpu_get_power(1, false);
+#if SUPPORT_MDLA
+		} else if (dev_id == MDLA0) {
+			mdla_opp_mapping_check(0, opp);
+			mdla_get_power(0);
+#endif
+		} else {
+			LOG_ERR("%s fail, unknown user : %d\n",
+						__func__, dev_id);
+		}
+	}
+
 	return 0;
 }
 
@@ -170,6 +190,29 @@ static struct power_device *find_out_device_by_user(enum DVFS_USER user)
 
 	return NULL;
 }
+
+uint8_t apusys_boost_value_to_opp(enum DVFS_USER user, uint8_t boost_value)
+{
+	uint8_t opp = 0;
+
+	if (user == VPU0 || user == VPU1) {
+		opp = vpu_boost_value_to_opp(boost_value);
+#if SUPPORT_MDLA
+	} else if (user == MDLA0) {
+		opp = mdla_boost_value_to_opp(boost_value);
+#endif
+	} else {
+		LOG_ERR("%s, unknown user : %d\n", __func__, user);
+		return -1;
+	}
+
+	LOG_INF("%s, user:%d, boost:%d -> opp:%d\n",
+			__func__, user, boost_value, opp);
+
+	return opp;
+
+}
+EXPORT_SYMBOL(apusys_boost_value_to_opp);
 
 bool apu_get_power_on_status(enum DVFS_USER user)
 {
@@ -209,6 +252,7 @@ find_out_callback_device_by_user(enum POWER_CALLBACK_USER user)
 int apu_device_power_suspend(enum DVFS_USER user, int is_suspend)
 {
 	int ret = 0;
+#if !BRING_UP
 	struct power_device *pwr_dev = NULL;
 
 	pwr_dev = find_out_device_by_user(user);
@@ -217,23 +261,26 @@ int apu_device_power_suspend(enum DVFS_USER user, int is_suspend)
 		return -1;
 	}
 
-	if (is_suspend)
-		g_pm_procedure = 1;
-
 	if (pwr_dev->is_power_on == 0) {
 		LOG_ERR(
 		"APUPWR_OFF_FAIL, not allow user:%d to pwr off twice, is_suspend:%d\n",
 							user, is_suspend);
 		return -ECANCELED;
 	}
-
+#endif
 	LOG_DBG("%s for user:%d, is_suspend:%d\n", __func__, user, is_suspend);
+
+	if (is_suspend)
+		g_pm_procedure = 1;
 
 	if (!g_pm_procedure)
 		apu_pwr_wake_lock();
 
 	ret = apusys_power_off(user);
-
+#if !BRING_UP
+	if (!ret)
+		pwr_dev->is_power_on = 0;
+#endif
 	if (!g_pm_procedure)
 		apu_pwr_wake_unlock();
 
@@ -242,12 +289,12 @@ int apu_device_power_suspend(enum DVFS_USER user, int is_suspend)
 					ret ? 0 : apu_get_power_info(0));
 
 	if (ret) {
+		// apusys_reg_dump();
 		apu_aee_warn("APUPWR_OFF_FAIL", "user:%d, is_suspend:%d\n",
 							user, is_suspend);
 		return -ENODEV;
 	}
 
-	pwr_dev->is_power_on = 0;
 	return 0;
 }
 EXPORT_SYMBOL(apu_device_power_suspend);
@@ -260,8 +307,18 @@ EXPORT_SYMBOL(apu_device_power_off);
 
 int apu_device_power_on(enum DVFS_USER user)
 {
-	struct power_device *pwr_dev = NULL;
+	LOG_DBG(
+	"%s bypass, real power on will be called in apu_device_set_opp\n",
+								__func__);
+	return 0;
+}
+EXPORT_SYMBOL(apu_device_power_on);
+
+static int real_apu_device_power_on(enum DVFS_USER user, uint8_t opp)
+{
 	int ret = 0;
+#if !BRING_UP
+	struct power_device *pwr_dev = NULL;
 
 	pwr_dev = find_out_device_by_user(user);
 	if (pwr_dev == NULL) {
@@ -269,21 +326,24 @@ int apu_device_power_on(enum DVFS_USER user)
 		return -1;
 	}
 
-	g_pm_procedure = 0;
-
 	if (pwr_dev->is_power_on == 1) {
 		LOG_ERR("APUPWR_ON_FAIL, not allow user:%d to pwr on twice\n",
 									user);
 		return -ECANCELED;
 	}
-
+#endif
 	LOG_DBG("%s for user:%d, cnt:%d\n", __func__, user);
+
+	g_pm_procedure = 0;
 
 	if (!g_pm_procedure)
 		apu_pwr_wake_lock();
 
-	ret = apusys_power_on(user);
-
+	ret = apusys_power_on(user, opp);
+#if !BRING_UP
+	if (!ret)
+		pwr_dev->is_power_on = 1;
+#endif
 	if (!g_pm_procedure)
 		apu_pwr_wake_unlock();
 
@@ -292,14 +352,13 @@ int apu_device_power_on(enum DVFS_USER user)
 				ret ? 0 : apu_get_power_info(0));
 
 	if (ret) {
+		// apusys_reg_dump();
 		apu_aee_warn("APUPWR_ON_FAIL", "user:%d\n", user);
 		return -ENODEV;
 	}
 
-	pwr_dev->is_power_on = 1;
 	return 0;
 }
-EXPORT_SYMBOL(apu_device_power_on);
 
 int apu_power_device_register(enum DVFS_USER user, struct platform_device *pdev)
 {
@@ -399,73 +458,9 @@ static void d_work_power_info_func(struct work_struct *work)
 
 void apu_device_set_opp(enum DVFS_USER user, uint8_t opp)
 {
-	LOG_WRN("%s bypass since not support DVFS\n", __func__);
+	real_apu_device_power_on(user, opp);
 }
 EXPORT_SYMBOL(apu_device_set_opp);
-
-static void init_regulator(struct device *pdev)
-{
-	int ret = 0;
-	struct regulator *vvpu_reg_id;
-	struct regulator *vmdla_reg_id;
-	struct regulator *vcore_reg_id;
-
-	pr_info("%s begin\n", __func__);
-
-	vvpu_reg_id = regulator_get(pdev, "vpu");
-	if (!vvpu_reg_id)
-		LOG_ERR("regulator_get vvpu_reg_id failed\n");
-	vmdla_reg_id = regulator_get(pdev, "VMDLA");
-	if (!vmdla_reg_id)
-		LOG_ERR("regulator_get vmdla_reg_id failed\n");
-	vcore_reg_id = regulator_get(pdev, "vcore");
-	if (!vcore_reg_id)
-		LOG_ERR("regulator_get vcore_reg_id failed\n");
-
-	/*--enable regulator--*/
-	ret = regulator_enable(vvpu_reg_id);
-	udelay(200);//slew rate:rising10mV/us
-	if (ret)
-		LOG_ERR("regulator_enable vvpu_reg_id failed\n");
-
-	ret = regulator_enable(vmdla_reg_id);
-	udelay(200);
-	if (ret)
-		LOG_ERR("regulator_enable vmdla_reg_id failed\n");
-
-	ret = regulator_set_voltage(vvpu_reg_id, 650000, 850000);
-	ret = regulator_set_voltage(vmdla_reg_id, 650000, 850000);
-	udelay(100);
-	pr_info("%s vvpu=%d, vmdla=%d, vcore=%d\n", __func__,
-			regulator_get_voltage(vvpu_reg_id),
-			regulator_get_voltage(vmdla_reg_id),
-			regulator_get_voltage(vcore_reg_id));
-
-	ret = regulator_set_voltage(vvpu_reg_id, 650000, 850000);
-	ret = regulator_set_voltage(vmdla_reg_id, 650000, 850000);
-	udelay(100);
-	pr_info("%s vvpu=%d, vmdla=%d, vcore=%d\n", __func__,
-			regulator_get_voltage(vvpu_reg_id),
-			regulator_get_voltage(vmdla_reg_id),
-			regulator_get_voltage(vcore_reg_id));
-
-	ret = regulator_set_voltage(vvpu_reg_id, 550000, 650000);
-	ret = regulator_set_voltage(vmdla_reg_id, 550000, 650000);
-	udelay(100);
-	pr_info("%s vvpu=%d, vmdla=%d, vcore=%d\n", __func__,
-			regulator_get_voltage(vvpu_reg_id),
-			regulator_get_voltage(vmdla_reg_id),
-			regulator_get_voltage(vcore_reg_id));
-
-	regulator_disable(vvpu_reg_id);
-	regulator_disable(vmdla_reg_id);
-	udelay(100);
-
-	regulator_put(vvpu_reg_id);
-	regulator_put(vmdla_reg_id);
-	regulator_put(vcore_reg_id);
-	pr_info("%s end\n", __func__);
-}
 
 static void initial_vpu_power(struct device *dev)
 {
@@ -479,11 +474,13 @@ static void initial_vpu_power(struct device *dev)
 	init_vpu_power_resource(dev);
 }
 
+#if SUPPORT_MDLA
 static void initial_mdla_power(struct platform_device *pdev)
 {
 	pr_info("%s for core %d\n", __func__, 0);
 	mdla_init_hw(0, pdev);
 }
+#endif
 
 #if DEBUG_OPP_TEST
 static void opp_test(void)
@@ -535,10 +532,10 @@ static int apu_power_probe(struct platform_device *pdev)
 		return 0;
 
 	udelay(1000);
-	init_regulator(&pdev->dev);
 	apu_dvfs_init(pdev);
 
 	mutex_init(&power_device_list_mtx);
+	spin_lock_init(&power_info_lock);
 	apu_pwr_wake_init();
 
 	wq = create_workqueue("apu_pwr_drv_wq");
@@ -552,18 +549,24 @@ static int apu_power_probe(struct platform_device *pdev)
 	apusys_spm_mtcmos_init();
 	pm_runtime_enable(&pdev->dev);
 	initial_vpu_power(&pdev->dev);
+#if SUPPORT_MDLA
 	initial_mdla_power(pdev);
+#endif
 #if DEBUG_OPP_TEST
 	opp_test();
 #endif
+
+#if PRE_POWER_ON
 	vpu_opp_check(0, 0, 0); // core, vvpu_index, freq_index
 	vpu_get_power(0, false); // core, secure
 	vpu_opp_check(1, 0, 0);
 	vpu_get_power(1, false);
+#if SUPPORT_MDLA
 	mdla_opp_check(0, 0, 0);
 	mdla_get_power(0);
-
-	//apusys_power_debugfs_init();
+#endif
+#endif
+	apusys_power_debugfs_init();
 
 	return 0;
 
@@ -593,7 +596,7 @@ static int apu_power_remove(struct platform_device *pdev)
 {
 	apu_dvfs_remove(pdev);
 	pm_runtime_disable(&pdev->dev);
-	//apusys_power_debugfs_exit();
+	apusys_power_debugfs_exit();
 
 	mutex_destroy(&power_device_list_mtx);
 

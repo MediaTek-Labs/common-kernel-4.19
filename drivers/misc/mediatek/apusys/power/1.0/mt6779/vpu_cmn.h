@@ -9,7 +9,8 @@
 #include <linux/wait.h>
 #include <linux/seq_file.h>
 #include <linux/interrupt.h>
-#include "vpu_dbg.h"
+
+#include "apu_log.h"
 
 #ifdef CONFIG_MTK_AEE_FEATURE
 #include <aee.h>
@@ -73,22 +74,7 @@ int vpu_dump_power(struct seq_file *s);
  */
 int vpu_set_power_parameter(uint8_t param, int argc, int *args);
 
-/* LOG & AEE */
-#define VPU_TAG "[vpu]"
-#define VPU_DEBUG
-#ifdef VPU_DEBUG
-#define LOG_DBG(format, args...)    pr_debug(VPU_TAG " " format, ##args)
-#else
-#define LOG_DBG(format, args...)
-#endif
-
-#define LOG_DVFS(format, args...) \
-	do { if (g_vpu_log_level > Log_STATE_MACHINE) \
-		pr_info(VPU_TAG " " format, ##args); \
-	} while (0)
-#define LOG_INF(format, args...)    pr_debug(VPU_TAG " " format, ##args)
-#define LOG_WRN(format, args...)    pr_debug(VPU_TAG "[warn] " format, ##args)
-#define LOG_ERR(format, args...)    pr_info(VPU_TAG "[error] " format, ##args)
+#define LOG_DVFS(...)	LOG_DBG(__VA_ARGS__)
 
 #define PRINT_LINE() pr_info(VPU_TAG " %s (%s:%d)\n", \
 		__func__,  __FILE__, __LINE__)

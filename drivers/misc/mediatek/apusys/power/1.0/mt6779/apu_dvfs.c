@@ -300,6 +300,8 @@ int vmdla2_cpe_result;
 static DEFINE_MUTEX(vpu_opp_lock);
 static DEFINE_MUTEX(mdla_opp_lock);
 static DEFINE_MUTEX(power_check_lock);
+static spinlock_t apusys_pm_vcore_lock;
+static spinlock_t apusys_pm_device_lock;
 
 static void get_vvpu_from_efuse(void);
 static void get_vmdla_from_efuse(void);
@@ -391,7 +393,7 @@ bool vvpu_vmdla_vcore_checker(void)
 						vvpu, vmdla, vcore);
 		aee_kernel_warning("dvfs", "%s: failed.", __func__);
 	} else {
-		pr_info("vvpu=%d, vmdla=%d, vcore=%d\n", vvpu, vmdla, vcore);
+		LOG_INF("vvpu=%d, vmdla=%d, vcore=%d\n", vvpu, vmdla, vcore);
 	}
 	mutex_unlock(&power_check_lock);
 	return ret;
@@ -748,7 +750,7 @@ int vvpu_regulator_set_mode(bool enable)
 		return ret;
 	}
 	mutex_lock(&vpu_opp_lock);
-	pr_info("vvpu_reg enable:%d, count:%d\n", enable, vvpu_count);
+	LOG_INF("vvpu_reg enable:%d, count:%d\n", enable, vvpu_count);
 	if (enable) {
 		if (vvpu_count == 0) {
 			//ret = regulator_set_mode(vvpu_reg_id,
@@ -770,7 +772,7 @@ int vvpu_regulator_set_mode(bool enable)
 			vvpu_count--;
 		}
 	}
-	pr_info("vvpu_reg enable:%d, count:%d end\n", enable, vvpu_count);
+	LOG_INF("vvpu_reg enable:%d, count:%d end\n", enable, vvpu_count);
 	mutex_unlock(&vpu_opp_lock);
 	return ret;
 }
@@ -788,7 +790,7 @@ int vmdla_regulator_set_mode(bool enable)
 		return ret;
 	}
 	mutex_lock(&mdla_opp_lock);
-	pr_info("vmdla_reg enable:%d, count:%d\n", enable, vmdla_count);
+	LOG_INF("vmdla_reg enable:%d, count:%d\n", enable, vmdla_count);
 	if (enable) {
 		if (vmdla_count == 0) {
 			ret = regulator_set_voltage(vmdla_reg_id,
@@ -806,7 +808,7 @@ int vmdla_regulator_set_mode(bool enable)
 			vmdla_count--;
 		}
 	}
-	pr_info("vmdla_reg enable:%d, count:%d end\n", enable, vmdla_count);
+	LOG_INF("vmdla_reg enable:%d, count:%d end\n", enable, vmdla_count);
 	mutex_unlock(&mdla_opp_lock);
 	return ret;
 }
@@ -1411,7 +1413,7 @@ static int commit_data(int type, int data)
 	get_vmdla_efuse();
 
 	if (ret < 0) {
-		pr_info("%s: type: 0x%x, data: 0x%x, opp: %d, level: %d\n",
+		LOG_INF("%s: type: 0x%x, data: 0x%x, opp: %d, level: %d\n",
 				__func__, type, data, opp, level);
 		apu_dvfs_dump_reg(NULL);
 		aee_kernel_warning("dvfs", "%s: failed.", __func__);
@@ -1488,12 +1490,16 @@ int apusys_pm_request_arbiter(void)
 	int leading_opp = VVPU_OPP_NUM; // 0: fastest, VVPU_OPP_NUM: slowest
 	int ret = 0;
 
+	spin_lock(&apusys_pm_device_lock);
+
 	// find leading opp in this round
 	for (dev_id = 0 ; dev_id < APUSYS_DVFS_USER_NUM ; dev_id++)
 		if (apusys_pm_device_opp[dev_id] < leading_opp)
 			leading_opp = apusys_pm_device_opp[dev_id];
 
-	pr_info("%s parking voltage (opp1) to avoid vmdla vvpu constraint\n",
+	spin_unlock(&apusys_pm_device_lock);
+
+	LOG_INF("%s parking voltage (opp1) to avoid vmdla vvpu constraint\n",
 								__func__);
 	ret = commit_data(PM_QOS_VVPU_OPP, 1);
 	ret |= commit_data(PM_QOS_VMDLA_OPP, 1);
@@ -1502,7 +1508,7 @@ int apusys_pm_request_arbiter(void)
 		// config regulator
 		for (dev_id = 0 ; dev_id < APUSYS_DVFS_USER_NUM ; dev_id++) {
 
-			pr_info(
+			LOG_INF(
 				"%s device:%d set volt opp = %d (target opp = %d)\n",
 						__func__, dev_id, leading_opp,
 						apusys_pm_device_opp[dev_id]);
@@ -1522,37 +1528,41 @@ int apusys_pm_request_arbiter(void)
 int apusys_pm_update_request(enum DVFS_USER device, int opp)
 {
 	if (device < 0 || device >= APUSYS_DVFS_USER_NUM) {
-		pr_info("%s with illegal device number : %d\n",
+		LOG_INF("%s with illegal device number : %d\n",
 				__func__, device);
 		return -1;
 	}
 
 	if (opp < 0) {
-		pr_info("%s with illegal opp number : %d, device : %d\n",
+		LOG_INF("%s with illegal opp number : %d, device : %d\n",
 				__func__, opp, device);
 		return -1;
 	}
 
 	if ((device == VPU0 || device == VPU1) && (opp > VVPU_OPP_NUM)) {
-		pr_info("%s with illegal opp number : %d, device : %d\n",
+		LOG_INF("%s with illegal opp number : %d, device : %d\n",
 				__func__, opp, device);
 		return -1;
 	}
 
 	if (device == MDLA0 && (opp > VMDLA_OPP_NUM)) {
-		pr_info("%s with illegal opp number : %d, device : %d\n",
+		LOG_INF("%s with illegal opp number : %d, device : %d\n",
 				__func__, opp, device);
 		return -1;
 	}
 
+	spin_lock(&apusys_pm_device_lock);
+
 	if (apusys_pm_device_opp[device] != opp) {
-		pr_info("%s device:%d, volt opp %d -> %d\n", __func__, device,
+		LOG_INF("%s device:%d, volt opp %d -> %d\n", __func__, device,
 				apusys_pm_device_opp[device], opp);
 		apusys_pm_device_opp[device] = opp;
 	} else {
-		pr_info("%s device:%d volt opp %d (no change)\n",
+		LOG_INF("%s device:%d volt opp %d (no change)\n",
 						__func__, device, opp);
 	}
+
+	spin_unlock(&apusys_pm_device_lock);
 
 	return 0;
 }
@@ -1566,6 +1576,7 @@ int apusys_pm_vcore(enum DVFS_USER device, int volt)
 	if (volt < 10 * VCORE_DVFS_LOW_BOUND)
 		volt = 10 * VCORE_DVFS_LOW_BOUND;
 
+	spin_lock(&apusys_pm_vcore_lock);
 	vcore_request[device] = volt;
 
 	/*
@@ -1573,17 +1584,20 @@ int apusys_pm_vcore(enum DVFS_USER device, int volt)
 	 */
 	for (dev_id = 0 ; dev_id < APUSYS_DVFS_USER_NUM ; dev_id++) {
 		if (vcore_request[dev_id] > volt) {
-			pr_info(
+			LOG_INF(
 			"%s device:%d, target:%d abort (dev:%d hold volt: %d)\n",
 						__func__, device, volt,
 						dev_id, vcore_request[dev_id]);
+			spin_unlock(&apusys_pm_vcore_lock);
 			return -1;
 		}
 	}
 
+	spin_unlock(&apusys_pm_vcore_lock);
+
 	ret = regulator_set_voltage(vcore_reg_id, volt, volt);
 
-	pr_info("%s device:%d, target:%d, ret:%d, volt:%d\n",
+	LOG_INF("%s device:%d, target:%d, ret:%d, volt:%d\n",
 					__func__, device, volt, ret,
 					regulator_get_voltage(vcore_reg_id));
 	return ret;
@@ -1601,7 +1615,7 @@ char *apu_dvfs_dump_reg(char *ptr)
 	if (ptr)
 		ptr += sprintf(ptr, "%s\n", buf);
 	else
-		pr_info("%s\n", buf);
+		LOG_INF("%s\n", buf);
 
 	return ptr;
 }
@@ -1612,8 +1626,8 @@ int apu_dvfs_init(struct platform_device *pdev)
 	struct device_node *ct_node = NULL;
 	u32 ct_flag = 0;
 
-	g_vpu_log_level = 1;
-	pr_info("%s g_vpu_log_level = %d\n", __func__, g_vpu_log_level);
+	spin_lock_init(&apusys_pm_vcore_lock);
+	spin_lock_init(&apusys_pm_device_lock);
 
 	/*enable Vvpu Vmdla*/
 	/*--Get regulator handle--*/

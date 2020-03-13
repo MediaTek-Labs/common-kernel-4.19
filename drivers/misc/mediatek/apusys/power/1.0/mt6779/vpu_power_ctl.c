@@ -426,6 +426,28 @@ int get_vpu_opp_to_freq(uint8_t step)
 }
 EXPORT_SYMBOL(get_vpu_opp_to_freq);
 
+void vpu_opp_mapping_check(int core, int vpu_opp)
+{
+	int vvpu_opp_index = 0;
+	int vpu_freq_index = 0;
+
+	if (vpu_opp < VPU_MAX_NUM_OPPS) {
+		vvpu_opp_index = opps.vvpu.opp_map[vpu_opp];
+		vpu_freq_index = opps.dsp.opp_map[vpu_opp];
+
+		LOG_DBG(
+		"%s core:%d vpu_opp:%d vvpu_opp_index:%d vpu_freq_index:%d\n",
+						__func__, core, vpu_opp,
+						vvpu_opp_index, vpu_freq_index);
+	} else {
+		LOG_ERR("%s wrong opp(%d) force assign 0\n", __func__, vpu_opp);
+	}
+
+	// FIXME: remove me after bringup finish
+	opp_keep_flag = false;
+	vpu_opp_check(core, vvpu_opp_index, vpu_freq_index);
+}
+
 /* expected range, vvpu_index: 0~15 */
 /* expected range, freq_index: 0~15 */
 //void vpu_opp_check(int core, uint8_t vcore_index, uint8_t freq_index)
@@ -530,8 +552,7 @@ void vpu_opp_check(int core, uint8_t vvpu_index, uint8_t freq_index)
 			if ((force_change_vvpu_opp[core] == false) &&
 				(freq_index > opps.dspcore[core].index) &&
 				(opp_keep_flag)) {
-				if (g_vpu_log_level > Log_ALGO_OPP_INFO)
-					LOG_INF("%s(%d) %s (%d/%d_%d/%d)\n",
+				LOG_DBG("%s(%d) %s (%d/%d_%d/%d)\n",
 						__func__,
 						core,
 						"dsp keep high",
@@ -613,8 +634,7 @@ void vpu_opp_check(int core, uint8_t vvpu_index, uint8_t freq_index)
 			}
 		} else {
 			/* vcore not change & dsp not change */
-			if (g_vpu_log_level > Log_ALGO_OPP_INFO)
-				LOG_INF("opp_check(%d) vcore/dsp no change\n",
+			LOG_DBG("opp_check(%d) vcore/dsp no change\n",
 						core);
 
 			opp_keep_flag = true;
@@ -1121,12 +1141,10 @@ int vpu_enable_regulator_and_clock(int core)
 	/*--enable regulator--*/
 	ret1 = vvpu_regulator_set_mode(true);
 	udelay(100);//slew rate:rising10mV/us
-	if (g_vpu_log_level > Log_STATE_MACHINE)
-		LOG_INF("enable vvpu ret:%d\n", ret1);
+	LOG_DBG("enable vvpu ret:%d\n", ret1);
 	ret1 = vmdla_regulator_set_mode(true);
 	udelay(100);//slew rate:rising10mV/us
-	if (g_vpu_log_level > Log_STATE_MACHINE)
-		LOG_INF("enable vmdla ret:%d\n", ret1);
+	LOG_DBG("enable vmdla ret:%d\n", ret1);
 	vvpu_vmdla_vcore_checker();
 
 	get_vvpu_opp = vpu_get_hw_vvpu_opp(core);
@@ -1342,8 +1360,7 @@ clk_on:
 	}
 
 out:
-	if (g_vpu_log_level > Log_STATE_MACHINE)
-		apu_get_power_info_internal();
+	apu_get_power_info_internal();
 	is_power_on[core] = true;
 	force_change_vcore_opp[core] = false;
 	force_change_vvpu_opp[core] = false;
@@ -1580,8 +1597,7 @@ out:
 		opps.dspcore[core].index = 15;
 	opps.dsp.index = 9;
 	opps.ipu_if.index = 9;
-	if (g_vpu_log_level > Log_STATE_MACHINE)
-		LOG_INF("[vpu_%d] dis_rc -\n", core);
+	LOG_DBG("[vpu_%d] dis_rc -\n", core);
 	return ret;
 #endif
 }
@@ -1754,8 +1770,7 @@ int vpu_get_power(int core, bool secure)
 		}
 	}
 
-	if (g_vpu_log_level > Log_STATE_MACHINE)
-		apu_get_power_info_internal();
+	apu_get_power_info_internal();
 	LOG_DBG("[vpu_%d/%d] gp -\n", core, power_counter[core]);
 
 	if (ret == POWER_ON_MAGIC)

@@ -3,12 +3,13 @@
  * Copyright (c) 2019 MediaTek Inc.
  */
 
-#include "mdla_debug.h"
 #include "mdla_dvfs.h"
 
 #include <linux/pm_runtime.h>
 #include <linux/types.h>
 #include <linux/uaccess.h>
+
+#include "mdla_debug.h"
 
 // FIXME: cowork func not ready yet
 #define ENABLE_MTK_DEVINFO	(0)
@@ -70,7 +71,7 @@ struct MDLA_OPP_INFO mdla_power_table[MDLA_OPP_NUM] = {
 #define CMD_WAIT_TIME_MS    (3 * 1000)
 #define OPP_WAIT_TIME_MS    (300)
 #define PWR_KEEP_TIME_MS    (0)
-#define OPP_KEEP_TIME_MS    (0)
+#define OPP_KEEP_TIME_MS    (3000)
 #define POWER_ON_MAGIC		(2)
 #define OPPTYPE_VCORE		(0)
 #define OPPTYPE_DSPFREQ		(1)
@@ -214,7 +215,6 @@ static int mdla_boot_up(int core);
 static int mdla_shut_down(int core);
 static bool mdla_update_lock_power_parameter
 	(struct mdla_lock_power *mdla_lock_power);
-static uint8_t mdla_boost_value_to_opp(uint8_t boost_value);
 static int mdla_lock_set_power(struct mdla_lock_power *mdla_lock_power);
 
 static inline int Map_MDLA_Freq_Table(int freq_opp)
@@ -675,6 +675,29 @@ static void get_segment_from_efuse(void)
 		break;
 	}
 	mdla_dvfs_debug("mdla segment_max_opp %d\n", segment_max_opp);
+}
+
+void mdla_opp_mapping_check(int core, int mdla_opp)
+{
+	int vmdla_opp_index = 0;
+	int mdla_freq_index = 0;
+
+	if (mdla_opp < MDLA_MAX_NUM_OPPS) {
+		vmdla_opp_index = opps.vmdla.opp_map[mdla_opp];
+		mdla_freq_index = opps.dsp.opp_map[mdla_opp];
+
+		LOG_DBG(
+		"%s core:%d mdla_opp:%d vmdla_opp_index:%d mdla_freq_index:%d\n",
+					__func__, core, mdla_opp,
+					vmdla_opp_index, mdla_freq_index);
+	} else {
+		LOG_ERR("%s wrong opp(%d) force assign 0\n",
+						__func__, mdla_opp);
+	}
+
+	// FIXME: remove me after bringup finish
+	opp_keep_flag = false;
+	mdla_opp_check(core, vmdla_opp_index, mdla_freq_index);
 }
 
 /* expected range, vmdla_index: 0~15 */
@@ -1478,8 +1501,7 @@ mdla_dvfs_debug("[mdla_%d] adjust(%d,%d) result vmdla=%d\n",
 	}
 
 out:
-	if (mdla_klog & MDLA_DBG_DVFS)
-		apu_get_power_info_internal();
+	apu_get_power_info_internal();
 	is_power_on[core] = true;
 	force_change_vcore_opp[core] = false;
 	force_change_vmdla_opp[core] = false;
@@ -1790,8 +1812,7 @@ int mdla_get_power(int core)
 		}
 	}
 	LOG_DBG("[mdla_%d/%d] gp -\n", core, power_counter[core]);
-	if (mdla_klog & MDLA_DBG_DVFS)
-		apu_get_power_info_internal();
+	apu_get_power_info_internal();
 
 	if (ret == POWER_ON_MAGIC)
 		return 0;
@@ -2412,7 +2433,7 @@ out:
 	return ret;
 }
 
-static uint8_t mdla_boost_value_to_opp(uint8_t boost_value)
+uint8_t mdla_boost_value_to_opp(uint8_t boost_value)
 {
 	int ret = 0;
 /* set dsp frequency - 0:788 MHz, 1:700 MHz, 2:606 MHz, 3:594 MHz*/

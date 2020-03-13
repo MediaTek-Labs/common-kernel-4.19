@@ -118,7 +118,9 @@ int get_mdla_ceiling_opp(void);
 int get_mdla_opp_to_freq(uint8_t step);
 void mdla_put_power(int core);
 int mdla_get_power(int core);
+void mdla_opp_mapping_check(int core, int mdla_opp);
 void mdla_opp_check(int core, uint8_t vmdla_index, uint8_t freq_index);
+uint8_t mdla_boost_value_to_opp(uint8_t boost_value);
 
 #ifndef MTK_MDLA_FPGA_PORTING
 int mdla_init_hw(int core, struct platform_device *pdev);

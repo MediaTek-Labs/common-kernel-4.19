@@ -10,6 +10,12 @@
  * for apusys power platform device API
  ******************************************************/
 
+#define DEBUG_OPP_TEST		(0)
+#define PRE_POWER_ON		(0)
+#define APUSYS_MAX_NUM_OPPS	(16)
+#define	SUPPORT_MDLA		(1)
+#define BRING_UP		(1)
+
 // unsed in power 1.0
 enum POWER_CALLBACK_USER {
 	IOMMU = 0,

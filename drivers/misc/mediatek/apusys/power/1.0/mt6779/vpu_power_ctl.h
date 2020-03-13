@@ -19,7 +19,7 @@
 
 #define OPP_WAIT_TIME_MS    (300)
 #define PWR_KEEP_TIME_MS    (0)
-#define OPP_KEEP_TIME_MS    (0)
+#define OPP_KEEP_TIME_MS    (3000)
 #define SDSP_KEEP_TIME_MS   (5000)
 #define POWER_ON_MAGIC          (2)
 #define OPPTYPE_VCORE           (0)
@@ -124,4 +124,6 @@ extern void vpu_opp_check(int core, uint8_t vvpu_index, uint8_t freq_index);
 extern int vpu_get_power(int core, bool secure);
 extern void vpu_put_power(int core, enum VpuPowerOnType type);
 extern void vpu_put_power_nowq(int core);
+extern uint8_t vpu_boost_value_to_opp(uint8_t boost_value);
+extern void vpu_opp_mapping_check(int core, int vpu_opp);
 #endif

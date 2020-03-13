@@ -36,9 +36,9 @@ subdir-ccflags-y += -DMTK_VPU_CORE=$(MTK_VPU_CORE)
 
 obj-m += apu_power.o
 apu_power-objs:= $(PDIR)/apu_dvfs.o \
-		$(PDIR)/vpu_power_ctl.o $(PDIR)/vpu_dbg.o \
-		$(PDIR)/mdla_debug.o $(PDIR)/mdla_dvfs.o \
-		$(PDIR)/spm_mtcmos_ctl.o apusys_power_driver.o
+		$(PDIR)/vpu_power_ctl.o $(PDIR)/mdla_dvfs.o \
+		$(PDIR)/spm_mtcmos_ctl.o $(PDIR)/apu_platform_debug.o \
+		apusys_power_driver.o apusys_power_debug.o
 
 
 # PER_OBSERVER support
