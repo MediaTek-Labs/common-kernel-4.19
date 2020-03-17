@@ -5,7 +5,6 @@
 
 #include "mdla_dvfs.h"
 
-#include <linux/pm_runtime.h>
 #include <linux/types.h>
 #include <linux/uaccess.h>
 
@@ -71,7 +70,7 @@ struct MDLA_OPP_INFO mdla_power_table[MDLA_OPP_NUM] = {
 #define CMD_WAIT_TIME_MS    (3 * 1000)
 #define OPP_WAIT_TIME_MS    (300)
 #define PWR_KEEP_TIME_MS    (0)
-#define OPP_KEEP_TIME_MS    (3000)
+#define OPP_KEEP_TIME_MS    (0)
 #define POWER_ON_MAGIC		(2)
 #define OPPTYPE_VCORE		(0)
 #define OPPTYPE_DSPFREQ		(1)
@@ -138,7 +137,8 @@ static struct clk *mtcmos_vpu_vcore_shutdown;
 static struct clk *mtcmos_vpu_conn_shutdown;
 static struct clk *mtcmos_vpu_core2_shutdown;
 #else
-//static int (*mtcmos_dis)(int) = NULL;
+static int (*mtcmos_dis)(int) =
+			spm_mtcmos_ctrl_mm_disp_shut_down;
 static int (*mtcmos_vpu_vcore_shutdown)(int) =
 			spm_mtcmos_ctrl_vpu_vcore_shut_down;
 static int (*mtcmos_vpu_conn_shutdown)(int) =
@@ -1415,12 +1415,7 @@ mdla_dvfs_debug("[mdla_%d] adjust(%d,%d) result vmdla=%d\n",
 	ENABLE_MDLA_CLK(clk_top_ipu_if_sel);
 	ENABLE_MDLA_CLK(clk_top_dsp3_sel);
 
-#if CCF_MTCMOS_SUPPORT
 	ENABLE_MDLA_MTCMOS(mtcmos_dis);
-#else
-	if (mm_dis_cnt++ == 0)
-		pm_runtime_get_sync(&g_pdev->dev);
-#endif
 	ENABLE_MDLA_MTCMOS(mtcmos_vpu_vcore_shutdown);
 	ENABLE_MDLA_MTCMOS(mtcmos_vpu_conn_shutdown);
 	ENABLE_MDLA_MTCMOS(mtcmos_vpu_core2_shutdown);
@@ -1554,28 +1549,6 @@ static int mdla_disable_regulator_and_clock(int core)
 	mdla_dvfs_debug("[mdla_%d] dis_rc + (0x%x)\n", core, smi_bus_vpu_value);
 #endif
 
-#if CCF_MTCMOS_SUPPORT
-#define DISABLE_MDLA_MTCMOS(clk) \
-	{ \
-		if (clk != NULL) { \
-			clk_disable_unprepare(clk); \
-		} else { \
-			LOG_WRN("mtcmos not existed: %s\n", #clk); \
-		} \
-	}
-#else
-#define DISABLE_MDLA_MTCMOS(func) (*(func))(STA_POWER_DOWN)
-#endif
-	DISABLE_MDLA_MTCMOS(mtcmos_vpu_core2_shutdown);
-	DISABLE_MDLA_MTCMOS(mtcmos_vpu_vcore_shutdown);
-	DISABLE_MDLA_MTCMOS(mtcmos_vpu_conn_shutdown);
-#if CCF_MTCMOS_SUPPORT
-	DISABLE_MDLA_MTCMOS(mtcmos_dis);
-#else
-	if (--mm_dis_cnt == 0)
-		pm_runtime_put_sync(&g_pdev->dev);
-#endif
-
 #define DISABLE_MDLA_CLK(clk) \
 	{ \
 		if (clk != NULL) { \
@@ -1627,6 +1600,23 @@ static int mdla_disable_regulator_and_clock(int core)
 	DISABLE_MDLA_CLK(clk_mmsys_gals_comm1);
 	DISABLE_MDLA_CLK(clk_mmsys_smi_common);
 	mdla_dvfs_debug("[mdla_%d] dis_rc flag4\n", core);
+
+#if CCF_MTCMOS_SUPPORT
+#define DISABLE_MDLA_MTCMOS(clk) \
+	{ \
+		if (clk != NULL) { \
+			clk_disable_unprepare(clk); \
+		} else { \
+			LOG_WRN("mtcmos not existed: %s\n", #clk); \
+		} \
+	}
+#else
+#define DISABLE_MDLA_MTCMOS(func) (*(func))(STA_POWER_DOWN)
+#endif
+	DISABLE_MDLA_MTCMOS(mtcmos_vpu_core2_shutdown);
+	DISABLE_MDLA_MTCMOS(mtcmos_vpu_vcore_shutdown);
+	DISABLE_MDLA_MTCMOS(mtcmos_vpu_conn_shutdown);
+	DISABLE_MDLA_MTCMOS(mtcmos_dis);
 
 	DISABLE_MDLA_CLK(clk_top_dsp_sel);
 	DISABLE_MDLA_CLK(clk_top_ipu_if_sel);

@@ -10,6 +10,7 @@
 #include <linux/kernel.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
+#include <linux/pm_runtime.h>
 #include <linux/spinlock.h>
 
 #include <linux/arm-smccc.h>
@@ -21,6 +22,7 @@ static int DBG_ID;
 static int DBG_STA;
 static int DBG_STEP;
 
+static struct platform_device *g_pdev;
 static struct device_node *infracfg_node;
 static struct device_node *spm_node;
 static struct device_node *infra_node;
@@ -47,8 +49,7 @@ static int vpu_conn_shut_down(int state);
 static int vpu_core0_shut_down(int state);
 static int vpu_core1_shut_down(int state);
 static int vpu_core2_shut_down(int state);
-
-int mm_dis_cnt;
+static int mm_disp_shut_down(int state);
 
 enum res_type {
 	RES_MTCMOS = 0,
@@ -76,6 +77,7 @@ static struct resource_ctl_unit apusys_mtcmos_array[] = {
 	_RES(VPU_CORE0, 0, "vpu_core0", vpu_core0_shut_down),
 	_RES(VPU_CORE1, 0, "vpu_core1", vpu_core1_shut_down),
 	_RES(VPU_CORE2, 0, "vpu_core2", vpu_core2_shut_down),
+	_RES(MM_DISP, 0, "mm_disp", mm_disp_shut_down),
 };
 
 /*
@@ -236,8 +238,15 @@ int spm_mtcmos_ctrl_vpu_core2_shut_down(int state)
 	return resource_ctl_lock(RES_MTCMOS, VPU_CORE2, state);
 }
 
-int apusys_spm_mtcmos_init(void)
+int spm_mtcmos_ctrl_mm_disp_shut_down(int state)
 {
+	return resource_ctl_lock(RES_MTCMOS, MM_DISP, state);
+}
+
+int apusys_spm_mtcmos_init(struct platform_device *pdev)
+{
+	g_pdev = pdev;
+
 	infracfg_node = of_find_compatible_node(NULL, NULL,
 					"mediatek,mt6779-infracfg_ao");
 	if (infracfg_node) {
@@ -331,6 +340,14 @@ int apusys_spm_mtcmos_init(void)
 
 err_out:
 	return -1;
+}
+
+static int mm_disp_shut_down(int state)
+{
+	if (state == STA_POWER_DOWN)
+		pm_runtime_put_sync(&g_pdev->dev);
+	else
+		pm_runtime_get_sync(&g_pdev->dev);
 }
 
 static int vpu_atf_vcore_cg_ctl(int state)

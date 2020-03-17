@@ -546,7 +546,7 @@ static int apu_power_probe(struct platform_device *pdev)
 
 	queue_work(wq, &d_work_power_info);
 
-	apusys_spm_mtcmos_init();
+	apusys_spm_mtcmos_init(pdev);
 	pm_runtime_enable(&pdev->dev);
 	initial_vpu_power(&pdev->dev);
 #if SUPPORT_MDLA

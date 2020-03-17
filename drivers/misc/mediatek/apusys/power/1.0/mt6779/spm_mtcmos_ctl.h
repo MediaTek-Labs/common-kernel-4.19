@@ -291,8 +291,7 @@ int spm_mtcmos_ctrl_vpu_conn_shut_down(int state);
 int spm_mtcmos_ctrl_vpu_core0_shut_down(int state);
 int spm_mtcmos_ctrl_vpu_core1_shut_down(int state);
 int spm_mtcmos_ctrl_vpu_core2_shut_down(int state);
+int spm_mtcmos_ctrl_mm_disp_shut_down(int state);
 void debug_reg(void);
-
-extern int mm_dis_cnt;
 
 #endif //_MT6779_SPM_MTCMOS_CTL_H_

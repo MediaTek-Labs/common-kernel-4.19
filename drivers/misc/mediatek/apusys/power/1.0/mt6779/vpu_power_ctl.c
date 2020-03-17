@@ -6,7 +6,6 @@
 #include <linux/slab.h>
 #include <linux/clk.h>
 #include <linux/workqueue.h>
-#include <linux/pm_runtime.h>
 
 // pmqos do not support vvpu, vmdla, vcore voting anymore
 //#define ENABLE_PMQOS
@@ -1273,12 +1272,7 @@ clk_on:
 	ENABLE_VPU_CLK(clk_top_dsp1_sel);
 	ENABLE_VPU_CLK(clk_top_dsp2_sel);
 
-#if CCF_MTCMOS_SUPPORT
 	ENABLE_VPU_MTCMOS(mtcmos_dis);
-#else
-	if (mm_dis_cnt++ == 0)
-		pm_runtime_get_sync(vpu_device->dev[0]);
-#endif
 	ENABLE_VPU_MTCMOS(mtcmos_vpu_vcore_shutdown);
 	ENABLE_VPU_MTCMOS(mtcmos_vpu_conn_shutdown);
 	ENABLE_VPU_MTCMOS(mtcmos_vpu_core0_shutdown);
@@ -1388,12 +1382,7 @@ void vpu_enable_mtcmos(void)
 #define ENABLE_VPU_MTCMOS(func) (*(func))(STA_POWER_ON)
 #endif
 
-#if CCF_MTCMOS_SUPPORT
 	ENABLE_VPU_MTCMOS(mtcmos_dis);
-#else
-	if (mm_dis_cnt++ == 0)
-		pm_runtime_get_sync(vpu_device->dev[0]);
-#endif
 	ENABLE_VPU_MTCMOS(mtcmos_vpu_vcore_shutdown);
 	ENABLE_VPU_MTCMOS(mtcmos_vpu_conn_shutdown);
 	ENABLE_VPU_MTCMOS(mtcmos_vpu_core0_shutdown);
@@ -1427,12 +1416,7 @@ void vpu_disable_mtcmos(void)
 	DISABLE_VPU_MTCMOS(mtcmos_vpu_core0_shutdown);
 	DISABLE_VPU_MTCMOS(mtcmos_vpu_vcore_shutdown);
 	DISABLE_VPU_MTCMOS(mtcmos_vpu_conn_shutdown);
-#if CCF_MTCMOS_SUPPORT
 	DISABLE_VPU_MTCMOS(mtcmos_dis);
-#else
-	if (--mm_dis_cnt == 0)
-		pm_runtime_put_sync(vpu_device->dev[0]);
-#endif
 
 #undef DISABLE_VPU_MTCMOS
 }
@@ -1442,7 +1426,6 @@ int vpu_disable_regulator_and_clock(int core)
 {
 	int ret = 0;
 	int ret1 = 0;
-	int dbg_step = 0;
 
 #ifdef MTK_VPU_FPGA_PORTING
 	LOG_INF("%s skip at FPGA\n", __func__);
@@ -1481,31 +1464,6 @@ int vpu_disable_regulator_and_clock(int core)
 	LOG_DVFS("[vpu_%d] dis_rc + (0x%x)\n", core, smi_bus_vpu_value);
 #endif
 
-#if CCF_MTCMOS_SUPPORT
-#define DISABLE_VPU_MTCMOS(clk) \
-	{ \
-		if (clk != NULL) { \
-			clk_disable_unprepare(clk); \
-		} else { \
-			LOG_WRN("mtcmos not existed: %s\n", #clk); \
-		} \
-	}
-#else
-#define DISABLE_VPU_MTCMOS(func) (*(func))(STA_POWER_DOWN)
-#endif
-	pr_info("%s dbg_step : %d\n", __func__, ++dbg_step);
-	DISABLE_VPU_MTCMOS(mtcmos_vpu_core1_shutdown);
-	DISABLE_VPU_MTCMOS(mtcmos_vpu_core0_shutdown);
-	DISABLE_VPU_MTCMOS(mtcmos_vpu_vcore_shutdown);
-	DISABLE_VPU_MTCMOS(mtcmos_vpu_conn_shutdown);
-#if CCF_MTCMOS_SUPPORT
-	DISABLE_VPU_MTCMOS(mtcmos_dis);
-#else
-	if (--mm_dis_cnt == 0)
-		pm_runtime_put_sync(vpu_device->dev[0]);
-#endif
-
-	pr_info("%s dbg_step : %d\n", __func__, ++dbg_step);
 #define DISABLE_VPU_CLK(clk) \
 	{ \
 		if (clk != NULL) { \
@@ -1545,7 +1503,6 @@ int vpu_disable_regulator_and_clock(int core)
 	// move vcore cg ctl to atf
 	// atf_vcore_cg_ctl(0);
 
-	pr_info("%s dbg_step : %d\n", __func__, ++dbg_step);
 	DISABLE_VPU_CLK(clk_mmsys_gals_ipu2mm);
 	DISABLE_VPU_CLK(clk_mmsys_gals_ipu12mm);
 	DISABLE_VPU_CLK(clk_mmsys_gals_comm0);
@@ -1553,7 +1510,24 @@ int vpu_disable_regulator_and_clock(int core)
 	DISABLE_VPU_CLK(clk_mmsys_smi_common);
 	LOG_DBG("[vpu_%d] dis_rc flag4\n", core);
 
-	pr_info("%s dbg_step : %d\n", __func__, ++dbg_step);
+#if CCF_MTCMOS_SUPPORT
+#define DISABLE_VPU_MTCMOS(clk) \
+	{ \
+		if (clk != NULL) { \
+			clk_disable_unprepare(clk); \
+		} else { \
+			LOG_WRN("mtcmos not existed: %s\n", #clk); \
+		} \
+	}
+#else
+#define DISABLE_VPU_MTCMOS(func) (*(func))(STA_POWER_DOWN)
+#endif
+	DISABLE_VPU_MTCMOS(mtcmos_vpu_core1_shutdown);
+	DISABLE_VPU_MTCMOS(mtcmos_vpu_core0_shutdown);
+	DISABLE_VPU_MTCMOS(mtcmos_vpu_vcore_shutdown);
+	DISABLE_VPU_MTCMOS(mtcmos_vpu_conn_shutdown);
+	DISABLE_VPU_MTCMOS(mtcmos_dis);
+
 	DISABLE_VPU_CLK(clk_top_dsp_sel);
 	DISABLE_VPU_CLK(clk_top_ipu_if_sel);
 	DISABLE_VPU_CLK(clk_top_dsp1_sel);
@@ -1582,7 +1556,6 @@ int vpu_disable_regulator_and_clock(int core)
 			core, regulator_get_voltage(vvpu_reg_id));
 out:
 
-	pr_info("%s dbg_step : %d\n", __func__, ++dbg_step);
 	/*--disable regulator--*/
 	ret1 = vmdla_regulator_set_mode(false);
 	udelay(100);//slew rate:rising10mV/us

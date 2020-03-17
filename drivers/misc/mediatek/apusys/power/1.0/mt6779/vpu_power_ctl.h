@@ -19,7 +19,7 @@
 
 #define OPP_WAIT_TIME_MS    (300)
 #define PWR_KEEP_TIME_MS    (0)
-#define OPP_KEEP_TIME_MS    (3000)
+#define OPP_KEEP_TIME_MS    (0)
 #define SDSP_KEEP_TIME_MS   (5000)
 #define POWER_ON_MAGIC          (2)
 #define OPPTYPE_VCORE           (0)
