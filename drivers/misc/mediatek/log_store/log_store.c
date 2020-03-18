@@ -29,12 +29,14 @@ static char *pbuff;
 static struct pl_lk_log *dram_curlog_header;
 static struct dram_buf_header *sram_dram_buff;
 static bool early_log_disable;
+struct proc_dir_entry *entry;
+
 
 #define EXPDB_PATH "/dev/block/platform/bootdevice/by-name/expdb"
 
 #define LOG_BLOCK_SIZE (512)
 
-#ifdef CONFIG_MTK_DRAM_LOG_STORE
+#if IS_ENABLED(CONFIG_MTK_DRAM_LOG_STORE)
 /* set the flag whether store log to emmc in next boot phase in pl */
 void store_log_to_emmc_enable(bool value)
 {
@@ -64,6 +66,7 @@ void log_store_bootup(void)
 	store_log_to_emmc_enable(false);
 }
 
+#ifndef MODULE
 int set_emmc_config(int type, int value)
 {
 	int fd;
@@ -140,6 +143,7 @@ int read_emmc_config(struct log_emmc_header *log_header)
 	return 0;
 }
 #endif
+#endif
 
 static void *remap_lowmem(phys_addr_t start, phys_addr_t size)
 {
@@ -213,8 +217,6 @@ static const struct file_operations pl_lk_file_ops = {
 
 static int __init log_store_late_init(void)
 {
-	struct proc_dir_entry *entry;
-
 	if (!sram_dram_buff) {
 		pr_notice("log_store: sram header is null.\n");
 		dram_log_store_status = BUFF_ALLOC_ERROR;
@@ -267,6 +269,7 @@ static int __init log_store_late_init(void)
 	return 0;
 }
 
+#ifndef MODULE
 /* need mapping virtual address to phy address */
 static void store_printk_buff(void)
 {
@@ -290,8 +293,9 @@ static void store_printk_buff(void)
 		sram_dram_buff->klog_size,
 		sram_dram_buff->flag);
 }
+#endif
 
-#ifdef CONFIG_MTK_DRAM_LOG_STORE
+#if IS_ENABLED(CONFIG_MTK_DRAM_LOG_STORE)
 void disable_early_log(void)
 {
 	pr_notice("log_store: %s.\n", __func__);
@@ -309,7 +313,7 @@ void disable_early_log(void)
 static int __init log_store_early_init(void)
 {
 
-#ifdef CONFIG_MTK_DRAM_LOG_STORE
+#if IS_ENABLED(CONFIG_MTK_DRAM_LOG_STORE)
 	/*pr_notice("log_store: sram header is null.\n");*/
 	sram_header = ioremap_wc(CONFIG_MTK_DRAM_LOG_STORE_ADDR,
 		CONFIG_MTK_DRAM_LOG_STORE_SIZE);
@@ -336,16 +340,38 @@ static int __init log_store_early_init(void)
 		return -1;
 	}
 
+#ifndef MODULE
 	/* store printk log buff information to DRAM */
 	store_printk_buff();
+#endif
 
 	pr_notice("sig 0x%x flag 0x%x add 0x%x size 0x%x offsize 0x%x point 0x%x\n",
 		sram_dram_buff->sig, sram_dram_buff->flag,
 		sram_dram_buff->buf_addr, sram_dram_buff->buf_size,
 		sram_dram_buff->buf_offsize, sram_dram_buff->buf_point);
 
+#ifdef MODULE
+	log_store_late_init();
+#endif
+
 	return 0;
 }
 
+#ifdef MODULE
+static void __exit log_store_exit(void)
+{
+	if (entry)
+		proc_remove(entry);
+}
+
+
+module_init(log_store_early_init);
+module_exit(log_store_exit);
+#else
 early_initcall(log_store_early_init);
 late_initcall(log_store_late_init);
+#endif
+
+MODULE_LICENSE("GPL");
+MODULE_DESCRIPTION("MediaTek LogStore Driver");
+MODULE_AUTHOR("MediaTek Inc.");

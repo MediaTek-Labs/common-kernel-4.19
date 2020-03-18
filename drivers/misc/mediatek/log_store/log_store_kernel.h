@@ -92,12 +92,24 @@ struct log_emmc_header {
 	u32 reserve[10];
 };
 
-#ifdef CONFIG_MTK_DRAM_LOG_STORE
+#if IS_ENABLED(CONFIG_MTK_DRAM_LOG_STORE)
 void log_store_bootup(void);
 void store_log_to_emmc_enable(bool value);
 void disable_early_log(void);
+#ifdef MODULE
+static inline int set_emmc_config(int type, int value)
+{
+	return 0;
+}
+
+static inline int read_emmc_config(struct log_emmc_header *log_header)
+{
+	return 0;
+}
+#else
 int set_emmc_config(int type, int value);
 int read_emmc_config(struct log_emmc_header *log_header);
+#endif
 #else
 
 static inline void  log_store_bootup(void)
