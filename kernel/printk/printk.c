@@ -507,12 +507,13 @@ void set_detect_count(int count)
 	pr_info("Printk too much criteria: %d  delay_flag: %d\n",
 		detect_count, detect_count_change);
 }
+EXPORT_SYMBOL_GPL(set_detect_count);
 
 int get_detect_count(void)
 {
 	return detect_count;
 }
-
+EXPORT_SYMBOL_GPL(get_detect_count);
 
 void set_logtoomuch_enable(int value)
 {

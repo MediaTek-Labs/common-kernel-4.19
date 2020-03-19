@@ -57,8 +57,6 @@
 #define TASK_STATE_TO_CHAR_STR "RSDTtXZxKWPNn"
 #endif
 
-#define CONFIG_MTK_ENG_BUILD
-
 #ifdef CONFIG_MTK_HANG_DETECT_DB
 #define MAX_HANG_INFO_SIZE (2*1024*1024) /* 2M info */
 static int MaxHangInfoSize = MAX_HANG_INFO_SIZE;
