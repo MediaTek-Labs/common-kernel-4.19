@@ -51,3 +51,4 @@ obj-$(CONFIG_MTK_CAMERA_ISP) += cameraisp/
 obj-$(CONFIG_MTK_DRAM_LOG_STORE) += log_store/
 obj-$(CONFIG_MTK_IMGSENSOR) += imgsensor/src/
 obj-$(CONFIG_MTK_APUSYS_SUPPORT) += apusys/
+obj-$(CONFIG_MTK_PID_MAP) += pidmap/
