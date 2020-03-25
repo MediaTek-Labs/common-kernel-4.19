@@ -145,7 +145,8 @@
 			reg = <0x0>;
 			clock-frequency = <1600000000>;
 			enable-method = "psci";
-			cpu-idle-states = <&MCDI_CPU &MCDI_CLUSTER &DPIDLE>;
+			cpu-idle-states = <&MCDI_CPU &MCDI_CLUSTER &SODI
+					   &DPIDLE>;
 			clocks = <&mcusys CLK_MCU_BUS_SEL>,
 				 <&apmixedsys CLK_APMIXED_MAINPLL>,
 				 <&apmixedsys CLK_APMIXED_ARMPLL>;
@@ -159,7 +160,8 @@
 			reg = <0x1>;
 			clock-frequency = <1600000000>;
 			enable-method = "psci";
-			cpu-idle-states = <&MCDI_CPU &MCDI_CLUSTER &DPIDLE>;
+			cpu-idle-states = <&MCDI_CPU &MCDI_CLUSTER &SODI
+					   &DPIDLE>;
 			clocks = <&mcusys CLK_MCU_BUS_SEL>,
 				 <&apmixedsys CLK_APMIXED_MAINPLL>,
 				 <&apmixedsys CLK_APMIXED_ARMPLL>;
@@ -173,7 +175,8 @@
 			reg = <0x2>;
 			clock-frequency = <1600000000>;
 			enable-method = "psci";
-			cpu-idle-states = <&MCDI_CPU &MCDI_CLUSTER &DPIDLE>;
+			cpu-idle-states = <&MCDI_CPU &MCDI_CLUSTER &SODI
+					   &DPIDLE>;
 			clocks = <&mcusys CLK_MCU_BUS_SEL>,
 				 <&apmixedsys CLK_APMIXED_MAINPLL>,
 				 <&apmixedsys CLK_APMIXED_ARMPLL>;
@@ -187,7 +190,8 @@
 			reg = <0x3>;
 			clock-frequency = <1600000000>;
 			enable-method = "psci";
-			cpu-idle-states = <&MCDI_CPU &MCDI_CLUSTER &DPIDLE>;
+			cpu-idle-states = <&MCDI_CPU &MCDI_CLUSTER &SODI
+					   &DPIDLE>;
 			clocks = <&mcusys CLK_MCU_BUS_SEL>,
 				 <&apmixedsys CLK_APMIXED_MAINPLL>,
 				 <&apmixedsys CLK_APMIXED_ARMPLL>;
@@ -216,13 +220,22 @@
 				min-residency-us = <1200>;
 			};
 
+			SODI: sodi {
+				compatible = "arm,idle-state";
+				local-timer-stop;
+				arm,psci-suspend-param = <0x01010002>;
+				entry-latency-us = <300>;
+				exit-latency-us = <850>;
+				min-residency-us = <2300>;
+			};
+
 			DPIDLE: dpidle {
 				compatible = "arm,idle-state";
 				local-timer-stop;
 				arm,psci-suspend-param = <0x01010004>;
-				entry-latency-us = <300>;
-				exit-latency-us = <800>;
-				min-residency-us = <3300>;
+				entry-latency-us = <350>;
+				exit-latency-us = <1050>;
+				min-residency-us = <2800>;
 			};
 		};
 	};
