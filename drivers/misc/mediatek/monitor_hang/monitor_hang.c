@@ -78,6 +78,10 @@ static int hang_detect_counter = 0x7fffffff;
 static int dump_bt_done;
 static bool reboot_flag;
 static struct name_list *white_list;
+#ifdef CONFIG_MTK_ENG_BUILD
+	struct proc_dir_entry *pe;
+#endif
+
 
 
 DECLARE_WAIT_QUEUE_HEAD(dump_bt_start_wait);
@@ -698,10 +702,13 @@ static int save_trace(struct stackframe *frame, void *d)
 	 * not the saved PC value.  So, we need to track the previous
 	 * frame PC value when doing this.
 	 */
-	addr = data->last_pc;
 	data->last_pc = frame->pc;
+
+#ifdef __aarch64__
+	addr = data->last_pc;
 	if (!in_exception_text(addr))
 		return 0;
+#endif
 
 	regs = (struct pt_regs *)frame->sp;
 
@@ -1892,8 +1899,9 @@ static int hang_detect_warn_thread(void *arg)
 		return 0;
 
 	sched_setscheduler(current, SCHED_FIFO, &param);
-	snprintf(string_tmp, 30, "hang_detect:[pid:%d]\n", system_server_pid);
-	pr_notice("hang_detect create warning api: %s.", string_tmp);
+	if (snprintf(string_tmp, 30, "hang_detect:[pid:%d]\n",
+			system_server_pid) != 0)
+		pr_notice("hang_detect create warning api: %s.", string_tmp);
 #ifdef __aarch64__
 		aee_kernel_warning_api(__FILE__, __LINE__,
 		DB_OPT_PROCESS_COREDUMP | DB_OPT_AARCH64 | DB_OPT_FTRACE,
@@ -2130,9 +2138,6 @@ int hang_detect_init(void)
 static int __init monitor_hang_init(void)
 {
 	int err = 0;
-#ifdef CONFIG_MTK_ENG_BUILD
-	struct proc_dir_entry *pe;
-#endif
 
 #ifdef MODULE
 	if (module_fun_init() == 1)
@@ -2163,6 +2168,14 @@ static int __init monitor_hang_init(void)
 static void __exit monitor_hang_exit(void)
 {
 	misc_deregister(&Hang_Monitor_dev);
+#ifdef CONFIG_MTK_HANG_DETECT_DB
+	/* kfree(NULL) is safe */
+	kfree(Hang_Info);
+#endif
+#ifdef CONFIG_MTK_ENG_BUILD
+	if (pe)
+		proc_remove(pe);
+#endif
 }
 
 
