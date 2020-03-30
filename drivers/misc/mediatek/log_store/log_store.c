@@ -206,9 +206,41 @@ static int pl_lk_file_open(struct inode *inode, struct file *file)
 	return single_open(file, pl_lk_log_show, inode->i_private);
 }
 
+static ssize_t pl_lk_file_write(struct file *filp,
+	const char *ubuf, size_t cnt, loff_t *data)
+{
+	char buf[64];
+	long val;
+	int ret;
+
+	if (cnt >= sizeof(buf))
+		return -EINVAL;
+
+	if (copy_from_user(&buf, ubuf, cnt))
+		return -EFAULT;
+
+	buf[cnt] = 0;
+
+	ret = kstrtoul(buf, 10, (unsigned long *)&val);
+
+	if (ret < 0)
+		return ret;
+
+	switch (val) {
+	case 0:
+		log_store_bootup();
+		break;
+
+	default:
+		break;
+	}
+	return cnt;
+}
+
 static const struct file_operations pl_lk_file_ops = {
 	.owner = THIS_MODULE,
 	.open = pl_lk_file_open,
+	.write = pl_lk_file_write,
 	.read = seq_read,
 	.llseek = seq_lseek,
 	.release = single_release,
@@ -260,7 +292,7 @@ static int __init log_store_late_init(void)
 		dram_curlog_header->off_lk, dram_curlog_header->sz_lk,
 		dram_curlog_header->pl_flag, dram_curlog_header->lk_flag);
 
-	entry = proc_create("pl_lk", 0444, NULL, &pl_lk_file_ops);
+	entry = proc_create("pl_lk", 0664, NULL, &pl_lk_file_ops);
 	if (!entry) {
 		pr_notice("log_store: failed to create proc entry\n");
 		return 1;
