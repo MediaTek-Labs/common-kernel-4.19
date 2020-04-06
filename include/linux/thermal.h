@@ -141,6 +141,8 @@ struct thermal_cooling_device {
 	struct mutex lock; /* protect thermal_instances list */
 	struct list_head thermal_instances;
 	struct list_head node;
+	unsigned long sysfs_cur_state_req;
+	unsigned long sysfs_min_state_req;
 };
 
 struct thermal_attr {
@@ -329,6 +331,12 @@ struct thermal_zone_params {
 	 * 		Used by thermal zone drivers (default 0).
 	 */
 	int offset;
+
+	/*
+	 * @tracks_low:	Indicates that the thermal zone params are for
+	 *		temperatures falling below the thresholds.
+	 */
+	bool tracks_low;
 };
 
 struct thermal_genl_event {
