@@ -1181,5 +1181,5 @@ dis_D_inner_flush_all:
 	isb
 
 	b	v7_flush_dcache_all
-
+EXPORT_SYMBOL(dis_D_inner_flush_all)
 	.end
