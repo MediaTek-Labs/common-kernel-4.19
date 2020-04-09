@@ -151,9 +151,9 @@ then
 	IFS="="
 	while read config test
 	do
-		echo $config $test $opt $arch
 		if [[ "$test" == "y" ]] && [[ -n "$opt" ]]
 		then
+			echo $config $test $opt $arch
 			sh $kernel_dir/scripts/config --file \
 			$kernel_dir/arch/$arch/configs/$defconfig \
 			$opt $config
