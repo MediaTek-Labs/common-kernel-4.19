@@ -74,6 +74,10 @@
 #define VFF_DEBUG_STATUS	0x50
 #define VFF_4G_SUPPORT		0x54
 
+struct mtk_uart_apdmacomp {
+	unsigned int addr_bits;
+};
+
 struct mtk_uart_apdmadev {
 	struct dma_device ddev;
 	struct clk *clk;
@@ -465,8 +469,14 @@ static void mtk_uart_apdma_free(struct mtk_uart_apdmadev *mtkd)
 	}
 }
 
+static const struct mtk_uart_apdmacomp mt6779_comp = {
+	.addr_bits = 34
+};
+
 static const struct of_device_id mtk_uart_apdma_match[] = {
-	{ .compatible = "mediatek,mt6577-uart-dma", },
+	{ .compatible = "mediatek,mt6577-uart-dma", .data = NULL},
+	{ .compatible = "mediatek,mt2712-uart-dma", .data = NULL},
+	{ .compatible = "mediatek,mt6779-uart-dma", .data = &mt6779_comp},
 	{ /* sentinel */ },
 };
 MODULE_DEVICE_TABLE(of, mtk_uart_apdma_match);
@@ -479,7 +489,7 @@ static int mtk_uart_apdma_probe(struct platform_device *pdev)
 	struct resource *res;
 	struct mtk_chan *c;
 	unsigned int i;
-	unsigned int addr_bits = VFF_ORI_ADDR_BITS_NUM;
+	const struct mtk_uart_apdmacomp *comp;
 
 	mtkd = devm_kzalloc(&pdev->dev, sizeof(*mtkd), GFP_KERNEL);
 	if (!mtkd)
@@ -492,14 +502,23 @@ static int mtk_uart_apdma_probe(struct platform_device *pdev)
 		return rc;
 	}
 
-	if (of_property_read_u32(pdev->dev.of_node, "dma-bits", &addr_bits))
-		addr_bits = VFF_ORI_ADDR_BITS_NUM;
+	comp = of_device_get_match_data(&pdev->dev);
+	if (comp == NULL) {
+		/*In order to compatiable with legacy device tree file*/
+		dev_info(&pdev->dev,
+			"No compatiable, using DTS configration\n");
+
+		if (of_property_read_bool(pdev->dev.of_node,
+				"mediatek,dma-33bits"))
+			mtkd->support_bits = 33;
+	} else
+		mtkd->support_bits = comp->addr_bits;
 
 	dev_info(&pdev->dev,
-			"DMA address bits: %d\n", addr_bits);
-	mtkd->support_bits = addr_bits;
+			"DMA address bits: %d\n",  mtkd->support_bits);
 
-	rc = dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(addr_bits));
+	rc = dma_set_mask_and_coherent(&pdev->dev,
+			DMA_BIT_MASK(mtkd->support_bits));
 	if (rc)
 		return rc;
 
