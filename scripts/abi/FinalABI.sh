@@ -18,6 +18,8 @@ FINAL_ABI_REPORT=abi-report-final.out
 source $ABI_DIR/abi_white_list
 #Find Delete/Changed/Added and leaf type change
 check_arr=("\[D\]" "\[C\]" "\[A\]" "^'.*' changed:$")
+#Find Delete/Changed and leaf type change
+check_arr=("\[D\]" "\[C\]" "^'.*' changed:$")
 
 is_abi_violation_bypass=0
 declare -i abi_violation_count=0
