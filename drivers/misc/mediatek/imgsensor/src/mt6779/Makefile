@@ -39,30 +39,35 @@ endef
 
 $(foreach drv,$(subst $\",,$(CONFIG_CUSTOM_KERNEL_IMGSENSOR)),$(eval $(call FILTER_DRV,$(drv))))
 
+define add_subdrv
+$(eval subdrv-rpath = $1)
+$(eval include $(src)/$1/subdrv.mk)
+endef
+
 ifneq ($(common_drv),)
 $(info common_drv : $(common_drv))
-$(foreach drv, $(common_drv), $(eval include $(IMGSENSOR_DRIVER_PATH)/common/$(COMMON_VERSION)/$(drv)/subdrv.mk))
+$(foreach drv,$(common_drv),$(eval $(call add_subdrv,../common/$(COMMON_VERSION)/$(drv))))
 endif
 
 ifneq ($(platform_drv),)
 $(info platform_drv : $(platform_drv))
-$(foreach drv, $(platform_drv), $(eval include $(IMGSENSOR_DRIVER_PATH)/$(MTK_PLATFORM)/$(drv)/subdrv.mk))
+$(foreach drv,$(platform_drv),$(eval $(call add_subdrv,$(drv))))
 endif
 
 ifneq ($(project_drv),)
 $(info project_drv : $(project_drv))
-$(foreach drv, $(platform_drv), $(eval include $(IMGSENSOR_DRIVER_PATH)/$(MTK_PLATFORM)/camera_project/$(ARCH_MTK_PROJECT)/$(drv)/subdrv.mk))
+$(foreach drv, $(project_drv), $(eval $(call add_subdrv,camera_project/$(ARCH_MTK_PROJECT)/$(drv))))
 endif
 
 ifeq (,$(wildcard $(IMGSENSOR_DRIVER_PATH)/$(MTK_PLATFORM)/camera_project/$(ARCH_MTK_PROJECT)/camera_hw))
 subdir-ccflags-y += -I$(IMGSENSOR_DRIVER_PATH)/$(MTK_PLATFORM)/camera_hw
-include $(IMGSENSOR_DRIVER_PATH)/$(MTK_PLATFORM)/camera_hw/subdrv.mk
+$(eval $(call add_subdrv,camera_hw))
 else
 subdir-ccflags-y += -I$(IMGSENSOR_DRIVER_PATH)/$(MTK_PLATFORM)/camera_project/$(ARCH_MTK_PROJECT)/camera_hw
-include $(IMGSENSOR_DRIVER_PATH)/$(MTK_PLATFORM)/camera_project/$(ARCH_MTK_PROJECT)/camera_hw/subdrv.mk
+$(eval $(call add_subdrv,camera_project/$(ARCH_MTK_PROJECT)/camera_hw))
 endif
 
-include $(IMGSENSOR_DRIVER_PATH)/$(MTK_PLATFORM)/seninf/subdrv.mk
+$(eval $(call add_subdrv,seninf))
 
 subdir-ccflags-y += -DNO_I2C_MTK -DNO_CLK_METER -DDFS_CTRL_BY_OPP -DSENINF_USE_RPM
 

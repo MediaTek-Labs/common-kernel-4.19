@@ -1,10 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0
-
-MKFILE_PATH := $(lastword $(MAKEFILE_LIST))
-CURRENT_DIR := $(patsubst %/,%,$(dir $(realpath $(MKFILE_PATH))))
-RELPATH := ..$(subst $(IMGSENSOR_DRIVER_PATH),,$(CURRENT_DIR))
+# Copyright (C) 2020 MediaTek Inc.
 
 imgsensor-objs += \
-	$(RELPATH)/imx519mipiraw_Sensor.o \
-	$(RELPATH)/imx519_eeprom.o \
+	$(subdrv-rpath)/imx519mipiraw_Sensor.o \
+	$(subdrv-rpath)/imx519_eeprom.o \
 

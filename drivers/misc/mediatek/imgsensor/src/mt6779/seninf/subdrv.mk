@@ -1,9 +1,6 @@
 # SPDX-License-Identifier: GPL-2.0
-
-MKFILE_PATH := $(lastword $(MAKEFILE_LIST))
-CURRENT_DIR := $(patsubst %/,%,$(dir $(realpath $(MKFILE_PATH))))
-RELPATH := ..$(subst $(IMGSENSOR_DRIVER_PATH),,$(CURRENT_DIR))
+# Copyright (C) 2020 MediaTek Inc.
 
 imgsensor-objs += \
-	$(RELPATH)/seninf_clk.o \
+	$(subdrv-rpath)/seninf_clk.o \
 
