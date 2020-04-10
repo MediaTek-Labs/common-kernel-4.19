@@ -50,16 +50,18 @@ static long usip_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 	int ret = 0;
 	long size_for_spe = 0;
 
-	pr_debug("%s(), cmd 0x%x, arg %lu\n", __func__, cmd, arg);
-	pr_debug("%s(), memory_size = %ld addr_phy = %lld\n", __func__,
-		 usip.memory_size, usip.addr_phy);
+	pr_info("%s(), cmd 0x%x, arg %lu, memory_size = %ld addr_phy = 0x%llx\n",
+		 __func__, cmd, arg, usip.memory_size, usip.addr_phy);
 
 	size_for_spe = EMI_TABLE[SP_EMI_AP_USIP_PARAMETER][SP_EMI_SIZE];
 	switch (cmd) {
 
 	case GET_USIP_EMI_SIZE:
-		if (copy_to_user((void __user *)arg, &size_for_spe,
-				 sizeof(size_for_spe))) {
+		if (!usip.memory_ready) {
+			pr_info("no phy addr from ccci");
+			ret = -ENODEV;
+		} else if (copy_to_user((void __user *)arg, &size_for_spe,
+			   sizeof(size_for_spe))) {
 			pr_warn("Fail copy to user Ptr:%p, r_sz:%zu",
 				(char *)&size_for_spe, sizeof(size_for_spe));
 			ret = -1;
@@ -97,8 +99,8 @@ int usip_mmap_data(struct usip_info *usip, struct vm_area_struct *area)
 	unsigned long pfn;
 	int ret;
 
-	pr_debug("%s(), memory ready %d, size %zu, align_bytes %zu\n",
-		 __func__, usip->memory_ready, usip->memory_size, align_bytes);
+	pr_info("%s(), memory ready %d, size %zu, align_bytes %zu\n",
+		__func__, usip->memory_ready, usip->memory_size, align_bytes);
 
 	if (!usip->memory_ready)
 		return -EBADFD;
@@ -123,7 +125,9 @@ int usip_mmap_data(struct usip_info *usip, struct vm_area_struct *area)
 			pfn, size, area->vm_page_prot);
 	if (ret)
 		pr_err("%s(), ret %d, remap failed 0x%lx, phys_addr %pa -> vm_start 0x%lx\n",
-		       __func__, ret, pfn, &usip->addr_phy, area->vm_start);
+		       __func__, ret, pfn,
+		       &usip->addr_phy,
+		       area->vm_start);
 	/*Comment*/
 	smp_mb();
 
@@ -145,10 +149,119 @@ static int usip_mmap(struct file *file, struct vm_area_struct *area)
 	}
 	return 0;
 }
+static void usip_get_addr(void)
+{
+#ifdef CONFIG_MTK_ECCCI_DRIVER
+	int size_o = 0;
+	phys_addr_t phys_addr;
+
+	phys_addr_t srw_base;
+	unsigned int srw_size;
+	phys_addr_t r_rw_base;
+	unsigned int r_rw_size;
+
+	phys_addr = get_smem_phy_start_addr(MD_SYS1,
+					    SMEM_USER_RAW_USIP, &size_o);
+	if (phys_addr == 0) {
+		pr_info("%s(), cannot get emi addr from ccci", __func__);
+		usip.memory_ready = false;
+	} else {
+		usip.memory_ready = true;
+
+		get_md_resv_mem_info(MD_SYS1, &r_rw_base, &r_rw_size,
+				     &srw_base, &srw_size);
+		pr_info("%s(), 0x%llx %d 0x%llx %d 0x%llx", __func__,
+			r_rw_base, r_rw_size, srw_base, srw_size, phys_addr);
+
+		usip.memory_size = size_o;
+		usip.addr_phy = phys_addr;
+	}
+#endif
+}
+#ifdef CONFIG_MTK_AURISYS_PHONE_CALL_SUPPORT
+static void usip_send_emi_info_to_dsp(void)
+{
+	int send_result = 0;
+	struct ipi_msg_t ipi_msg;
+	long long usip_emi_info[2]; //idx0 for addr, idx1 for size
+	phys_addr_t offset = 0;
+
+	if (!usip.memory_ready) {
+		usip_get_addr();
+		if (!usip.memory_ready) {
+			pr_info("%s(), cannot get emi addr from ccci",
+				__func__);
+			return;
+		}
+	}
+
+	offset = EMI_TABLE[SP_EMI_ADSP_USIP_PHONECALL][SP_EMI_OFFSET];
+	usip_emi_info[0] = usip.addr_phy + offset;
+	usip_emi_info[1] = EMI_TABLE[SP_EMI_ADSP_USIP_PHONECALL][SP_EMI_SIZE];
+
+	ipi_msg.magic      = IPI_MSG_MAGIC_NUMBER;
+	ipi_msg.task_scene = TASK_SCENE_PHONE_CALL;
+	ipi_msg.source_layer  = AUDIO_IPI_LAYER_FROM_KERNEL;
+	ipi_msg.target_layer  = AUDIO_IPI_LAYER_TO_DSP;
+	ipi_msg.data_type  = AUDIO_IPI_PAYLOAD;
+	ipi_msg.ack_type   = AUDIO_IPI_MSG_BYPASS_ACK;
+	ipi_msg.msg_id     = IPI_MSG_A2D_GET_EMI_ADDRESS;
+	ipi_msg.param1     = sizeof(usip_emi_info);
+	ipi_msg.param2     = 0;
+
+	/* Send EMI Address to Hifi3 Via IPI*/
+	adsp_register_feature(VOICE_CALL_FEATURE_ID);
+	send_result = audio_send_ipi_msg(
+					 &ipi_msg, TASK_SCENE_PHONE_CALL,
+					 AUDIO_IPI_LAYER_TO_DSP,
+					 AUDIO_IPI_PAYLOAD,
+					 AUDIO_IPI_MSG_BYPASS_ACK,
+					 IPI_MSG_A2D_GET_EMI_ADDRESS,
+					 sizeof(usip_emi_info),
+					 0,
+					 (char *)&usip_emi_info);
+	adsp_deregister_feature(VOICE_CALL_FEATURE_ID);
+
+	if (send_result != 0)
+		pr_info("%s(), scp_ipi send fail\n", __func__);
+	else
+		pr_debug("%s(), scp_ipi send succeed\n", __func__);
+}
+
+static int audio_call_event_receive(struct notifier_block *this,
+				    unsigned long event,
+				    void *ptr)
+{
+	switch (event) {
+	case ADSP_EVENT_STOP:
+		break;
+	case ADSP_EVENT_READY:
+		usip_send_emi_info_to_dsp();
+		break;
+	default:
+		pr_info("event %lu err", event);
+	}
+	return 0;
+}
+
+static struct notifier_block audio_call_notifier = {
+	.notifier_call = audio_call_event_receive,
+	.priority = VOICE_CALL_FEATURE_PRI,
+};
+#endif /* end of CONFIG_MTK_AURISYS_PHONE_CALL_SUPPORT */
 
 static int usip_open(struct inode *inode, struct file *file)
 {
+
 	file->private_data = &usip;
+
+	if (!usip.memory_ready) {
+		usip_get_addr();
+#ifdef CONFIG_MTK_AURISYS_PHONE_CALL_SUPPORT
+		usip_send_emi_info_to_dsp();
+#endif
+	}
+
 	return 0;
 }
 
@@ -173,45 +286,29 @@ static struct miscdevice usip_miscdevice = {
 static int __init usip_init(void)
 {
 	int ret;
-	int size_o = 0;
-	phys_addr_t r_rw_base;
 
-	unsigned int r_rw_size;
-
-	phys_addr_t srw_base;
-	unsigned int srw_size;
-
-	phys_addr_t phys_addr;
+	usip.memory_ready = false;
+	usip.memory_size = 0;
+	usip.addr_phy = 0;
 
 #ifdef CONFIG_MTK_ECCCI_DRIVER
-	phys_addr = get_smem_phy_start_addr(MD_SYS1,
-					    SMEM_USER_RAW_USIP, &size_o);
-
 	ret = misc_register(&usip_miscdevice);
-	if (ret)
+	if (ret) {
 		pr_err("%s(), cannot register miscdev on minor %d, ret %d\n",
 		       __func__, usip_miscdevice.minor, ret);
-
-	get_md_resv_mem_info(MD_SYS1, &r_rw_base, &r_rw_size,
-			     &srw_base, &srw_size);
+		ret = -ENODEV;
+	}
 #else
-	phys_addr = 0;
-	size_o = 0;
-	ret = 0;
-	r_rw_base = 0;
-	r_rw_size = 0;
-	srw_base = 0;
-	srw_size = 0;
+	ret = -ENODEV;
 #endif
 
-	pr_debug("%s(), %lld %d %lld %d %lld", __func__,
-		 r_rw_base, r_rw_size, srw_base, srw_size, phys_addr);
-
 	/* init usip info */
-	usip.memory_size = size_o;
 	usip.memory_addr = 0x11220000L;
-	usip.addr_phy = phys_addr;
-	usip.memory_ready = true;
+
+
+#ifdef CONFIG_MTK_AURISYS_PHONE_CALL_SUPPORT
+	adsp_register_notify(&audio_call_notifier);
+#endif
 
 	return ret;
 }
