@@ -1012,6 +1012,7 @@ firmware_class.path=/vendor/firmware loop.max_part=7";
 		scp_infra: scp_infra@10001000 {
 			compatible = "mediatek,scpinfra";
 			reg = <0 0x10001000 0 0x1000>;
+			#clock-cells = <1>;
 		};
 
 		dcm: dcm@10001000 {
