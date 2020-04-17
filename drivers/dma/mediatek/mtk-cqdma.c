@@ -84,7 +84,7 @@ struct mtk_cqdma_vdesc {
 /**
  * struct mtk_cqdma_pchan - The struct holding info describing physical
  *                         channel (PC)
- * @active_vdesc:          Point to the CVD which is under hardware processing
+ * @active_vdesc:          The pointer to the CVD which is under processing
  * @base:                  The mapped register I/O base of this PC
  * @irq:                   The IRQ that this PC are using
  * @refcnt:                Track how many VCs are using this PC
@@ -116,6 +116,7 @@ struct mtk_cqdma_vchan {
  * @clk:                    The clock that device internal is using
  * @dma_requests:           The number of VCs the device supports to
  * @dma_channels:           The number of PCs the device supports to
+ * @dma_mask:               A mask for DMA capability
  * @vc:                     The pointer to all available VCs
  * @pc:                     The pointer to all the underlying PCs
  */
@@ -125,6 +126,7 @@ struct mtk_cqdma_device {
 
 	u32 dma_requests;
 	u32 dma_channels;
+	u32 dma_mask;
 	struct mtk_cqdma_vchan *vc;
 	struct mtk_cqdma_pchan **pc;
 };
@@ -551,6 +553,7 @@ static const struct of_device_id mtk_cqdma_match[] = {
 };
 MODULE_DEVICE_TABLE(of, mtk_cqdma_match);
 
+static u64 cqdma_dmamask;
 static int mtk_cqdma_probe(struct platform_device *pdev)
 {
 	struct mtk_cqdma_device *cqdma;
@@ -607,6 +610,16 @@ static int mtk_cqdma_probe(struct platform_device *pdev)
 			MTK_CQDMA_NR_PCHANS);
 
 		cqdma->dma_channels = MTK_CQDMA_NR_PCHANS;
+	}
+
+	if (pdev->dev.of_node && of_property_read_u32(pdev->dev.of_node,
+						      "dma-mask",
+						      &cqdma->dma_mask)) {
+		dev_dbg(&pdev->dev,
+			"Using 0 as missing dma-mask property\n");
+	} else {
+		cqdma_dmamask = DMA_BIT_MASK(cqdma->dma_mask);
+		pdev->dev.dma_mask = &cqdma_dmamask;
 	}
 
 	cqdma->pc = devm_kcalloc(&pdev->dev, cqdma->dma_channels,
