@@ -151,7 +151,7 @@ static int usip_mmap(struct file *file, struct vm_area_struct *area)
 }
 static void usip_get_addr(void)
 {
-#ifdef CONFIG_MTK_ECCCI_DRIVER
+#if IS_ENABLED(CONFIG_MTK_ECCCI_DRIVER)
 	int size_o = 0;
 	phys_addr_t phys_addr;
 
@@ -275,7 +275,7 @@ static const struct file_operations usip_fops = {
 	.mmap = usip_mmap,
 };
 
-#ifdef CONFIG_MTK_ECCCI_DRIVER
+#if IS_ENABLED(CONFIG_MTK_ECCCI_DRIVER)
 static struct miscdevice usip_miscdevice = {
 	.minor      = MISC_DYNAMIC_MINOR,
 	.name       = "usip",
@@ -291,7 +291,7 @@ static int __init usip_init(void)
 	usip.memory_size = 0;
 	usip.addr_phy = 0;
 
-#ifdef CONFIG_MTK_ECCCI_DRIVER
+#if IS_ENABLED(CONFIG_MTK_ECCCI_DRIVER)
 	ret = misc_register(&usip_miscdevice);
 	if (ret) {
 		pr_err("%s(), cannot register miscdev on minor %d, ret %d\n",
@@ -315,7 +315,7 @@ static int __init usip_init(void)
 
 static void __exit usip_exit(void)
 {
-#ifdef CONFIG_MTK_ECCCI_DRIVER
+#if IS_ENABLED(CONFIG_MTK_ECCCI_DRIVER)
 	misc_deregister(&usip_miscdevice);
 #endif
 }
