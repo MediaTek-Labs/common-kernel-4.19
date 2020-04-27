@@ -137,6 +137,7 @@ static int mboot_params_init_desc(uint32_t off_linux)
 
 	memcpy(idesc, &idesc_init, IDESC_SIZE);
 	idesc->off_linux = off_linux;
+	idesc->cpu_num = nr_cpu_ids;
 	for (i = 0; i < E_EX(num_total); i++) {
 		if (buf[i]) {
 			len = strlen(buf[i]);

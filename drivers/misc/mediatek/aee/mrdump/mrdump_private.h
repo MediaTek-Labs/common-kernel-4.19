@@ -49,28 +49,6 @@ extern void mrdump_mini_add_entry(unsigned long addr, unsigned long size);
 int aee_dump_stack_top_binary(char *buf, int buf_len, unsigned long bottom,
 				unsigned long top);
 
-#if defined(CONFIG_RANDOMIZE_BASE) && defined(CONFIG_ARM64)
-static inline void show_kaslr(void)
-{
-	u64 const kaslr_offset = aee_get_kimage_vaddr() - KIMAGE_VADDR;
-
-	pr_notice("Kernel Offset: 0x%llx from 0x%lx\n",
-			kaslr_offset, KIMAGE_VADDR);
-	pr_notice("PHYS_OFFSET: 0x%llx\n", PHYS_OFFSET);
-#if IS_ENABLED(CONFIG_MTK_AEE_IPANIC)
-	aee_rr_rec_kaslr_offset(kaslr_offset);
-#endif
-}
-#else
-static inline void show_kaslr(void)
-{
-	pr_notice("Kernel Offset: disabled\n");
-#if IS_ENABLED(CONFIG_MTK_AEE_IPANIC)
-	aee_rr_rec_kaslr_offset(0);
-#endif
-}
-#endif
-
 int in_fiq_handler(void);
 
 extern void mrdump_mini_per_cpu_regs(int cpu, struct pt_regs *regs,

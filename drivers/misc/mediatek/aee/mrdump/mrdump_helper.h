@@ -17,7 +17,9 @@ extern unsigned long aee_get_etext(void);
 extern unsigned long aee_get_text(void);
 extern unsigned long aee_get_sdata(void);
 extern unsigned long aee_get_edata(void);
+#if defined(CONFIG_ARM64)
 extern unsigned long aee_get_kimage_vaddr(void);
+#endif
 
 #ifdef CONFIG_ARM64
 extern int aee_unwind_frame(struct task_struct *tsk, struct stackframe *frame);

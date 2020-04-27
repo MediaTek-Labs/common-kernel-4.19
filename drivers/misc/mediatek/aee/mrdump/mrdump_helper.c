@@ -67,7 +67,7 @@ static void find_koes(void)
 }
 
 static int need_init = 1;
-static unsigned long aee_addr_find(const char *name)
+unsigned long aee_addr_find(const char *name)
 {
 	struct aee_sym sym;
 
@@ -79,12 +79,17 @@ static unsigned long aee_addr_find(const char *name)
 		return 0;
 
 	memset(&sym, 0x0, sizeof(sym));
-	snprintf(sym.name, sizeof(sym.name), "%s", name);
+	if (snprintf(sym.name, sizeof(sym.name), "%s", name) < 0) {
+		pr_info("mrdump: fail to find %s", name);
+		return 0;
+	}
+
 	if (aee_koes(addr_ok, (void *)(&sym)))
 		return sym.addr;
 
 	return 0;
 }
+EXPORT_SYMBOL(aee_addr_find);
 
 /* for mrdump.ko */
 static void (*p_show_regs)(struct pt_regs *);
@@ -180,6 +185,7 @@ unsigned long aee_get_edata(void)
 	return 0;
 }
 
+#if defined(CONFIG_ARM64)
 static unsigned long *p_kimage_vaddr;
 unsigned long aee_get_kimage_vaddr(void)
 {
@@ -193,6 +199,7 @@ unsigned long aee_get_kimage_vaddr(void)
 	}
 	return *p_kimage_vaddr;
 }
+#endif
 
 #ifdef CONFIG_SYSFS
 static struct kset **p_module_kset;
@@ -520,10 +527,12 @@ unsigned long aee_get_edata(void)
 	return (unsigned long)_edata;
 }
 
+#if defined(CONFIG_ARM64)
 unsigned long aee_get_kimage_vaddr(void)
 {
 	return (unsigned long)kimage_vaddr;
 }
+#endif
 
 #ifdef CONFIG_SYSFS
 struct kset *aee_get_module_kset(void)

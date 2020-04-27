@@ -86,6 +86,24 @@ int aee_dump_stack_top_binary(char *buf, int buf_len, unsigned long bottom,
 	return top - bottom;
 }
 
+#if defined(CONFIG_RANDOMIZE_BASE) && defined(CONFIG_ARM64)
+static inline void show_kaslr(void)
+{
+	u64 const kaslr_offset = aee_get_kimage_vaddr() - KIMAGE_VADDR;
+
+	pr_notice("Kernel Offset: 0x%llx from 0x%lx\n",
+			kaslr_offset, KIMAGE_VADDR);
+	pr_notice("PHYS_OFFSET: 0x%llx\n", PHYS_OFFSET);
+	aee_rr_rec_kaslr_offset(kaslr_offset);
+}
+#else
+static inline void show_kaslr(void)
+{
+	pr_notice("Kernel Offset: disabled\n");
+	aee_rr_rec_kaslr_offset(0xd15ab1e);
+}
+#endif
+
 int mrdump_common_die(int fiq_step, int reboot_reason, const char *msg,
 		      struct pt_regs *regs)
 {

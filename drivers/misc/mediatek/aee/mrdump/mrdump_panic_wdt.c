@@ -329,7 +329,7 @@ void aee_wdt_atf_info(unsigned int cpu, struct pt_regs *regs)
 
 	if (regs) {
 		aee_rr_rec_fiq_step(AEE_FIQ_STEP_WDT_IRQ_STACK);
-		for (cpu = 0; cpu < AEE_MTK_CPU_NUMS; cpu++)
+		for (cpu = 0; cpu < nr_cpu_ids; cpu++)
 			aee_save_reg_stack_sram(cpu);
 		aee_sram_fiq_log("\n\n");
 	} else {

@@ -121,27 +121,27 @@ __init void mrdump_cblock_init(void)
 #endif
 	if (!mrdump_sram_cb.start_addr || !mrdump_sram_cb.size) {
 		pr_notice("%s: no mrdump_cb\n", __func__);
-		goto end;
+		return;
 	}
 
 	if (mrdump_sram_cb.size < sizeof(struct mrdump_control_block)) {
 		pr_notice("%s: not enough space for mrdump control block\n",
 			  __func__);
-		goto end;
+		return;
 	}
 
 	mrdump_cblock = ioremap_wc(mrdump_sram_cb.start_addr,
 				   mrdump_sram_cb.size);
 	if (!mrdump_cblock) {
 		pr_notice("%s: mrdump_cb not mapped\n", __func__);
-		goto end;
+		return;
 	}
 	memset_io(mrdump_cblock, 0, sizeof(struct mrdump_control_block));
 	memcpy_toio(mrdump_cblock->sig, MRDUMP_GO_DUMP,
 			sizeof(mrdump_cblock->sig));
 
 	machdesc_p = &mrdump_cblock->machdesc;
-	machdesc_p->nr_cpus = AEE_MTK_CPU_NUMS;
+	machdesc_p->nr_cpus = nr_cpu_ids;
 	machdesc_p->page_offset = (uint64_t)PAGE_OFFSET;
 	machdesc_p->high_memory = (uintptr_t)high_memory;
 
@@ -184,7 +184,6 @@ __init void mrdump_cblock_init(void)
 	mrdump_cblock->machdesc_crc = crc32(0, machdesc_p,
 			sizeof(struct mrdump_machdesc));
 
-end:
 	pr_notice("%s: done.\n", __func__);
 
 	/* TODO: remove flush APIs after full ramdump support  HW_Reboot*/

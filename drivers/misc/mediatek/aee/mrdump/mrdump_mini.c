@@ -46,6 +46,7 @@ static char *modules_info_buf;
 
 static bool dump_all_cpus;
 
+#ifdef MODULE
 static char __aee_cmdline[COMMAND_LINE_SIZE];
 static char *aee_cmdline = __aee_cmdline;
 
@@ -74,6 +75,13 @@ const char *mrdump_get_cmd(void)
 	return aee_cmdline;
 }
 EXPORT_SYMBOL(mrdump_get_cmd);
+#else
+const char *mrdump_get_cmd(void)
+{
+	return saved_command_line;
+}
+EXPORT_SYMBOL(mrdump_get_cmd);
+#endif
 
 #if IS_ENABLED(CONFIG_HAVE_MTK_GZ_LOG)
 __weak void get_gz_log_buffer(unsigned long *addr, unsigned long *size,
@@ -281,7 +289,7 @@ static void fill_prstatus(struct elf_prstatus *prstatus, struct pt_regs *regs,
 {
 	elf_core_copy_regs(&prstatus->pr_reg, regs);
 	prstatus->pr_pid = pid;
-	prstatus->pr_ppid = AEE_MTK_CPU_NUMS;
+	prstatus->pr_ppid = nr_cpu_ids;
 	prstatus->pr_sigpend = (uintptr_t)p;
 }
 
@@ -513,7 +521,7 @@ static int mrdump_mini_cpu_regs(int cpu, struct pt_regs *regs,
 		pr_notice("mrdump: invalid ehdr");
 		return -1;
 	}
-	if (cpu >= AEE_MTK_CPU_NUMS) {
+	if (cpu >= nr_cpu_ids) {
 		pr_notice("mrdump: invalid cpu - %d", cpu);
 		return -1;
 	}
@@ -819,7 +827,8 @@ static void mrdump_mini_build_elf_misc(void)
 	modules_info_buf = kzalloc(MODULES_INFO_BUF_SIZE, GFP_KERNEL);
 	if (modules_info_buf)
 		mrdump_mini_add_misc_pa((unsigned long)modules_info_buf,
-			(unsigned long)__pa_nodebug(modules_info_buf),
+			(unsigned long)__pa_nodebug((unsigned long)
+							modules_info_buf),
 			MODULES_INFO_BUF_SIZE, 0, "SYS_MODULES_INFO");
 #endif
 
@@ -839,7 +848,7 @@ static void mrdump_mini_add_loads(void)
 
 	if (!mrdump_mini_ehdr)
 		return;
-	for (id = 0; id < AEE_MTK_CPU_NUMS + 1; id++) {
+	for (id = 0; id < nr_cpu_ids + 1; id++) {
 		if (!strncmp(mrdump_mini_ehdr->prstatus[id].name, "NA", 2))
 			continue;
 		prstatus = &mrdump_mini_ehdr->prstatus[id].data;
@@ -855,8 +864,7 @@ static void mrdump_mini_add_loads(void)
 			mrdump_mini_add_tsk_ti(cpu, &regs, tsk, 1);
 			mrdump_mini_add_entry((unsigned long)aee_cpu_rq(cpu),
 					MRDUMP_MINI_SECTION_SIZE);
-			aee_cpu_curr(cpu);
-		} else if (prstatus->pr_pid <= AEE_MTK_CPU_NUMS) {
+		} else if (prstatus->pr_pid <= nr_cpu_ids) {
 			cpu = prstatus->pr_pid - 1;
 			mrdump_mini_add_tsk_ti(cpu, &regs, tsk, 0);
 			for (i = 0; i < ELF_NGREG; i++) {
@@ -873,7 +881,7 @@ static void mrdump_mini_add_loads(void)
 	mrdump_mini_add_entry((unsigned long)__per_cpu_offset,
 			MRDUMP_MINI_SECTION_SIZE);
 	if (dump_all_cpus) {
-		for (cpu = 0; cpu < AEE_MTK_CPU_NUMS; cpu++) {
+		for (cpu = 0; cpu < nr_cpu_ids; cpu++) {
 			tsk = aee_cpu_curr(cpu);
 			if (mrdump_virt_addr_valid(tsk))
 				ti = (struct thread_info *)tsk->stack;

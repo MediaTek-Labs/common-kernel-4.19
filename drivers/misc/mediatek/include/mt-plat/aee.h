@@ -166,7 +166,7 @@ struct unwind_info_rms {
 #define AEE_API_CALL_INTERVAL   (120 * HZ)
 #define AEE_API_CALL_BURST      2
 
-#ifdef MODULE
+#if defined(MODULE) || IS_BUILTIN(CONFIG_MTK_AEE_AED)
 #define aee_kernel_exception(module, msg...)		\
 ({							\
 	static DEFINE_RATELIMIT_STATE(__func__##_rs,	\
@@ -211,18 +211,18 @@ struct unwind_info_rms {
 				module, msg);				\
 })
 #else
-# undef aee_kernel_warning
-# define aee_kernel_warning(module, msg...) WARN(1, msg)
+#undef aee_kernel_warning
+#define aee_kernel_warning(module, msg...) WARN(1, msg)
 
-# undef aee_kernel_warning_api
-# define aee_kernel_warning_api(file, line, db_opt, module, msg...) \
+#undef aee_kernel_warning_api
+#define aee_kernel_warning_api(file, line, db_opt, module, msg...) \
 	WARN(1, msg)
 
-# undef aee_kernel_exception
-# define aee_kernel_exception(module, msg...) WARN(1, msg)
+#undef aee_kernel_exception
+#define aee_kernel_exception(module, msg...) WARN(1, msg)
 
-# undef aee_kernel_exception_api
-# define aee_kernel_exception_api(file, line, db_opt, module, msg...) \
+#undef aee_kernel_exception_api
+#define aee_kernel_exception_api(file, line, db_opt, module, msg...) \
 	WARN(1, msg)
 #endif
 
