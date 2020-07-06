@@ -1,0 +1,29 @@
+0. get toolchain
+================
+
+a. aarch64-linux-android-4.9
+https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9/+/refs/heads/android10-release
+
+b. clang-r353983c
+https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+/refs/heads/android10-release
+
+1. build kernel
+===============
+
+a. generate .config by k79v1_64_defconfig
+PATH=/{path-to}prebuilts/linux-x86/clang-r353983c/bin:/{path-to}/prebuilts/aarch64-linux-android-4.9/bin:$PATH make -j64 ARCH=arm64 CLANG_TRIPLE=aarch64-linux-gnu- CROSS_COMPILE=aarch64-linux-androidkernel- CC=clang KCFLAGS="-fno-diagnostics-color" -k k79v1_64_defconfig O=out 2>&1 | tee b.log
+
+b. build kernel
+PATH=/{path-to}/prebuilts/linux-x86/clang-r353983c/bin:/{path-to}/prebuilts/aarch64-linux-android-4.9/bin:$PATH make -j64 ARCH=arm64 CLANG_TRIPLE=aarch64-linux-gnu- CROSS_COMPILE=aarch64-linux-androidkernel- CC=clang KCFLAGS="-fno-diagnostics-color" -k O=out 2>&1 | tee b.log
+
+m. build bootimage
+==================
+
+a. cat Image.gz and dtb
+cat out/arch/arm64/boot/Image.gz out/arch/arm64/boot/dts/mediatek/mt6779-evb.dtb > Image.gz-dtb
+
+b. create boot.img
+./mkbootimg  --kernel Image.gz-dtb --ramdisk ramdisk.img --cmdline "bootopt=64S3,32N2,64N2" --base 0x40000000 --kernel_offset 0x00080000 --ramdisk_offset 0x07C80000 --tags_offset 0x0BC80000 --header_version 1 --pagesize 4096 --output boot.img
+
+c. remove tmp Image.gz-dtb
+rm -f Image.gz-dtb
