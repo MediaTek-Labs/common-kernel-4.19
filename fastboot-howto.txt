@@ -5,13 +5,13 @@ The base boot.img:
   If you have problems with your boot.img, flash this boot.base.img to
   go back to bootable status.
 
-Important bottoms:
-- "reset" bottom (SYSRSTB key on evb)
-- "fastboot" bottom, it is also the "vol up" bottom (HOMEKEY key on evb)
-- "power" bottom (PWRKEY key on evb)
+Important keys:
+- "reset" key (SYSRSTB key on evb)
+- "fastboot" key, it is also the "vol up" key (HOMEKEY key on evb)
+- "power" key (PWRKEY key on evb)
 
 1. Enter fastboot mode
-	Action: press "reset" bottom than long press "fastboot" bottom, hold the "fastboot" bottom until enter fastboot mode
+	Action: press "reset" key than long press "fastboot" key, hold the "fastboot" key until enter fastboot mode
 
 	Note:
 		- the bootloader will catch the "fastboot" key and enter fastboot mode
@@ -21,10 +21,10 @@ Important bottoms:
 	Action: $ fastboot flashing unlock
 
 	Note:
-		the screen will ask you to press "vol up" bottom to unlock the device
+		the screen will ask you to press "vol up" key to unlock the device
 
-3. press the "vol up" bottom to unlock the device
-	Action: press the "vol up" bottom
+3. press the "vol up" key to unlock the device
+	Action: press the "vol up" key
 
 4. flash boot.img
 	Action: $ fastboot flash boot boot.img
