@@ -11,7 +11,7 @@ Important keys:
 - "power" key (PWRKEY key on evb)
 
 1. Enter fastboot mode
-	Action: press "reset" key than long press "fastboot" key, hold the "fastboot" key until enter fastboot mode
+	Action: press "reset" key then long press "fastboot" key, hold the "fastboot" key until enter fastboot mode
 
 	Note:
 		- the bootloader will catch the "fastboot" key and enter fastboot mode
