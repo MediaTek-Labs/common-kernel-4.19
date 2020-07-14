@@ -1,0 +1,40 @@
+This file describes the step of using fastboot to flash image
+
+The base boot.img:
+- a bootable image: boot.base.img added as a rescue boot.img.
+  If you have problems with your boot.img, flash this boot.base.img to
+  go back to bootable status.
+
+Important bottoms:
+- "reset" bottom (SYSRSTB key on evb)
+- "fastboot" bottom, it is also the "vol up" bottom (HOMEKEY key on evb)
+- "power" bottom (PWRKEY key on evb)
+
+1. Enter fastboot mode
+	Action: press "reset" bottom than long press "fastboot" bottom, hold the "fastboot" bottom until enter fastboot mode
+
+	Note:
+		- the bootloader will catch the "fastboot" key and enter fastboot mode
+		- Once entering fastboot mode, release  the "fastboot" key
+
+2. fastboot unlock
+	Action: $ fastboot flashing unlock
+
+	Note:
+		the screen will ask you to press "vol up" bottom to unlock the device
+
+3. press the "vol up" bottom to unlock the device
+	Action: press the "vol up" bottom
+
+4. flash boot.img
+	Action: $ fastboot flash boot boot.img
+
+	Note: you will see message like:
+
+		fastboot flash boot boot.base.img
+		Sending 'boot' (32768 KB)                          OKAY [  1.872s]
+		Writing 'boot'                                     OKAY [  0.328s]
+		Finished. Total time: 2.231s
+
+5. reboot
+	Action: $ fastboot reboot
